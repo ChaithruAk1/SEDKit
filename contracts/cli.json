@@ -1,0 +1,1514 @@
+{
+  "commands": [
+    {
+      "commands": [
+        {
+          "help": "Assign an alias manually (never overwritten by imports) and re-link existing rows.",
+          "name": "assign",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "kind",
+              "opts": [
+                "kind"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "raw",
+              "opts": [
+                "raw"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "target",
+              "opts": [
+                "target"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "no_reresolve",
+              "opts": [
+                "--no-reresolve"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "List aliases, or unresolved values with fuzzy suggestions (--unmapped).",
+          "name": "list",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "kind",
+              "opts": [
+                "--kind"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "unmapped",
+              "opts": [
+                "--unmapped"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Re-link rows from stored raw values (same as `sed import reresolve`).",
+          "name": "reresolve",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Recompute fuzzy suggestions for unresolved values.",
+          "name": "suggest",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Alias table (raw names -> canonical ids)",
+      "name": "alias"
+    },
+    {
+      "commands": [
+        {
+          "help": "Recompute rule-origin findings (renewals, notice deadlines, license use, vendor SLA, cost, quiet apps).",
+          "name": "refresh",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_of",
+              "opts": [
+                "--as-of"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "force",
+              "opts": [
+                "--force"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Rule-origin findings",
+      "name": "analytics"
+    },
+    {
+      "help": "Open incidents needing attention now (P1/P2, near/past SLA, aged, reopened, ping-pong, unassigned).",
+      "name": "attention",
+      "params": [
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_of",
+          "opts": [
+            "--as-of"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": 50,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "limit",
+          "opts": [
+            "--limit"
+          ],
+          "required": false,
+          "type": "int range"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "profile",
+          "opts": [
+            "--profile",
+            "-p"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "data_dir",
+          "opts": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": "path"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_json",
+          "opts": [
+            "--json"
+          ],
+          "required": false,
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "help": "Online backup via the SQLite backup API.",
+          "name": "backup",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": 7,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "keep",
+              "opts": [
+                "--keep"
+              ],
+              "required": false,
+              "type": "int range"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Show schema version, journal mode, meta and row counts.",
+          "name": "info",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Apply pending schema migrations (takes a backup first).",
+          "name": "migrate",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Restore a backup (validated first; refused while `sed serve` runs; takes a safety backup).",
+          "name": "restore",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "file",
+              "opts": [
+                "file"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Database maintenance",
+      "name": "db"
+    },
+    {
+      "help": "Check environment, DATA_DIR location, schema, salt, hooks and Claude Code wiring.",
+      "name": "doctor",
+      "params": [
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "profile",
+          "opts": [
+            "--profile",
+            "-p"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "data_dir",
+          "opts": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": "path"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_json",
+          "opts": [
+            "--json"
+          ],
+          "required": false,
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "help": "Import exports: map columns, pseudonymize, resolve references, upsert, record data quality.",
+      "name": "import",
+      "params": [
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "argument",
+          "multiple": false,
+          "name": "files",
+          "opts": [
+            "files"
+          ],
+          "required": false,
+          "type": "path"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "profile",
+          "opts": [
+            "--profile",
+            "-p"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "data_dir",
+          "opts": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": "path"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "inbox",
+          "opts": [
+            "--inbox"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "mapping",
+          "opts": [
+            "--mapping"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "dry_run",
+          "opts": [
+            "--dry-run"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "force",
+          "opts": [
+            "--force"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_of",
+          "opts": [
+            "--as-of"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "allow_unmanifested",
+          "opts": [
+            "--allow-unmanifested"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "keep_files",
+          "opts": [
+            "--keep-files"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_json",
+          "opts": [
+            "--json"
+          ],
+          "required": false,
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "help": "Delete processed raw export files older than the given age (the database keeps the imported data).",
+          "name": "prune",
+          "params": [
+            {
+              "default": "90d",
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "older_than",
+              "opts": [
+                "--older-than"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Inbox housekeeping",
+      "name": "inbox"
+    },
+    {
+      "help": "Create or upgrade a profile: DATA_DIR, database, meta, salt, Claude Code wiring.",
+      "name": "init",
+      "params": [
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "profile",
+          "opts": [
+            "--profile",
+            "-p"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "data_dir",
+          "opts": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": "path"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "new_salt",
+          "opts": [
+            "--new-salt"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "ai_approval_note",
+          "opts": [
+            "--ai-approval-note"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "pii_mode",
+          "opts": [
+            "--pii-mode"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "no_claude_settings",
+          "opts": [
+            "--no-claude-settings"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_json",
+          "opts": [
+            "--json"
+          ],
+          "required": false,
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "help": "Score a file against every mapping and show missing required fields.",
+          "name": "check",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "file",
+              "opts": [
+                "file"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "List effective mappings (repo defaults + DATA_DIR overrides).",
+          "name": "list",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Column mappings",
+      "name": "mappings"
+    },
+    {
+      "commands": [
+        {
+          "help": "Compute one metric family from the store.",
+          "name": "show",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "name",
+              "opts": [
+                "name"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "period",
+              "opts": [
+                "--period"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_of",
+              "opts": [
+                "--as-of"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": true,
+              "name": "app_id",
+              "opts": [
+                "--app"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "family",
+              "opts": [
+                "--family"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "vendor",
+              "opts": [
+                "--vendor"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "group",
+              "opts": [
+                "--group"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": "incident",
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "kind",
+              "opts": [
+                "--kind"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": 180,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "days",
+              "opts": [
+                "--days"
+              ],
+              "required": false,
+              "type": "int"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Deterministic metrics",
+      "name": "metrics"
+    },
+    {
+      "commands": [
+        {
+          "help": "Build a report from a fresh frozen snapshot.",
+          "name": "build",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "report",
+              "opts": [
+                "report"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "period",
+              "opts": [
+                "--period"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": "xlsx,md",
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "fmt",
+              "opts": [
+                "--format"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": "approved",
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "ai",
+              "opts": [
+                "--ai"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "vendor",
+              "opts": [
+                "--vendor"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Create (or reuse) the frozen facts snapshot for a report period.",
+          "name": "snapshot",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "report",
+              "opts": [
+                "report"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "period",
+              "opts": [
+                "--period"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "vendor",
+              "opts": [
+                "--vendor"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Report snapshots and artifacts",
+      "name": "report"
+    },
+    {
+      "help": "Generate synthetic exports (real field names, planted patterns) into the profile inbox.",
+      "name": "synth",
+      "params": [
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "profile",
+          "opts": [
+            "--profile",
+            "-p"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "data_dir",
+          "opts": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": "path"
+        },
+        {
+          "default": 42,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "seed",
+          "opts": [
+            "--seed"
+          ],
+          "required": false,
+          "type": "int"
+        },
+        {
+          "default": "2026-09-01",
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_of",
+          "opts": [
+            "--as-of"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "anchor",
+          "opts": [
+            "--anchor"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": 18,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "months",
+          "opts": [
+            "--months"
+          ],
+          "required": false,
+          "type": "int range"
+        },
+        {
+          "default": 1.0,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "scale",
+          "opts": [
+            "--scale"
+          ],
+          "required": false,
+          "type": "float range"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "no_clean",
+          "opts": [
+            "--no-clean"
+          ],
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_json",
+          "opts": [
+            "--json"
+          ],
+          "required": false,
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "help": "Print the sed version.",
+      "name": "version",
+      "params": [
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_json",
+          "opts": [
+            "--json"
+          ],
+          "required": false,
+          "type": "boolean"
+        }
+      ]
+    }
+  ],
+  "help": "SED",
+  "name": "sed"
+}

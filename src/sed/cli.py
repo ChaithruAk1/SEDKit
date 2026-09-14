@@ -7,58 +7,36 @@ Exit codes: 0 ok, 1 internal error (bug; JSON envelope kind=internal), 2 validat
 
 from __future__ import annotations
 
-import json
 import re
-import sqlite3
 import sys
-from collections.abc import Callable
 from datetime import date, timedelta
-from functools import wraps
 from pathlib import Path
-from typing import Annotated, Any, TypeVar
+from typing import Annotated, Any
 
 import typer
 
 from sed import __version__, bootstrap, db, doctor
+from sed.cli_common import (
+    DataDirOpt,
+    JsonOpt,
+    ProfileOpt,
+    handle_errors,
+    open_db,
+    parse_date,
+    paths_for,
+)
 from sed.errors import EXIT_PRECONDITION, PreconditionFailed, SedError, ValidationFailed
-from sed.output import console, emit, emit_error, ensure_utf8_stdio
-from sed.paths import Paths, get_paths
+from sed.output import console, emit, ensure_utf8_stdio
 from sed.salt import fingerprint, read_salt
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="SED")
 db_app = typer.Typer(no_args_is_help=True, help="Database maintenance")
 app.add_typer(db_app, name="db")
 
-ProfileOpt = Annotated[str | None, typer.Option("--profile", "-p", help="synthetic | real | eval-<seed>")]
-DataDirOpt = Annotated[Path | None, typer.Option("--data-dir", help="Override DATA_DIR (advanced)")]
-JsonOpt = Annotated[bool, typer.Option("--json", help="Machine-readable JSON output")]
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def handle_errors(func: F) -> F:
-    @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        as_json = bool(kwargs.get("as_json"))
-        try:
-            return func(*args, **kwargs)
-        except typer.Exit:
-            raise
-        except SedError as exc:
-            emit_error(exc.to_dict(), as_json)
-            raise typer.Exit(exc.exit_code) from exc
-        except (sqlite3.DatabaseError, OSError) as exc:
-            emit_error({"kind": "precondition", "message": f"{type(exc).__name__}: {exc}"}, as_json)
-            raise typer.Exit(EXIT_PRECONDITION) from exc
-        except Exception as exc:
-            emit_error({"kind": "internal", "message": f"{type(exc).__name__}: {exc}"}, as_json)
-            raise typer.Exit(1) from exc
-
-    return wrapper  # type: ignore[return-value]
-
-
-def _paths(profile: str | None, data_dir: Path | None) -> Paths:
-    return get_paths(profile, data_dir)
+# Legacy private names kept for readability of the commands below.
+_paths = paths_for
+_open = open_db
+_parse_date = parse_date
 
 
 @app.command()
@@ -125,12 +103,6 @@ def doctor_cmd(profile: ProfileOpt = None, data_dir: DataDirOpt = None, as_json:
     emit(summary, as_json, human, ok=not failed)
     if failed:
         raise typer.Exit(EXIT_PRECONDITION)
-
-
-def _open(paths: Paths):
-    if not paths.db.exists():
-        raise PreconditionFailed(f"No database at {paths.db}; run `sed init --profile {paths.profile}` first.")
-    return db.connect(paths.db)
 
 
 @db_app.command("migrate")
@@ -218,15 +190,6 @@ inbox_app = typer.Typer(no_args_is_help=True, help="Inbox housekeeping")
 app.add_typer(mappings_app, name="mappings")
 app.add_typer(alias_app, name="alias")
 app.add_typer(inbox_app, name="inbox")
-
-
-def _parse_date(value: str | None) -> date | None:
-    if value is None:
-        return None
-    try:
-        return date.fromisoformat(value)
-    except ValueError as exc:
-        raise ValidationFailed(f"Invalid date '{value}' (use YYYY-MM-DD)") from exc
 
 
 @app.command()
@@ -422,46 +385,12 @@ def alias_assign(
     as_json: JsonOpt = False,
 ) -> None:
     """Assign an alias manually (never overwritten by imports) and re-link existing rows."""
-    from sed.ingest.loader import reresolve
-    from sed.ingest.resolve import ALIAS_KINDS, Resolver
+    from sed.ingest.aliases import assign_alias
 
-    if kind not in ALIAS_KINDS:
-        raise ValidationFailed(f"kind must be one of {', '.join(ALIAS_KINDS)}")
-    paths = _paths(profile, data_dir)
-    conn = db.connect(paths.db)
-    try:
-        target_id = _resolve_target_id(conn, kind, target)
-        resolver = Resolver(conn)
-        resolver.add_alias(kind, raw, target_id, "manual")
-        with db.write_tx(conn):
-            resolver.flush(None)
-            conn.execute(
-                "INSERT INTO review_decision (target_type, target_id, decision, payload_json, reviewer, decided_at) "
-                "VALUES ('alias', ?, 'approve', ?, ?, ?)",
-                (f"{kind}:{raw}", json.dumps({"target": target_id}), bootstrap.reviewer_name(), db.utc_now()),
-            )
-    finally:
-        conn.close()
-    result: dict[str, Any] = {"kind": kind, "raw": raw, "target_id": target_id}
-    if not no_reresolve:
-        result["reresolved"] = reresolve(paths)
+    result = assign_alias(
+        _paths(profile, data_dir), kind, raw, target, reviewer=bootstrap.reviewer_name(), reresolve=not no_reresolve
+    )
     emit(result, as_json)
-
-
-def _resolve_target_id(conn, kind: str, target: str) -> str:
-    if kind in {"app", "ci", "jira_project", "jira_component", "confluence_space"}:
-        row = conn.execute(
-            "SELECT app_id FROM application WHERE app_id = ? OR lower(name) = lower(?)", (target, target)
-        ).fetchone()
-    elif kind == "vendor":
-        row = conn.execute(
-            "SELECT vendor_id FROM vendor WHERE vendor_id = ? OR lower(name) = lower(?)", (target, target)
-        ).fetchone()
-    else:
-        row = conn.execute("SELECT name FROM assignment_group WHERE lower(name) = lower(?)", (target,)).fetchone()
-    if not row:
-        raise ValidationFailed(f"Unknown {kind} target '{target}'")
-    return str(row[0])
 
 
 @alias_app.command("suggest")
@@ -520,10 +449,8 @@ def inbox_prune(
 # metrics, analytics, reports
 # ---------------------------------------------------------------------------
 
-report_app = typer.Typer(no_args_is_help=True, help="Report snapshots and artifacts")
 metrics_app = typer.Typer(no_args_is_help=True, help="Deterministic metrics")
 analytics_app = typer.Typer(no_args_is_help=True, help="Rule-origin findings")
-app.add_typer(report_app, name="report")
 app.add_typer(metrics_app, name="metrics")
 app.add_typer(analytics_app, name="analytics")
 
@@ -687,55 +614,13 @@ def analytics_refresh(
     )
 
 
-@report_app.command("build")
-@handle_errors
-def report_build(
-    report: Annotated[str, typer.Argument(help="weekly (monthly | quarterly | vendor arrive in M2)")],
-    period: Annotated[str, typer.Option(help="Period label, e.g. 2026-W35")],
-    fmt: Annotated[str, typer.Option("--format", help="Comma-separated: xlsx,md")] = "xlsx,md",
-    ai: Annotated[str, typer.Option("--ai", help="approved | none | draft")] = "approved",
-    vendor: Annotated[str | None, typer.Option(help="Vendor id (vendor report)")] = None,
-    profile: ProfileOpt = None,
-    data_dir: DataDirOpt = None,
-    as_json: JsonOpt = False,
-) -> None:
-    """Build a report from a fresh frozen snapshot."""
-    from sed.reports.build import build_report
+def _mount_core_subapps() -> None:
+    from sed.reports.cli import report_app
 
-    paths = _paths(profile, data_dir)
-    formats = [x.strip().lower() for x in fmt.split(",") if x.strip()]
-    result = build_report(paths, report, period, formats, ai, vendor)
-    emit(result, as_json, lambda p: [console().print(f"{a['format']}: {a['path']}") for a in p["artifacts"]])
+    app.add_typer(report_app, name="report")
 
 
-@report_app.command("snapshot")
-@handle_errors
-def report_snapshot(
-    report: Annotated[str, typer.Argument(help="weekly")],
-    period: Annotated[str, typer.Option(help="Period label, e.g. 2026-W35")],
-    vendor: Annotated[str | None, typer.Option(help="Vendor id (vendor report)")] = None,
-    profile: ProfileOpt = None,
-    data_dir: DataDirOpt = None,
-    as_json: JsonOpt = False,
-) -> None:
-    """Create (or reuse) the frozen facts snapshot for a report period."""
-    from sed.reports.snapshot import create_snapshot
-
-    paths = _paths(profile, data_dir)
-    conn = db.connect(paths.db)
-    try:
-        snap = create_snapshot(conn, paths, report, period, vendor)
-    finally:
-        conn.close()
-    emit(
-        {
-            "snapshot_id": snap.snapshot_id,
-            "sha256": snap.sha256,
-            "facts": snap.facts,
-            "tables": {k: len(v["rows"]) for k, v in snap.tables.items()},
-        },
-        as_json,
-    )
+_mount_core_subapps()
 
 
 def main() -> None:

@@ -43,3 +43,15 @@ class Busy(SedError):
 class PreconditionFailed(SedError):
     exit_code = EXIT_PRECONDITION
     kind = "precondition"
+
+
+class NotImplementedByWorkstream(PreconditionFailed):
+    """Placeholder raised by a contract stub until its owning M2 workstream implements it (exit 4, HTTP 501)."""
+
+    kind = "not_implemented"
+
+    def __init__(self, workstream: str, message: str | None = None) -> None:
+        super().__init__(
+            message or f"Not implemented yet (owned by workstream {workstream})", {"workstream": workstream}
+        )
+        self.workstream = workstream
