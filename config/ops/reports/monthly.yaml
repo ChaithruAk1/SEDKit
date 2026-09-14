@@ -1,5 +1,104 @@
-# Monthly Service Review (placeholder until ws3-reports). Module: ops.
+# Monthly Service Review for business stakeholders (plan A10). Facts/tables come from the frozen snapshot built by
+# sed.modules.ops.reports.monthly; module: ops. Aggregates cover the month clamped to the data date (to date when open).
 report: monthly
 title: Monthly Service Review
-kpis: []
-sheets: []
+audience: Business stakeholders
+kpis:
+  - {fact: inc.opened, compare: inc.opened.prev_month}
+  - {fact: inc.resolved, compare: inc.resolved.prev_month}
+  - {fact: inc.sla.pct, compare: inc.sla.pct.prev_month, delta: inc.sla.delta_pp_vs_prev_month}
+  - {fact: inc.mttr.median_h, compare: inc.mttr.median_h.prev_month}
+  - {fact: inc.backlog}
+  - {fact: inc.p1p2.opened}
+  - {fact: chg.count}
+  - {fact: chg.success.pct}
+  - {fact: work.resolved.count}
+sheets:
+  - table: trend_6m
+    sheet: 6-month trend
+    chart: {type: column, categories: period, series: [opened, resolved], title: Incidents opened vs resolved}
+    conditional: [{column: sla_pct, rule: "<", value: 90, style: bad}]
+  - table: sla_6m_by_family
+    sheet: SLA by family
+    conditional:
+      - {column: m1, rule: "<", value: 90, style: bad}
+      - {column: m2, rule: "<", value: 90, style: bad}
+      - {column: m3, rule: "<", value: 90, style: bad}
+      - {column: m4, rule: "<", value: 90, style: bad}
+      - {column: m5, rule: "<", value: 90, style: bad}
+      - {column: m6, rule: "<", value: 90, style: bad}
+  - table: trend_6m_by_family
+    sheet: Trend by family
+    conditional: [{column: sla_pct, rule: "<", value: 90, style: bad}]
+  - table: top_recurring
+    sheet: Recurring issues
+    conditional: [{column: p1p2, rule: ">=", value: 1, style: warn}]
+  - table: problems
+    sheet: Problems
+    conditional: [{column: age_days, rule: ">", value: 90, style: warn}]
+  - {table: improvements, sheet: Improvements}
+  - {table: upcoming_changes, sheet: Upcoming changes}
+  - {table: findings, sheet: Risks}
+slides:
+  - {kind: title, title: Monthly Service Review, subtitle: Business stakeholders}
+  - kind: kpis
+    title: Executive summary
+    kpis:
+      - {fact: inc.opened, compare: inc.opened.prev_month}
+      - {fact: inc.resolved, compare: inc.resolved.prev_month}
+      - {fact: inc.sla.pct, compare: inc.sla.pct.prev_month, delta: inc.sla.delta_pp_vs_prev_month}
+      - {fact: inc.mttr.median_h, compare: inc.mttr.median_h.prev_month}
+      - {fact: inc.backlog}
+      - {fact: inc.p1p2.opened}
+      - {fact: chg.success.pct}
+      - {fact: work.resolved.count}
+  - {kind: section, title: Service performance, subtitle: Last 6 months}
+  - kind: bar_chart
+    title: Incident volume, last 6 months
+    table: trend_6m
+    chart: {type: column, categories: period, series: [opened, resolved], title: Incidents opened vs resolved}
+  - kind: line_chart
+    title: SLA met, last 6 months
+    table: trend_6m
+    chart: {type: line, categories: period, series: [sla_pct], title: SLA met %}
+  - kind: line_chart
+    title: Resolution time, last 6 months
+    table: trend_6m
+    chart: {type: line, categories: period, series: [mttr_median_h], title: MTTR median (hours)}
+  - kind: table
+    title: SLA % per application family
+    table: sla_6m_by_family
+    columns: [family, m1, m2, m3, m4, m5, m6]
+  - {kind: section, title: Issues and delivery}
+  - kind: table
+    title: Top recurring issues
+    table: top_recurring
+    columns: [app, category, subcategory, incidents, prev_3m, months_seen, problems]
+    max_rows: 10
+    when: has_rows
+  - kind: table
+    title: Problem status
+    table: problems
+    columns: [number, app, status, state, age_days, incidents_linked, short_description]
+    when: has_rows
+  - kind: table
+    title: Improvements delivered
+    table: improvements
+    columns: [app, project, resolved, stories, bugs, points]
+    when: has_rows
+  - {kind: section, title: Looking ahead}
+  - kind: table
+    title: Upcoming changes (next 30 days)
+    table: upcoming_changes
+    columns: [number, app, change_type, risk, start_date, short_description]
+    when: has_rows
+  - kind: findings
+    title: System-detected risks
+    table: findings
+    columns: [severity, kind, title]
+    max_rows: 8
+    when: has_rows
+  - {kind: narrative, title: Asks, ai_section_key: asks, notes: "AI-drafted and human-approved section (omitted in M2)."}
+  - {kind: provenance, title: Provenance}
+markdown:
+  max_words: 400
