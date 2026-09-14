@@ -8,15 +8,16 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from sed import __version__
 from sed.api import errors
 from sed.api.models import ErrorBody, ErrorEnvelope
-from sed.api.security import SecurityHeadersMiddleware, TokenMiddleware
+from sed.api.security import SecurityHeadersMiddleware, TokenMiddleware, validate_token
 from sed.paths import Paths
 
 ENVELOPE_REF = {"$ref": "#/components/schemas/ErrorEnvelope"}
@@ -29,6 +30,8 @@ ERROR_RESPONSES = {
     "501": "Not implemented yet",
 }
 TOKEN_PLACEHOLDER = "__SED_TOKEN__"
+INDEX = "index.html"
+NO_STORE = {"Cache-Control": "no-store"}
 
 
 def operation_id(route: APIRoute) -> str:
@@ -60,6 +63,33 @@ def _openapi(app: FastAPI) -> dict[str, Any]:
     return schema
 
 
+def _mount_web(app: FastAPI, web_dist: Path, token: str) -> None:
+    """Serve the built dashboard: index.html with the launch token injected (never cached), /assets, and the other
+    top-level files of web_dist (favicon and similar). Nothing outside web_dist is reachable."""
+    dist = web_dist.resolve()
+    index_template = (dist / INDEX).read_text(encoding="utf-8")
+    index_html = index_template.replace(TOKEN_PLACEHOLDER, token)
+    if (dist / "assets").is_dir():
+        app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+    # Fixed at startup: a request can only name one of these files, so there is no path to traverse.
+    root_files = {p.name: p for p in dist.iterdir() if p.is_file() and p.name != INDEX and not p.name.startswith(".")}
+
+    @app.get("/", include_in_schema=False)
+    def index() -> HTMLResponse:
+        return HTMLResponse(index_html, headers=NO_STORE)
+
+    @app.get(f"/{INDEX}", include_in_schema=False)
+    def index_file() -> HTMLResponse:
+        return HTMLResponse(index_html, headers=NO_STORE)
+
+    @app.get("/{name}", include_in_schema=False)
+    def root_file(name: str) -> FileResponse:
+        path = root_files.get(name)
+        if path is None:
+            raise StarletteHTTPException(404)
+        return FileResponse(path)
+
+
 def create_app(
     paths: Paths,
     *,
@@ -71,6 +101,7 @@ def create_app(
     from sed import modules as registry
     from sed.api import routes_core
 
+    validate_token(token)
     app = FastAPI(
         title="SED",
         version=__version__,
@@ -88,20 +119,16 @@ def create_app(
     for module in mounted:
         if module.api:
             app.include_router(registry.load_ref(module.api.router), prefix=f"/api/{module.key}", tags=[module.key])
+    # The modules this app serves: the core routes (nav, meta, modules) describe exactly these.
     app.state.modules = [m.key for m in mounted]
+    app.state.module_manifests = mounted
 
-    if web_dist is not None and (web_dist / "index.html").is_file():
-        index_template = (web_dist / "index.html").read_text(encoding="utf-8")
-        if (web_dist / "assets").is_dir():
-            app.mount("/assets", StaticFiles(directory=web_dist / "assets"), name="assets")
-
-        @app.get("/", include_in_schema=False)
-        def index() -> HTMLResponse:
-            return HTMLResponse(index_template.replace(TOKEN_PLACEHOLDER, token), headers={"Cache-Control": "no-store"})
+    if web_dist is not None and (web_dist / INDEX).is_file():
+        _mount_web(app, web_dist, token)
 
     app.openapi = lambda: _openapi(app)  # type: ignore[method-assign]
-    # Middleware order (outermost last): host check, then token, then security headers on every response.
-    app.add_middleware(SecurityHeadersMiddleware)
+    # Middleware order, outermost first: security headers (so 400 and 403 carry them too), host check, token.
     app.add_middleware(TokenMiddleware, token=token)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(allowed_hosts))
+    app.add_middleware(SecurityHeadersMiddleware)
     return app
