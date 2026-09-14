@@ -203,16 +203,17 @@ def vendor_trend(ctx: Context, months: int, *, min_tickets: int = 20) -> VendorT
     )
     buckets = Bucketer(periods)
     acc: dict[str, dict[str, Any]] = {}
-    for vendor_id, name, resolved_at, hours, breached, reassign in ctx.conn.execute(
+    for row_vendor, row_name, resolved_at, hours, breached, reassign in ctx.conn.execute(
         sql, [periods[0].start_iso, periods[-1].end_iso, *params]
     ):
         i = buckets.index(resolved_at)
         if i is None:
             continue
-        v = acc.setdefault(
-            vendor_id, {"name": name, "buckets": [{"n": 0, "met": 0, "hours": [], "reassign": 0} for _ in periods]}
+        entry = acc.setdefault(
+            row_vendor,
+            {"name": row_name, "buckets": [{"n": 0, "met": 0, "hours": [], "reassign": 0} for _ in periods]},
         )
-        b = v["buckets"][i]
+        b = entry["buckets"][i]
         b["n"] += 1
         b["met"] += 0 if breached else 1
         b["reassign"] += reassign
@@ -236,6 +237,6 @@ def vendor_trend(ctx: Context, months: int, *, min_tickets: int = 20) -> VendorT
             recent = [x.sla_pct for x in valid[-3:] if x.sla_pct is not None]
             prior = [x.sla_pct for x in valid[-6:-3] if x.sla_pct is not None]
             delta = round(statistics.fmean(recent) - statistics.fmean(prior), 2)
-        items.append(VendorTrendRow(vendor_id=vendor_id, vendor=name, delta_pp=delta, series=series))
+        items.append(VendorTrendRow(vendor_id=vendor_id, vendor=v["name"], delta_pp=delta, series=series))
     items.sort(key=lambda x: (x.delta_pp is None, x.delta_pp or 0))
     return VendorTrendsOut(months=months, items=items)
