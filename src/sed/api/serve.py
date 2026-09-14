@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import os
 import secrets
+import signal
 import socket
 import sys
 import threading
@@ -137,6 +138,32 @@ def _open_browser_when_started(server: Any, url: str) -> None:
     threading.Thread(target=wait_and_open, name="sed-open-browser", daemon=True).start()
 
 
+@contextlib.contextmanager
+def _stop_signals_raise_keyboard_interrupt() -> Iterator[None]:
+    """After a graceful shutdown uvicorn re-raises the signal that stopped it. The default SIGBREAK (Ctrl+Break) and
+    SIGTERM handlers end the process on the spot, which would skip removing serve.lock; raise KeyboardInterrupt instead
+    so the `finally` blocks run. Signal handlers can only be installed from the main thread."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def stop(signum: int, frame: Any) -> None:
+        raise KeyboardInterrupt
+
+    previous = {}
+    for name in ("SIGBREAK", "SIGTERM"):
+        sig = getattr(signal, name, None)
+        if sig is not None:
+            with contextlib.suppress(OSError, ValueError):
+                previous[sig] = signal.signal(sig, stop)
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            with contextlib.suppress(OSError, ValueError, TypeError):
+                signal.signal(sig, handler)
+
+
 def shutdown() -> None:
     """Ask every server started by run() in this process to stop (tests, embedding)."""
     with _active_lock:
@@ -183,9 +210,10 @@ def run(paths: Paths, *, port: int = 8000, open_browser: bool = True, dev: bool 
             with _active_lock:
                 _active.append(server)
             try:
-                server.run(sockets=[sock])
+                with _stop_signals_raise_keyboard_interrupt():
+                    server.run(sockets=[sock])
             except KeyboardInterrupt:
-                pass  # uvicorn re-raises Ctrl+C after its graceful shutdown; stopping is the normal way out
+                pass  # uvicorn re-raises the stop signal after its graceful shutdown; that is the normal way out
             finally:
                 with _active_lock:
                     _active.remove(server)

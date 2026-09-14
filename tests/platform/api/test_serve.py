@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -190,3 +191,46 @@ def test_cli_serve_passes_the_options_through(profile, monkeypatch):
     result = CliRunner().invoke(app, ["serve", "--profile", "synthetic", "--no-browser", "--port", "8123", "--dev"])
     assert result.exit_code == 0, result.output
     assert calls == [("synthetic", {"port": 8123, "open_browser": False, "dev": True})]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Ctrl+Break is a Windows console event")
+def test_cli_serve_stopped_with_ctrl_break_removes_its_lock(profile, data_root, tmp_path):
+    port = free_port()
+    env = {**os.environ, "SED_DATA_ROOT": str(data_root), "PYTHONUTF8": "1"}
+    env.pop("SED_PROFILE", None)
+    log = tmp_path / "serve.log"
+    with open(log, "w", encoding="utf-8") as out:
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "sed", "serve", "--profile", "synthetic", "--no-browser", "--port", str(port)],
+            env=env,
+            stdout=out,
+            stderr=subprocess.STDOUT,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+        try:
+            deadline = time.monotonic() + 60
+            while time.monotonic() < deadline and proc.poll() is None:
+                try:
+                    if httpx.get(f"http://127.0.0.1:{port}/api/meta", timeout=1).status_code == 200:
+                        break
+                except httpx.TransportError:
+                    time.sleep(0.2)
+            assert proc.poll() is None, log.read_text(encoding="utf-8")
+            assert int(profile.serve_lock.read_text(encoding="utf-8").split()[0]) != os.getpid()
+            proc.send_signal(signal.CTRL_BREAK_EVENT)
+            try:
+                code = proc.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=30)
+                if "Shutting down" not in log.read_text(encoding="utf-8"):
+                    pytest.skip("console control events are not delivered in this environment")
+                raise
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=30)
+    output = log.read_text(encoding="utf-8")
+    assert code == 0, output
+    assert "SED server stopped." in output
+    assert not profile.serve_lock.exists()
