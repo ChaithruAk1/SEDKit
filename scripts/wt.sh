@@ -8,7 +8,7 @@
 set -euo pipefail
 to_win() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
 WT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MAIN="${SED_MAIN_CHECKOUT:-/c/Projects/sed}"
+MAIN="${SED_MAIN_CHECKOUT:-$(git -C "$WT" worktree list --porcelain | awk 'NR == 1 { sub(/^worktree /, ""); print }')}"
 [ "$(to_win "$WT")" != "$(to_win "$MAIN")" ] || { echo "wt.sh: this is the main checkout; use C:/Projects/sed-wt/<ws>/scripts/wt.sh" >&2; exit 2; }
 cd "$WT"
 TOP="$(git rev-parse --show-toplevel)"

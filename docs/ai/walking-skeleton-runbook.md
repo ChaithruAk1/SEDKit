@@ -6,19 +6,19 @@ packet, ingest, finish-run) with **zero permission prompts**, that a human can r
 weekly workbook then carries AI categories with a sample-accuracy provenance line. It also measures the real Read-tool
 limits so the packet settings can be tuned.
 
-Everything below runs in the **main checkout** (`C:\Projects\sed`) through the Bash tool or a
-terminal. Quote paths: the checkout path contains a space. Replace `<RUN>` with the run id and `<you>` with the
-Windows user name. The offline equivalent of this flow is
+Everything below runs in the **main checkout** (the repository root) through the Bash tool or a terminal. Quote
+paths, in case the checkout path contains spaces. Replace `<RUN>` with the run id and `<you>` with the Windows user
+name. The offline equivalent of this flow is
 `tests/modules/ops/ai/test_walking_skeleton.py` (fake agent, no Claude calls).
 
 ## 0. Preconditions
 - `m2/ws1-ai` is merged, `uv run python scripts/ci.py` is green on main, and no other workstream merges until I1 is
   done (step 1 of the merge order is blocking).
-- `git -C "C:/Projects/sed" status --porcelain` prints nothing.
+- `git status --porcelain` in the main checkout prints nothing.
 
 ## 1. Restart the Claude Code session
 Skills and workflows are discovered when a session starts. Exit the current session and start a new one in the main
-checkout (`claude` in `C:\Projects\sed`). Check that the new session lists the `sed-triage-batch` skill
+checkout (run `claude` from the repository root). Check that the new session lists the `sed-triage-batch` skill
 and the `sed-analyze` workflow.
 
 ## 2. Migrate and check the profile
