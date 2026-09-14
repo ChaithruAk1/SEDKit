@@ -66,8 +66,9 @@ without `ops_api_indexes.sql`.
 | `/api/ops/tickets` | q=time* | 200 | 58.3 | 65.4 | 57.4 | 69.7 | 300 | 71.3 |
 
 The first run on a freshly built profile gave the same picture (slowest: App 360 p95 151.9 ms, apps grid 120.4 ms,
-vendor trend 98.7 ms; `q=error` 64.6 ms). Every ops GET is below 160 ms p95 and every search below 100 ms p95, so the
-budget holds with more than 6x headroom; without the pending indexes it still holds (worst: overview 491 ms).
+vendor trend 98.7 ms; `q=error` 64.6 ms), and a third run on the final commit had App 360 at 163.0 ms and `q=error` at
+66.6 ms. Across the three runs every ops GET stayed below 165 ms p95 and every search below 100 ms p95, so the budget
+holds with about 6x headroom; without the pending indexes it still holds (worst: overview 491 ms).
 
 Heavier non-default parameters measured during development on the same data (indexed): 18 monthly volume buckets
 91 ms, overview for the largest app 22 ms, backlog at 2026-W30 63 ms, tickets for the largest app 16 ms.
