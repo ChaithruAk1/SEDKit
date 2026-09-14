@@ -1,6 +1,7 @@
-"""Ops API routes mounted at /api/ops. Signatures are final for M2; bodies belong to ws5-api-ops.
+"""Ops API routes mounted at /api/ops. Signatures are final for M2; the read models live in `queries/`.
 
-Route order matters: static paths are declared before `{id}` paths.
+Route order matters: static paths are declared before `{id}` paths. Every route reads through `deps.read_conn`
+(query_only) and never writes: no snapshots, no rule-finding refresh.
 """
 
 from __future__ import annotations
@@ -8,10 +9,9 @@ from __future__ import annotations
 import sqlite3
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from sed.api.deps import CommonFilters, common_filters, read_conn
-from sed.errors import NotImplementedByWorkstream
 from sed.modules.ops.api_models import (
     App360Out,
     AppsOut,
@@ -29,21 +29,29 @@ from sed.modules.ops.api_models import (
     VendorTrendsOut,
     VolumesOut,
 )
+from sed.modules.ops.queries import apps as apps_q
+from sed.modules.ops.queries import commercial, search
+from sed.modules.ops.queries import overview as overview_q
+from sed.modules.ops.queries import tickets as tickets_q
+from sed.modules.ops.queries.common import Context, build_context
 
-WS = "ws5-api-ops"
 router = APIRouter()
+
+
+def _ctx(request: Request, conn: sqlite3.Connection, f: CommonFilters | None = None) -> Context:
+    return build_context(conn, request.app.state.paths, f)
 
 
 @router.get("/filters", response_model=OpsFiltersOut)
 def filters(conn: sqlite3.Connection = Depends(read_conn)) -> OpsFiltersOut:
-    raise NotImplementedByWorkstream(WS)
+    return apps_q.filter_options(conn)
 
 
 @router.get("/overview", response_model=OpsOverview)
 def overview(
     request: Request, f: CommonFilters = Depends(common_filters), conn: sqlite3.Connection = Depends(read_conn)
 ) -> OpsOverview:
-    raise NotImplementedByWorkstream(WS)
+    return overview_q.overview(_ctx(request, conn, f))
 
 
 @router.get("/attention", response_model=AttentionOut)
@@ -53,7 +61,7 @@ def attention(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> AttentionOut:
-    raise NotImplementedByWorkstream(WS)
+    return overview_q.attention(_ctx(request, conn, f), limit)
 
 
 @router.get("/tickets/volumes", response_model=VolumesOut)
@@ -65,7 +73,7 @@ def ticket_volumes(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> VolumesOut:
-    raise NotImplementedByWorkstream(WS)
+    return tickets_q.volumes(_ctx(request, conn, f), granularity, n, kind)
 
 
 @router.get("/tickets/sla", response_model=SlaOut)
@@ -76,7 +84,7 @@ def ticket_sla(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> SlaOut:
-    raise NotImplementedByWorkstream(WS)
+    return tickets_q.sla(_ctx(request, conn, f), granularity, n)
 
 
 @router.get("/tickets/mttr", response_model=MttrOut)
@@ -87,14 +95,14 @@ def ticket_mttr(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> MttrOut:
-    raise NotImplementedByWorkstream(WS)
+    return tickets_q.mttr(_ctx(request, conn, f), granularity, n)
 
 
 @router.get("/tickets/backlog", response_model=BacklogOut)
 def ticket_backlog(
     request: Request, f: CommonFilters = Depends(common_filters), conn: sqlite3.Connection = Depends(read_conn)
 ) -> BacklogOut:
-    raise NotImplementedByWorkstream(WS)
+    return tickets_q.backlog(_ctx(request, conn, f))
 
 
 @router.get("/tickets", response_model=TicketPage)
@@ -114,19 +122,35 @@ def tickets(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> TicketPage:
-    raise NotImplementedByWorkstream(WS)
+    return search.search(
+        _ctx(request, conn, f),
+        q=q,
+        kind=kind,
+        priority=priority,
+        state=state,
+        is_open=open,
+        stale=stale,
+        sn_category=sn_category,
+        am_category=am_category,
+        sort=sort,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/tickets/{ticket_id}", response_model=TicketDetail)
 def ticket_detail(ticket_id: str, conn: sqlite3.Connection = Depends(read_conn)) -> TicketDetail:
-    raise NotImplementedByWorkstream(WS)
+    found = search.detail(conn, ticket_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown ticket '{ticket_id}'")
+    return found
 
 
 @router.get("/apps", response_model=AppsOut)
 def apps(
     request: Request, f: CommonFilters = Depends(common_filters), conn: sqlite3.Connection = Depends(read_conn)
 ) -> AppsOut:
-    raise NotImplementedByWorkstream(WS)
+    return apps_q.apps(_ctx(request, conn, f))
 
 
 @router.get("/apps/{app_id}", response_model=App360Out)
@@ -136,7 +160,10 @@ def app_360(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> App360Out:
-    raise NotImplementedByWorkstream(WS)
+    found = apps_q.app_360(_ctx(request, conn, f), app_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown application '{app_id}'")
+    return found
 
 
 @router.get("/costs", response_model=CostsOut)
@@ -147,7 +174,7 @@ def costs(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> CostsOut:
-    raise NotImplementedByWorkstream(WS)
+    return commercial.costs(_ctx(request, conn, f), group_by, months)
 
 
 @router.get("/contracts/renewals", response_model=RenewalsOut)
@@ -157,14 +184,14 @@ def renewals(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> RenewalsOut:
-    raise NotImplementedByWorkstream(WS)
+    return commercial.renewals(_ctx(request, conn, f), days)
 
 
 @router.get("/licenses/utilization", response_model=LicensesOut)
 def licenses(
     request: Request, f: CommonFilters = Depends(common_filters), conn: sqlite3.Connection = Depends(read_conn)
 ) -> LicensesOut:
-    raise NotImplementedByWorkstream(WS)
+    return commercial.licenses(_ctx(request, conn, f))
 
 
 @router.get("/vendors/sla-trend", response_model=VendorTrendsOut)
@@ -174,4 +201,4 @@ def vendor_sla_trend(
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> VendorTrendsOut:
-    raise NotImplementedByWorkstream(WS)
+    return commercial.vendor_trend(_ctx(request, conn, f), months)
