@@ -203,19 +203,30 @@ def synth(
     months: Annotated[int, typer.Option(min=3, max=36, help="Months of history")] = 18,
     scale: Annotated[float, typer.Option(min=0.001, max=5.0, help="Background volume multiplier")] = 1.0,
     no_clean: Annotated[bool, typer.Option("--no-clean", help="Keep previously generated inbox files")] = False,
+    module: Annotated[str | None, typer.Option("--module", help="Only this module's generator (default: all)")] = None,
     as_json: JsonOpt = False,
 ) -> None:
     """Generate synthetic exports (real field names, planted patterns) into the profile inbox."""
-    from sed.synth.generate import SynthOptions, generate
+    from sed import modules
+    from sed.modules.contract import SynthRequest
 
     paths = _paths(profile, data_dir)
     if not paths.db.exists():
         raise PreconditionFailed(f"Run `sed init --profile {paths.profile}` first.")
-    opts = SynthOptions(
+    req = SynthRequest(
         seed=seed, as_of=_parse_date(as_of), anchor=_parse_date(anchor), months=months, scale=scale, clean=not no_clean
     )
-    result = generate(paths, opts)
-    emit(result, as_json, lambda p: console().print(f"Wrote {p['files']} files to {p['inbox']} {p['counts']}"))
+    targets = [modules.require_enabled(paths, module)] if module else [m for m in modules.enabled(paths) if m.synth]
+    if not targets or any(m.synth is None for m in targets):
+        raise ValidationFailed("No synthetic data generator for the selected module(s)")
+    results = {m.key: modules.load_ref(m.synth.generate)(paths, req) for m in targets}
+    result = next(iter(results.values())) if len(results) == 1 else results
+
+    def human(p: dict[str, Any]) -> None:
+        for payload in [p] if "files" in p else list(p.values()):
+            console().print(f"Wrote {payload['files']} files to {payload['inbox']} {payload['counts']}")
+
+    emit(result, as_json, human)
 
 
 @app.command("import")
@@ -615,9 +626,15 @@ def analytics_refresh(
 
 
 def _mount_core_subapps() -> None:
+    from sed import modules
+    from sed.modules.cli import modules_app
     from sed.reports.cli import report_app
 
     app.add_typer(report_app, name="report")
+    app.add_typer(modules_app, name="modules")
+    for module in modules.installed():
+        for mount in module.cli:
+            app.add_typer(modules.load_ref(mount.app), name=mount.name)
 
 
 _mount_core_subapps()

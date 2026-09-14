@@ -10,21 +10,16 @@ from sed import db
 from sed.errors import ValidationFailed
 from sed.paths import Paths
 
-APP_KINDS = {"app", "ci", "jira_project", "jira_component", "confluence_space"}
-
 
 def resolve_target_id(conn: sqlite3.Connection, kind: str, target: str) -> str:
     """Canonical id for a target given as an id or an exact (case-insensitive) name."""
-    if kind in APP_KINDS:
-        row = conn.execute(
-            "SELECT app_id FROM application WHERE app_id = ? OR lower(name) = lower(?)", (target, target)
-        ).fetchone()
-    elif kind == "vendor":
-        row = conn.execute(
-            "SELECT vendor_id FROM vendor WHERE vendor_id = ? OR lower(name) = lower(?)", (target, target)
-        ).fetchone()
-    else:
-        row = conn.execute("SELECT name FROM assignment_group WHERE lower(name) = lower(?)", (target,)).fetchone()
+    from sed.modules import entity_for_alias_kind
+
+    entity = entity_for_alias_kind(kind)
+    row = conn.execute(
+        f"SELECT {entity.id_col} FROM {entity.table} WHERE {entity.id_col} = ? OR lower({entity.name_col}) = lower(?)",
+        (target, target),
+    ).fetchone()
     if not row:
         raise ValidationFailed(f"Unknown {kind} target '{target}'")
     return str(row[0])
@@ -32,20 +27,16 @@ def resolve_target_id(conn: sqlite3.Connection, kind: str, target: str) -> str:
 
 def alias_targets(conn: sqlite3.Connection, kind: str, q: str | None = None, limit: int = 50) -> list[dict[str, str]]:
     """Candidate targets for an alias kind, optionally filtered by a name/id substring."""
+    from sed.modules import entity_for_alias_kind
+
     like = f"%{(q or '').strip().lower()}%"
-    if kind in APP_KINDS:
-        table, id_col = "application", "app_id"
-    elif kind == "vendor":
-        table, id_col = "vendor", "vendor_id"
-    elif kind == "group":
-        table, id_col = "assignment_group", "name"
-    else:
-        raise ValidationFailed(f"Unknown alias kind '{kind}'")
+    entity = entity_for_alias_kind(kind)
+    table, id_col, name_col = entity.table, entity.id_col, entity.name_col
     sql = (
-        f"SELECT {id_col} AS id, name FROM {table} "
-        f"WHERE is_deleted = 0 AND (lower(name) LIKE ? OR lower({id_col}) LIKE ?)"
+        f"SELECT {id_col} AS id, {name_col} AS name FROM {table} "
+        f"WHERE is_deleted = 0 AND (lower({name_col}) LIKE ? OR lower({id_col}) LIKE ?)"
     )
-    rows = conn.execute(sql + " ORDER BY name LIMIT ?", (like, like, int(limit))).fetchall()
+    rows = conn.execute(sql + f" ORDER BY {name_col} LIMIT ?", (like, like, int(limit))).fetchall()
     return [{"id": str(r["id"]), "name": str(r["name"])} for r in rows]
 
 

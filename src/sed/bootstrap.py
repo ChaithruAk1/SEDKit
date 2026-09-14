@@ -33,6 +33,11 @@ def init_profile(
     agent = load_agent_config()
 
     paths.ensure()
+    from sed.modules import enabled
+
+    for module in enabled(paths):
+        for sub in module.data_subdirs:
+            (paths.data_dir / sub).mkdir(parents=True, exist_ok=True)
     created_db = not paths.db.exists()
     conn = db.connect(paths.db)
     try:

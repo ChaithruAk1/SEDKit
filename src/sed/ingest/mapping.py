@@ -1,4 +1,4 @@
-"""Column-mapping specifications (config/ops/mappings/*.yaml) and file-to-mapping matching.
+"""Column-mapping specifications (config/<module>/mappings/*.yaml) and file-to-mapping matching.
 
 A mapping says which source columns feed which canonical fields of a target, how values are transformed, and
 which PII class each field has (mandatory). Local overrides in DATA_DIR\\config\\mappings use ``extends:`` and
@@ -19,7 +19,7 @@ from sed.errors import ValidationFailed
 from sed.ingest.readers import RawTable, ReaderOptions, normalize_header, read_table
 from sed.ingest.transforms import TRANSFORMS
 from sed.paths import Paths
-from sed.settings import config_sha256, load_layered, repo_config_dir
+from sed.settings import config_sha256, load_layered
 
 LoadMode = Literal["delta", "full_snapshot", "append_snapshot", "active_snapshot"]
 PiiClass = Literal["none", "person", "free_text"]
@@ -111,18 +111,20 @@ class MappingSpec(_Strict):
         return [name for name, spec in self.fields.items() if spec.required]
 
 
-MAPPINGS_DIR = "ops/mappings"
-
-
 def mapping_names(paths: Paths | None) -> list[str]:
-    names = {p.stem for p in (repo_config_dir() / MAPPINGS_DIR).glob("*.yaml")}
-    if paths and (paths.config / MAPPINGS_DIR).is_dir():
-        names |= {p.stem for p in (paths.config / MAPPINGS_DIR).glob("*.yaml")}
-    return sorted(names)
+    """Mapping names of every enabled module (repo defaults plus DATA_DIR overrides)."""
+    from sed.modules import mapping_index
+
+    return sorted(mapping_index(paths))
 
 
 def load_mapping(name: str, paths: Paths | None) -> MappingSpec:
-    data = load_layered(f"{MAPPINGS_DIR}/{name}.yaml", paths)
+    from sed.modules import mapping_index
+
+    index = mapping_index(paths)
+    if name not in index:
+        raise ValidationFailed(f"Unknown mapping '{name}'", {"available": sorted(index)})
+    data = load_layered(f"{index[name][1]}/{name}.yaml", paths)
     try:
         spec = MappingSpec.model_validate({**data, "sha256": config_sha256(data)})
     except ValidationError as exc:

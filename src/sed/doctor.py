@@ -95,6 +95,7 @@ def run_checks(paths: Paths, *, skip: set[str] | None = None) -> list[Check]:
     clashes, bad_names = skill_name_problems(root)
     add(_check("skill_names_valid", not bad_names, ", ".join(bad_names) or "all sed-* with matching frontmatter name"))
     add(_check("skill_names_no_personal_clash", not clashes, ", ".join(clashes) or "no clashes with ~/.claude/skills"))
+    _module_checks(paths, root, add)
 
     if paths.data_class == "real":
         add(
@@ -155,6 +156,39 @@ def _settings_checks(paths: Paths, add) -> None:
         add(Check("tzdata", "ok", f"reporting_tz={settings.reporting_tz}"))
     except (ZoneInfoNotFoundError, ValueError) as exc:
         add(Check("tzdata", "fail", f"timezone '{settings.reporting_tz}' unusable: {exc}"))
+
+
+def _module_checks(paths: Paths, root: Path, add) -> None:
+    from sed import modules
+
+    try:
+        problems = modules.validate()
+        for m in modules.enabled(paths):
+            for ref in modules.declared_refs(m):
+                try:
+                    modules.load_ref(ref)
+                except SedError as exc:
+                    problems.append(f"{m.key}: {exc.message}")
+        modules.mapping_index(paths)
+        modules.ingest_targets(paths)
+        overlaps = modules.mapping_glob_overlaps(paths)
+    except SedError as exc:
+        add(Check("modules_valid", "fail", f"{exc.message}: {exc.details}" if exc.details else exc.message))
+        return
+    if problems:
+        add(Check("modules_valid", "fail", "; ".join(problems)))
+    elif overlaps:
+        add(Check("modules_valid", "warn", "mapping globs overlap across modules: " + "; ".join(overlaps)))
+    else:
+        add(Check("modules_valid", "ok", "enabled: " + ", ".join(m.key for m in modules.enabled(paths))))
+
+    skills_dir = root / ".claude" / "skills"
+    folders = sorted(p.name for p in skills_dir.iterdir() if p.is_dir()) if skills_dir.is_dir() else []
+    declared = [s.name for m in modules.installed() for s in m.skills]
+    unclaimed = [f for f in folders if f.startswith("sed-") and declared.count(f) != 1]
+    add(_check("skills_claimed", not unclaimed, ", ".join(unclaimed) or "every sed-* skill belongs to one module"))
+    for check in modules.doctor_checks(paths):
+        add(check)
 
 
 def _salt_checks(paths: Paths, meta: dict[str, str], add) -> None:

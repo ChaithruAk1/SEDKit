@@ -1,4 +1,4 @@
-"""Report specifications (config/ops/reports/<report>.yaml, layered like all config)."""
+"""Report specifications (config/<module>/reports/<report>.yaml via ReportDef.spec, layered like all config)."""
 
 from __future__ import annotations
 
@@ -56,7 +56,10 @@ class ReportSpec(_Strict):
 
 
 def load_report_spec(report_key: str, paths: Paths | None) -> ReportSpec:
-    data: dict[str, Any] = load_layered(f"ops/reports/{report_key}.yaml", paths)
+    from sed.modules import report
+
+    _, rdef = report(report_key)
+    data: dict[str, Any] = load_layered(rdef.spec, paths)
     try:
         return ReportSpec.model_validate(data)
     except ValidationError as exc:
