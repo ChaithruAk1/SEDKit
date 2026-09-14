@@ -1,5 +1,100 @@
-# Vendor Review (placeholder until ws3-reports). Module: ops.
+# Vendor Review for vendor and contract reviews (plan A10; needs --vendor). Facts/tables come from the frozen snapshot
+# built by sed.modules.ops.reports.vendor; module: ops. Period aggregates cover the period up to the data date.
 report: vendor
 title: Vendor Review
-kpis: []
-sheets: []
+audience: Vendor and contract review
+kpis:
+  - {fact: vendor.name}
+  - {fact: vendor.spend.period, compare: vendor.spend.prev_period}
+  - {fact: vendor.contracts.count}
+  - {fact: vendor.contracts.annual_value}
+  - {fact: vendor.sla.pct}
+  - {fact: vendor.sla.delta_pp}
+  - {fact: vendor.mttr.median_h}
+  - {fact: vendor.reassign.avg}
+  - {fact: vendor.incidents.count}
+  - {fact: vendor.license.idle_cost}
+sheets:
+  - {table: contracts, sheet: Contracts}
+  - table: spend_trend
+    sheet: Spend trend
+    chart: {type: column, categories: period, series: [actual, budget], title: Vendor spend vs budget by month}
+    conditional: [{column: variance_pct, rule: ">=", value: 25, style: bad}]
+  - table: licenses
+    sheet: Licenses
+    conditional:
+      - {column: utilization, rule: "<", value: 0.7, style: warn}
+      - {column: utilization, rule: ">", value: 1.0, style: bad}
+  - table: sla_trend
+    sheet: SLA trend
+    chart: {type: line, categories: period, series: [sla_pct], title: Vendor SLA met % by month}
+    conditional: [{column: sla_pct, rule: "<", value: 90, style: bad}]
+  - table: incidents_by_app
+    sheet: Incidents by app
+    conditional: [{column: sla_pct, rule: "<", value: 90, style: bad}]
+  - table: renewal_timeline
+    sheet: Renewal timeline
+    conditional: [{column: days_to_notice, rule: "<=", value: 30, style: bad}]
+  - {table: risks, sheet: Risks}
+slides:
+  - {kind: title, title: Vendor Review, subtitle: Vendor and contract review}
+  - kind: kpis
+    title: Vendor summary
+    kpis:
+      - {fact: vendor.name}
+      - {fact: vendor.spend.period, compare: vendor.spend.prev_period}
+      - {fact: vendor.contracts.annual_value}
+      - {fact: vendor.sla.pct}
+      - {fact: vendor.sla.delta_pp}
+      - {fact: vendor.mttr.median_h}
+      - {fact: vendor.incidents.count}
+      - {fact: vendor.license.idle_cost}
+  - {kind: section, title: Commercial position}
+  - kind: table
+    title: Contract terms
+    table: contracts
+    columns: [contract_number, product, term, end_date, notice_deadline, auto_renew, annual_value_base]
+    when: has_rows
+  - kind: bar_chart
+    title: Spend trend
+    table: spend_trend
+    chart: {type: column, categories: period, series: [actual, budget], title: Actual vs budget by month}
+  - kind: table
+    title: License position
+    table: licenses
+    columns: [app, product, entitled_qty, active_qty_90d, utilization, position, idle_cost_base]
+    when: has_rows
+  - {kind: section, title: Service performance}
+  - kind: line_chart
+    title: SLA trend
+    table: sla_trend
+    chart: {type: line, categories: period, series: [sla_pct], title: SLA met %}
+    when: has_rows
+  - kind: table
+    title: SLA, resolution time and reassignments by month
+    table: sla_trend
+    columns: [period, resolved, sla_pct, mttr_median_h, reassign_avg]
+    when: has_rows
+  - kind: table
+    title: Incidents by application
+    table: incidents_by_app
+    columns: [app, opened, p1p2, resolved, sla_pct, mttr_median_h]
+    when: has_rows
+  - {kind: section, title: Renewals and risks}
+  - kind: table
+    title: Renewal and notice timeline
+    table: renewal_timeline
+    columns: [contract_number, product, notice_deadline, days_to_notice, end_date, auto_renew, annual_value_base]
+    when: has_rows
+  - kind: findings
+    title: Risks
+    table: risks
+    columns: [severity, title, exposure_eur]
+    when: has_rows
+  - kind: narrative
+    title: Negotiation points
+    ai_section_key: negotiation_points
+    notes: "AI-drafted and human-approved section (omitted in M2)."
+  - {kind: provenance, title: Provenance}
+markdown:
+  max_words: 400

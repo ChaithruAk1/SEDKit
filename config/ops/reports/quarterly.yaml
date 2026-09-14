@@ -1,5 +1,89 @@
-# Quarterly Budget & Governance (placeholder until ws3-reports). Module: ops.
+# Quarterly Budget & Governance for IT leadership (plan A10). Facts/tables come from the frozen snapshot built by
+# sed.modules.ops.reports.quarterly; module: ops. Cost covers the complete months of the quarter up to the data date.
 report: quarterly
 title: Quarterly Budget & Governance
-kpis: []
-sheets: []
+audience: IT leadership
+kpis:
+  - {fact: cost.actual.qtd, compare: cost.budget.qtd, delta: cost.variance.qtd_pct}
+  - {fact: cost.actual.ytd, compare: cost.budget.ytd}
+  - {fact: cost.variance.qtd_pct}
+  - {fact: license.idle_cost}
+  - {fact: renewals.2q.count}
+  - {fact: notice.2q.count}
+  - {fact: apps.quiet.count}
+sheets:
+  - table: spend_by_category
+    sheet: Spend by category
+    chart: {type: column, categories: key, series: [actual_qtd, budget_qtd], title: Actual vs budget by category (QTD)}
+    conditional: [{column: variance_pct, rule: ">=", value: 25, style: bad}]
+  - table: spend_by_app
+    sheet: Spend by app
+    conditional:
+      - {column: variance_pct, rule: ">=", value: 25, style: bad}
+      - {column: qoq_pct, rule: ">=", value: 25, style: warn}
+  - table: license_idle
+    sheet: Idle licenses
+    conditional: [{column: utilization, rule: "<", value: 0.7, style: warn}]
+  - table: renewals_2q
+    sheet: Renewals next 2Q
+    conditional: [{column: days_to_notice, rule: "<=", value: 30, style: bad}]
+  - {table: risks, sheet: Risks}
+  - table: portfolio_health
+    sheet: Portfolio health
+    conditional: [{column: quiet_apps, rule: ">=", value: 1, style: warn}]
+  - {table: quiet_apps, sheet: Quiet apps}
+slides:
+  - {kind: title, title: Quarterly Budget & Governance, subtitle: IT leadership}
+  - kind: kpis
+    title: Budget and governance summary
+    kpis:
+      - {fact: cost.actual.qtd, compare: cost.budget.qtd, delta: cost.variance.qtd_pct}
+      - {fact: cost.actual.ytd, compare: cost.budget.ytd}
+      - {fact: license.idle_cost}
+      - {fact: renewals.2q.count}
+      - {fact: notice.2q.count}
+      - {fact: apps.quiet.count}
+  - {kind: section, title: Spend vs budget}
+  - kind: bar_chart
+    title: Actual vs budget by cost category
+    table: spend_by_category
+    chart: {type: column, categories: key, series: [actual_qtd, budget_qtd], title: Quarter to date}
+  - kind: table
+    title: Spend by application
+    table: spend_by_app
+    columns: [key, actual_qtd, budget_qtd, variance_pct, qoq_pct, actual_ytd]
+    max_rows: 12
+  - {kind: section, title: Licenses and renewals}
+  - kind: table
+    title: Idle license cost and right-size opportunities
+    table: license_idle
+    columns: [app, product, entitled_qty, active_qty_90d, utilization, idle_cost_base]
+    when: has_rows
+  - kind: table
+    title: Renewals in the next 2 quarters
+    table: renewals_2q
+    columns: [contract_number, vendor, end_date, notice_deadline, days_to_notice, auto_renew, annual_value_base]
+    when: has_rows
+  - kind: findings
+    title: Vendor, renewal and license risks
+    table: risks
+    columns: [severity, title, exposure_eur]
+    max_rows: 8
+    when: has_rows
+  - {kind: section, title: Portfolio health}
+  - kind: table
+    title: Criticality x life cycle
+    table: portfolio_health
+    columns: [criticality, lifecycle, apps, incidents, license_cost, spend, quiet_apps]
+  - kind: table
+    title: Quiet applications
+    table: quiet_apps
+    columns: [name, business_criticality, life_cycle_stage, last_ticket, license_cost]
+    when: has_rows
+  - kind: narrative
+    title: Decisions needed
+    ai_section_key: decisions_needed
+    notes: "AI-drafted and human-approved section (omitted in M2)."
+  - {kind: provenance, title: Provenance}
+markdown:
+  max_words: 400
