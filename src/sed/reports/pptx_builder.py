@@ -27,7 +27,6 @@ from sed.reports.snapshot import RenderView, Snapshot, format_provenance_line, r
 from sed.reports.specs import KpiSpec, ReportSpec, SlideSpec
 from sed.reports.template_map import EMU_PER_INCH, LayoutSpec, LoadedTemplateMap, open_template, resolve_layout
 
-PAGINATED_KINDS = frozenset({"table", "findings", "attention_list", "provenance", "kpis"})
 TABLE_KINDS = frozenset({"table", "findings", "attention_list"})
 CHART_KINDS = frozenset({"line_chart", "bar_chart", "stacked_bar"})
 NUMERIC_UNITS = frozenset({"count", "number", "pct", "pp", "ratio", "hours", "eur"})
@@ -267,9 +266,8 @@ def plan_deck(
                 planned.append(PlannedSlide(s, idx, page=p + 1, pages=pages, kpis=chunk))
             continue
         if s.kind in TABLE_KINDS or s.kind in CHART_KINDS:
-            source_rows = snapshot.tables[s.table]["rows"] if s.table in snapshot.tables else []
             if s.table in view.excluded_tables:
-                if s.when == "has_rows" and not source_rows:
+                if s.when == "has_rows" and not snapshot.tables[s.table]["rows"]:
                     omitted.append(f"{title}: no rows this period")
                     continue
                 omitted.append(f"{title}: {EXCLUDED_TEXT}")
@@ -318,21 +316,19 @@ def provenance_lines(
 ) -> list[tuple[str, bool]]:
     """Lines of the provenance slide as (text, is_heading)."""
     lines: list[tuple[str, bool]] = [("Snapshot", True)]
-    lines.append((f"Data class: {snapshot.data_class.upper()}", False))
-    period = f"{spec.title} | period {snapshot.period}"
+    scope = f"Data class: {snapshot.data_class.upper()} | period {snapshot.period}"
     if snapshot.vendor_id:
-        period += f" | vendor {snapshot.vendor_id}"
-    lines.append((f"{period} | as of {snapshot.as_of}", False))
+        scope += f" | vendor {snapshot.vendor_id}"
+    lines.append((f"{scope} | as of {snapshot.as_of} | reporting timezone {snapshot.reporting_tz}", False))
     lines.append(
         (
             f"Data as of: {snapshot.data_as_of or 'n/a'} | period end (exclusive): {snapshot.period_end or 'n/a'}"
-            f" | reporting timezone {snapshot.reporting_tz}",
+            f" | SLA source: {snapshot.sla_source or 'n/a'}",
             False,
         )
     )
     lines.append((f"Snapshot id: {snapshot.snapshot_id}", False))
     lines.append((f"Snapshot sha256: {snapshot.sha256}", False))
-    lines.append((f"SLA source: {snapshot.sla_source or 'n/a'}", False))
     lines.append(
         (
             f"Generated at (UTC): {generated_at} | code version {snapshot.git_commit or 'n/a'}"
@@ -717,7 +713,7 @@ class _Deck:
 
     def _kpis(self, slide: Any, box: list[float], kpis: list[KpiSpec], view: RenderView) -> None:
         from pptx.enum.shapes import MSO_SHAPE
-        from pptx.enum.text import MSO_ANCHOR
+        from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 
         n = len(kpis)
         cols = {1: 1, 2: 2, 3: 3, 4: 2, 5: 3, 6: 3, 9: 3}.get(n, 4)
@@ -725,7 +721,7 @@ class _Deck:
         gap = 0.15
         x0, y0, bw, bh = box
         tile_w = (bw - gap * (cols - 1)) / cols
-        tile_h = min((bh - gap * (rows - 1)) / rows, 2.2)
+        tile_h = min((bh - gap * (rows - 1)) / rows, 1.7)
         body = self.tmap.fonts.body_pt
         value_pt = max(14.0, min(30.0, tile_h * 72 * 0.28, tile_w * 72 / 6))
         small = max(8.0, body - 5)
@@ -745,7 +741,7 @@ class _Deck:
             tf.margin_left = tf.margin_right = _emu(0.08)
             tf.margin_top = tf.margin_bottom = _emu(0.05)
             label_pt = max(8.0, body - 3)
-            paragraphs = [
+            paragraphs: list[dict[str, Any]] = [
                 {
                     "text": _truncate(clean_text(fact.get("label"), single_line=True), 60),
                     "size": label_pt,
@@ -758,6 +754,8 @@ class _Deck:
                 if other:
                     label = _truncate(clean_text(other.get("label"), single_line=True), 40)
                     paragraphs.append({"text": f"{label}: {_fact_text(other)}", "size": small, "color": _MUTED})
+            for para in paragraphs:
+                para["align"] = PP_ALIGN.LEFT  # auto shapes centre text by default
             self._write(tf, paragraphs)
 
     def _chart(self, slide: Any, box: list[float], s: SlideSpec, tbl: dict[str, Any], rows: list[dict]) -> None:
@@ -890,8 +888,8 @@ class _Deck:
         paragraphs: list[dict[str, Any]] = []
         for row in rows:
             runs = []
-            if tag_col:
-                severity = format_value(row.get(tag_col), "text")
+            severity = format_value(row.get(tag_col), "text") if tag_col else ""
+            if severity:
                 color = _SEVERITY_COLORS.get(severity.lower(), _MUTED)
                 runs.append({"text": f"[{severity.upper()}] ", "bold": True, "color": color, "size": head_pt})
             head = format_value(row.get(head_col), col_defs[head_col].get("format", "text"))

@@ -43,6 +43,8 @@ def make_alt_template(folder: Path) -> Path:
         id_list.remove(item)
     for item in items[3:] + items[:3]:  # rotate: every layout index changes
         id_list.append(item)
+    sample = prs.slides.add_slide(prs.slide_layouts[0])  # templates often ship sample slides; decks must drop them
+    sample.shapes.title.text = "Sample slide from the template"
     path = folder / "alt.pptx"
     prs.save(str(path))
     return path
@@ -89,7 +91,8 @@ def test_alt_map_resolves_layouts_by_name_and_proofs(tmp_path, alt_map):
     assert result["fallbacks"] == [] and len(result["kinds"]) == 11
     assert {s["layout"] for s in result["slides"]} == set(RENAMES.values())
     assert deck_problems(Path(result["path"])) == []
-    assert open_deck(Path(result["path"])).slide_width == WIDE_WIDTH_EMU
+    proof = open_deck(Path(result["path"]))
+    assert proof.slide_width == WIDE_WIDTH_EMU and len(proof.slides) == len(result["slides"])
 
 
 def _titles_in_title_placeholders(path: Path) -> list[str]:
