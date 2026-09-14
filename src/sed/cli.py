@@ -627,11 +627,14 @@ def analytics_refresh(
 
 def _mount_core_subapps() -> None:
     from sed import modules
+    from sed.ai.cli import ai_app, review_app
     from sed.modules.cli import modules_app
     from sed.reports.cli import report_app
 
     app.add_typer(report_app, name="report")
     app.add_typer(modules_app, name="modules")
+    app.add_typer(ai_app, name="ai")
+    app.add_typer(review_app, name="review")
     for module in modules.installed():
         for mount in module.cli:
             app.add_typer(modules.load_ref(mount.app), name=mount.name)
