@@ -1,9 +1,9 @@
 """Reference resolution: raw names in exports -> canonical ids via the alias table.
 
-Alias kinds: app, vendor, group, ci, jira_project, jira_component, confluence_space.
+Alias kinds and the entities they point at come from the module registry (`AliasKind`, `EntityRef`); ops declares
+app, vendor, group, ci, jira_project, jira_component and confluence_space.
 Origins: auto_exact (seeded from master data names/ids), cmdb_rel (CI -> business app from cmdb_rel_ci),
-seed (DATA_DIR\\config\\aliases.yaml / DATA_DIR\\config\\ops\\ci_to_app.yaml),
-manual (`sed alias assign`; never overwritten).
+seed (DATA_DIR config files read by module ingest hooks), manual (`sed alias assign`; never overwritten).
 Unresolved values are counted in unmapped_value with a rapidfuzz suggestion.
 """
 
@@ -13,16 +13,56 @@ import re
 import sqlite3
 import unicodedata
 from collections import Counter, defaultdict
-from typing import Any
+from collections.abc import Iterable, Iterator, Sequence
+from typing import Any, overload
 
 from rapidfuzz import fuzz, process
 
 from sed import db
+from sed import modules as registry
+from sed.ingest.hooks import resolved_by, suggestion_kinds
 
-ALIAS_KINDS = ("app", "vendor", "group", "ci", "jira_project", "jira_component", "confluence_space")
 _LEGAL_SUFFIXES = re.compile(
     r"\b(gmbh|ag|sa|sas|sarl|s a|ltd|limited|inc|llc|plc|bv|nv|spa|srl|oy|ab|as|co|corp|corporation|company)\b"
 )
+
+
+class _AliasKinds(Sequence[str]):
+    """Alias kinds declared by the installed modules, read from the registry on every access."""
+
+    @staticmethod
+    def _kinds() -> tuple[str, ...]:
+        return registry.alias_kinds()
+
+    @overload
+    def __getitem__(self, index: int) -> str: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> tuple[str, ...]: ...
+
+    def __getitem__(self, index: int | slice) -> str | tuple[str, ...]:
+        return self._kinds()[index]
+
+    def __len__(self) -> int:
+        return len(self._kinds())
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._kinds())
+
+    def __contains__(self, kind: object) -> bool:
+        return kind in self._kinds()
+
+    def __eq__(self, other: object) -> bool:
+        return tuple(self) == (tuple(other) if isinstance(other, (tuple, list, _AliasKinds)) else other)
+
+    def __hash__(self) -> int:
+        return hash(tuple(self))
+
+    def __repr__(self) -> str:
+        return repr(self._kinds())
+
+
+ALIAS_KINDS: Sequence[str] = _AliasKinds()
 
 
 def normalize_alias(value: Any, kind: str = "") -> str:
@@ -32,6 +72,11 @@ def normalize_alias(value: Any, kind: str = "") -> str:
     if kind == "vendor":
         text = _LEGAL_SUFFIXES.sub(" ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _alias_entities() -> dict[str, str]:
+    """Alias kind -> entity key, from every installed module."""
+    return {a.key: a.entity for m in registry.installed() for a in m.alias_kinds}
 
 
 class Resolver:
@@ -44,28 +89,25 @@ class Resolver:
         for row in conn.execute("SELECT kind, alias_norm, target_id, origin FROM alias"):
             self.aliases[(row["kind"], row["alias_norm"])] = row["target_id"]
             self.origins[(row["kind"], row["alias_norm"])] = row["origin"]
-        self.group_vendor: dict[str, str | None] = {}
-        self.group_app: dict[str, str | None] = {}
-        for row in conn.execute("SELECT name, vendor_id, app_id FROM assignment_group WHERE is_deleted = 0"):
-            key = normalize_alias(row["name"])
-            self.group_vendor[key] = row["vendor_id"]
-            self.group_app[key] = row["app_id"]
         self.unmapped: dict[str, Counter[str]] = defaultdict(Counter)
         self._pending_aliases: dict[tuple[str, str], tuple[str, str]] = {}
+        self.entities = registry.entities()
+        self.kind_entity = _alias_entities()
         # Only ids that exist may be returned (FK safety): a seed/manual alias to an unknown id counts as unmapped.
+        # Entities declared with validate_ids=False (free-text ids such as group names) are not checked.
         self.valid: dict[str, set[str]] = {
-            "app": {r[0] for r in conn.execute("SELECT app_id FROM application")},
-            "vendor": {r[0] for r in conn.execute("SELECT vendor_id FROM vendor")},
+            e.key: {r[0] for r in conn.execute(f"SELECT {e.id_col} FROM {e.table}")}
+            for e in self.entities.values()
+            if e.validate_ids
         }
 
     def _target_kind(self, kind: str) -> str | None:
-        if kind in {"app", "ci", "jira_project", "jira_component", "confluence_space"}:
-            return "app"
-        if kind == "vendor":
-            return "vendor"
-        return None
+        """Entity key whose ids an alias of `kind` must match, or None when ids are not validated."""
+        entity = self.kind_entity.get(kind)
+        return entity if entity in self.valid else None
 
-    def _valid_target(self, kind: str, target: str | None) -> str | None:
+    def valid_target(self, kind: str, target: str | None) -> str | None:
+        """`target` when it is an existing id of the entity behind `kind` (or the entity is not validated)."""
         if target is None:
             return None
         tk = self._target_kind(kind)
@@ -73,8 +115,16 @@ class Resolver:
             return target
         return None
 
-    def register_ids(self, kind: str, ids: list[str]) -> None:
-        self.valid[kind].update(ids)
+    def register_ids(self, kind: str, ids: Iterable[str]) -> None:
+        """Mark ids as existing for an entity key (or the entity behind an alias kind) during an import."""
+        entity = kind if kind in self.entities else self.kind_entity.get(kind, kind)
+        if entity in self.valid:
+            self.valid[entity].update(ids)
+
+    @property
+    def pending(self) -> int:
+        """Number of aliases added in memory and not flushed yet."""
+        return len(self._pending_aliases)
 
     # -- lookups ---------------------------------------------------------------------------------------------
 
@@ -84,7 +134,7 @@ class Resolver:
         key = normalize_alias(raw, kind)
         if not key:
             return None
-        target = self._valid_target(kind, self.aliases.get((kind, key)))
+        target = self.valid_target(kind, self.aliases.get((kind, key)))
         if target is None and record_unmapped:
             self.unmapped[kind][str(raw).strip()] += 1
         return target
@@ -98,24 +148,6 @@ class Resolver:
         if candidates:
             self.unmapped[kind][str(candidates[0]).strip()] += 1
         return None
-
-    def resolve_app(self, business_service: Any, ci: Any) -> str | None:
-        """Business service name first, then the CI via cmdb_rel / ci_to_app aliases."""
-        for kind, raw in (("app", business_service), ("ci", ci), ("app", ci)):
-            if raw not in (None, ""):
-                hit = self.resolve(kind, raw, record_unmapped=False)
-                if hit:
-                    return hit
-        if business_service not in (None, ""):
-            self.unmapped["app"][str(business_service).strip()] += 1
-        elif ci not in (None, ""):
-            self.unmapped["ci"][str(ci).strip()] += 1
-        return None
-
-    def vendor_for_group(self, group: Any) -> str | None:
-        if group in (None, ""):
-            return None
-        return self._valid_target("vendor", self.group_vendor.get(normalize_alias(group)))
 
     # -- writes ----------------------------------------------------------------------------------------------
 
@@ -134,11 +166,6 @@ class Resolver:
         self.aliases[(kind, key)] = target_id
         self.origins[(kind, key)] = origin
         self._pending_aliases[(kind, key)] = (target_id, origin)
-
-    def set_group(self, name: str, vendor_id: str | None, app_id: str | None) -> None:
-        key = normalize_alias(name)
-        self.group_vendor[key] = vendor_id
-        self.group_app[key] = app_id
 
     def flush(self, batch_id: int | None) -> dict[str, Any]:
         """Persist pending aliases and unmapped counts (call inside write_tx)."""
@@ -168,23 +195,27 @@ class Resolver:
 
 
 def candidate_names(conn: sqlite3.Connection, kind: str) -> dict[str, str]:
-    """Display name -> target id for fuzzy suggestions."""
-    if kind in {"app", "ci"}:
-        rows = conn.execute("SELECT app_id, name FROM application WHERE is_deleted = 0").fetchall()
-        return {r["name"]: r["app_id"] for r in rows}
-    if kind == "vendor":
-        rows = conn.execute("SELECT vendor_id, name FROM vendor WHERE is_deleted = 0").fetchall()
-        return {r["name"]: r["vendor_id"] for r in rows}
-    if kind == "group":
-        rows = conn.execute("SELECT name FROM assignment_group WHERE is_deleted = 0").fetchall()
-        return {r["name"]: r["name"] for r in rows}
-    return {}
+    """Display name -> target id for fuzzy suggestions (active rows of the entity behind the alias kind)."""
+    entity_key = _alias_entities().get(kind)
+    entity = registry.entities().get(entity_key or "")
+    if entity is None:
+        return {}
+    rows = conn.execute(f"SELECT {entity.id_col}, {entity.name_col} FROM {entity.table} WHERE is_deleted = 0")
+    return {r[1]: r[0] for r in rows.fetchall()}
 
 
-def refresh_suggestions(conn: sqlite3.Connection) -> int:
-    """Compute rapidfuzz suggestions for unresolved unmapped values (call inside write_tx)."""
+def _hooks(hooks: Iterable[Any] | None) -> list[Any]:
+    return list(registry.ingest_hooks() if hooks is None else hooks)
+
+
+def refresh_suggestions(conn: sqlite3.Connection, hooks: Iterable[Any] | None = None) -> int:
+    """Compute rapidfuzz suggestions for unresolved unmapped values (call inside write_tx).
+
+    Only the alias kinds the modules' ingest hooks list in `suggestion_kinds` get suggestions. `hooks` defaults to the
+    hooks of the enabled modules.
+    """
     updated = 0
-    for kind in ("app", "vendor", "group", "ci"):
+    for kind in suggestion_kinds(_hooks(hooks)):
         names = candidate_names(conn, kind)
         if not names:
             continue
@@ -207,13 +238,18 @@ def refresh_suggestions(conn: sqlite3.Connection) -> int:
     return updated
 
 
-def mark_resolved(conn: sqlite3.Connection) -> int:
-    """Flag unmapped values that now resolve through the alias table (call inside write_tx)."""
+def mark_resolved(conn: sqlite3.Connection, hooks: Iterable[Any] | None = None) -> int:
+    """Flag unmapped values that now resolve through the alias table (call inside write_tx).
+
+    An unmapped value of kind K counts as resolved when an alias exists for any kind the hooks list in
+    `resolved_by[K]` (default: K itself). `hooks` defaults to the hooks of the enabled modules.
+    """
+    fallbacks = resolved_by(_hooks(hooks))
     rows = conn.execute("SELECT kind, raw_value FROM unmapped_value WHERE resolved = 0").fetchall()
     known = {(r["kind"], r["alias_norm"]) for r in conn.execute("SELECT kind, alias_norm FROM alias")}
     count = 0
     for row in rows:
-        kinds = ("app", "ci") if row["kind"] in {"app", "ci"} else (row["kind"],)
+        kinds = fallbacks.get(row["kind"], (row["kind"],))
         if any((k, normalize_alias(row["raw_value"], k)) in known for k in kinds):
             conn.execute(
                 "UPDATE unmapped_value SET resolved = 1 WHERE kind = ? AND raw_value = ?",
