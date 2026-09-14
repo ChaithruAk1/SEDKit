@@ -19,8 +19,6 @@ REGISTRY_FILES = {"modules/__init__.py", "modules/contract.py", "modules/cli.py"
 ALLOWLIST = {
     "cli.py",  # legacy top-level ops commands (metrics, attention, analytics)
     "ingest/loader.py",  # registry-driven ingest lands with ws7-ingest
-    "reports/snapshot.py",  # removed in P0.5 (weekly builder moves to the ops module)
-    "reports/xlsx_builder.py",  # removed in P0.5 (definitions come from the registry)
 }
 
 

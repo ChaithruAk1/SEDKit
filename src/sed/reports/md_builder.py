@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from sed.reports.snapshot import Snapshot
+from sed.reports.snapshot import Snapshot, render_view
 from sed.reports.specs import ReportSpec
 
 
@@ -35,9 +35,10 @@ def _signed_pct(f: dict[str, Any] | None) -> str:
 
 
 def render_weekly_md(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> str:
-    F = snapshot.facts
-    findings = snapshot.tables["findings"]["rows"]
-    renewals = snapshot.tables["renewals_90d"]["rows"]
+    view = render_view(snapshot, ai_mode)
+    F = view.facts
+    findings = view.tables["findings"]["rows"]
+    renewals = view.tables["renewals_90d"]["rows"]
     critical = [f for f in findings if f.get("severity") in {"critical", "high"}]
     lines = []
     if snapshot.data_class == "synthetic":
@@ -82,6 +83,13 @@ def render_weekly_md(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> s
 
 
 def build_md(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode: str) -> Path:
+    """Render with the report's declared Markdown renderer (ReportDef.markdown)."""
+    from sed.errors import ValidationFailed
+    from sed.modules import load_ref, report
+
+    _, rdef = report(snapshot.report_key)
+    if not rdef.markdown:
+        raise ValidationFailed(f"The {snapshot.report_key} report has no Markdown format")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(render_weekly_md(snapshot, spec, ai_mode=ai_mode), encoding="utf-8")
+    out_path.write_text(load_ref(rdef.markdown)(snapshot, spec, ai_mode=ai_mode), encoding="utf-8")
     return out_path

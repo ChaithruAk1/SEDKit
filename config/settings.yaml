@@ -17,3 +17,12 @@ ai:
   max_items_per_run: 8000
   backfill_days: 90
   claim_lease_hours: 6
+  review_sample_size: 30           # random stratified sample per triage run (drives sample accuracy)
+  lowest_conf_sample: 30           # additionally shown for review, never used for accuracy
+  low_confidence_threshold: 0.5
+
+reports:
+  template_map: neutral            # templates/pptx/<name>.map.yaml, or DATA_DIR/config/templates/<name>.map.yaml
+
+api:
+  port: 8000                       # `sed serve` binds 127.0.0.1 only

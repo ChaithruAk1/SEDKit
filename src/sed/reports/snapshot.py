@@ -2,23 +2,46 @@
 
 A snapshot is stored in report_snapshot with a sha256 over its canonical JSON. Builders (XLSX/MD/PPTX) render only
 from the snapshot, so narrative, charts and tables in one artifact always agree.
+
+Report content is module-owned: `create_snapshot` resolves the ReportDef through the registry and calls its builder
+with a `SnapshotRequest`; the builder returns `SnapshotParts`. AI provenance (runs, AI-derived facts and tables) sits
+outside facts/tables so `--ai none` can exclude AI content at render time (`render_view`) without changing the snapshot.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import sqlite3
 import subprocess
-from dataclasses import dataclass
-from datetime import date, timedelta
-from typing import Any
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Any, TypedDict
 
-from sed import __version__, analytics, db, metrics
+from sed import __version__, db
 from sed.calendar import Period, parse_period
 from sed.errors import ValidationFailed
 from sed.paths import Paths, repo_root
 from sed.settings import Settings, load_settings
+
+UNITS = ("text", "count", "number", "pct", "pp", "ratio", "hours", "eur", "date", "datetime")
+
+
+class AiRunProvenance(TypedDict):
+    run_id: str
+    skill: str
+    skill_hash: str
+    status: str
+    model_reported: str | None
+    reviewed_by: str | None
+    reviewed_at: str | None
+    sample_n: int | None
+    sample_accuracy: float | None
+    sample_ci_low: float | None
+    sample_ci_high: float | None
+    used_for: list[str]
 
 
 @dataclass
@@ -30,7 +53,7 @@ class Snapshot:
     as_of: str
     data_class: str
     reporting_tz: str
-    sla_source: str
+    sla_source: str | None
     facts: dict[str, dict[str, Any]]
     tables: dict[str, dict[str, Any]]
     freshness: list[dict[str, Any]]
@@ -38,6 +61,57 @@ class Snapshot:
     sha256: str
     created_at: str
     git_commit: str | None
+    ai_runs: list[AiRunProvenance] = field(default_factory=list)
+    ai_derived_tables: list[str] = field(default_factory=list)
+    ai_derived_facts: list[str] = field(default_factory=list)
+    period_end: str = ""
+    data_as_of: str | None = None
+    suppressed_findings: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SnapshotRequest:
+    conn: sqlite3.Connection
+    paths: Paths
+    settings: Settings
+    report: Any  # sed.modules.contract.ReportDef
+    period: Period
+    vendor_id: str | None
+    as_of: date  # min(period.end_local, data_as_of): as_of-dependent calls (findings, renewals, licenses)
+    data_as_of: date | None
+    window: Period  # the period with end_local clamped to as_of: "to date" aggregates
+
+
+@dataclass
+class SnapshotParts:
+    facts: dict[str, dict[str, Any]]
+    tables: dict[str, dict[str, Any]]
+    sla_source: str | None = None
+    freshness: list[dict[str, Any]] | None = None
+    ai_runs: list[AiRunProvenance] = field(default_factory=list)
+    ai_derived_tables: list[str] = field(default_factory=list)
+    ai_derived_facts: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class AiParts:
+    facts: dict[str, dict[str, Any]]
+    ai_runs: list[AiRunProvenance]
+    ai_derived_tables: tuple[str, ...]
+    ai_derived_facts: tuple[str, ...]
+
+
+SnapshotBuilder = Callable[[SnapshotRequest], SnapshotParts]
+
+
+@dataclass(frozen=True)
+class RenderView:
+    facts: dict[str, dict[str, Any]]
+    tables: dict[str, dict[str, Any]]
+    excluded_facts: list[str]
+    excluded_tables: list[str]
+    ai_runs: list[AiRunProvenance]
+    note: str | None
 
 
 def fact(value: Any, unit: str, label: str, definition: str | None = None) -> dict[str, Any]:
@@ -53,15 +127,36 @@ def table(title: str, columns: list[tuple[str, str, str]], rows: list[dict[str, 
     }
 
 
-def _delta_pct(current: float | None, baseline: float | None) -> float | None:
-    if current is None or not baseline:
-        return None
-    return round(100.0 * (current - baseline) / baseline, 1)
+def format_provenance_line(run: AiRunProvenance) -> str:
+    """One human-readable line per AI run, e.g. for the Provenance sheet and deck notes."""
+    if run.get("sample_accuracy") is None:
+        accuracy = "sample accuracy n/a"
+    else:
+        accuracy = f"sample accuracy {100 * run['sample_accuracy']:.1f}%"
+        if run.get("sample_ci_low") is not None and run.get("sample_ci_high") is not None:
+            accuracy += f" ({100 * run['sample_ci_low']:.1f}–{100 * run['sample_ci_high']:.1f}%)"
+        if run.get("sample_n"):
+            accuracy += f", n={run['sample_n']}"
+    return (
+        f"{run['skill']} {str(run.get('skill_hash') or '')[:12]} run {run['run_id']}, "
+        f"approved by {run.get('reviewed_by') or 'n/a'} at {run.get('reviewed_at') or 'n/a'}: {accuracy}"
+    )
 
 
-def _avg(values: list[float | None]) -> float | None:
-    vals = [v for v in values if v is not None]
-    return round(sum(vals) / len(vals), 2) if vals else None
+def render_view(snapshot: Snapshot, ai_mode: str) -> RenderView:
+    """What a renderer may show. `none` drops AI-derived facts and tables; `approved` and `draft` show everything."""
+    if ai_mode != "none":
+        return RenderView(dict(snapshot.facts), dict(snapshot.tables), [], [], list(snapshot.ai_runs), None)
+    excluded_facts = [k for k in snapshot.ai_derived_facts if k in snapshot.facts]
+    excluded_tables = [k for k in snapshot.ai_derived_tables if k in snapshot.tables]
+    return RenderView(
+        {k: v for k, v in snapshot.facts.items() if k not in excluded_facts},
+        {k: v for k, v in snapshot.tables.items() if k not in excluded_tables},
+        excluded_facts,
+        excluded_tables,
+        [],
+        "AI content excluded (--ai none)",
+    )
 
 
 def _git_commit() -> str | None:
@@ -79,338 +174,128 @@ def _git_commit() -> str | None:
         return None
 
 
-def _months_before(as_of: date, n: int) -> list[str]:
-    out = []
-    d = date(as_of.year, as_of.month, 1)
-    for _ in range(n):
-        d = date(d.year, d.month, 1) - timedelta(days=1)
-        out.append(f"{d.year}-{d.month:02d}")
-        d = date(d.year, d.month, 1)
-    return list(reversed(out))
+def _suppressed_findings(conn: sqlite3.Connection, as_of: date) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT stable_key, kind, title, status, suppress_until FROM finding WHERE origin = 'rule' "
+        "AND (status = 'acknowledged' OR (status = 'active' AND suppress_until > ?)) ORDER BY kind, title",
+        (as_of.isoformat(),),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
-def weekly(conn: sqlite3.Connection, paths: Paths, settings: Settings, period: Period) -> tuple[dict, dict, str]:
-    f = metrics.Filters()
-    as_of_date = period.end_local
-    previous = [period.previous(k) for k in range(1, 5)]
-    trend_periods = [period.previous(k) for k in range(11, 0, -1)] + [period]
-    src = metrics.sla_source(conn)
+def build_request(
+    conn: sqlite3.Connection, paths: Paths, report_key: str, period_label: str, vendor_id: str | None = None
+) -> SnapshotRequest:
+    """Validate a report request and derive as_of/window. Raises exit 2 (validation) or 4 (module disabled)."""
+    from sed.ingest.freshness import data_as_of
+    from sed.modules import report, require_enabled
 
-    vol = metrics.volume_trend(conn, f, trend_periods)
-    current = vol[-1]
-    prev_vol = vol[-5:-1]
-    sla_now = metrics.sla(conn, f, period, src)
-    sla_prev = [metrics.sla(conn, f, p, src)["pct"] for p in previous]
-    mttr_now = metrics.mttr(conn, f, period)
-    mttr_prev = [metrics.mttr(conn, f, p)["median_h"] for p in previous]
-    backlog_now = metrics.backlog(conn, f, period.end_utc)
-    backlog_now_all = metrics.backlog(conn, f, period.end_utc, exclude_stale=False)["total"]
-    backlog_prev_all = metrics.backlog(conn, f, period.start_utc, exclude_stale=False)["total"]
-    quality = metrics.quality(conn, f, period)
-    att = metrics.attention(conn, f, period.end_utc, settings.thresholds)
-    chg = metrics.changes(conn, period)
-    p1p2 = metrics.p1p2_opened(conn, f, period)
-    renewals_90 = metrics.renewals(conn, as_of_date, 90)
-    licenses = metrics.license_utilization(conn, as_of_date)
-    outliers = [
-        x
-        for x in licenses
-        if x["utilization"] is not None
-        and (x["utilization"] < 0.70 or x["utilization"] > 1.0 or (x["assigned_ratio"] or 0) > 1.0)
-    ]
-    cost_months = _months_before(as_of_date, 2)
-    cost_rows = [
-        r
-        for r in metrics.cost_vs_budget(conn, cost_months, "app_category")
-        if r["variance_pct"] is not None and abs(r["variance_pct"]) >= 10
-    ]
-    findings = analytics.findings_as_of(conn, paths, as_of_date)
-    opened_avg = _avg([v["opened"] for v in prev_vol])
-    resolved_avg = _avg([v["resolved"] for v in prev_vol])
-    sla_avg = _avg(sla_prev)
-    mttr_avg = _avg(mttr_prev)
-
-    facts = {
-        "period.label": fact(period.label, "text", "Period"),
-        "period.start": fact(period.start_local.isoformat(), "date", "Period start"),
-        "period.end": fact(period.last_day.isoformat(), "date", "Period end"),
-        "inc.opened": fact(current["opened"], "count", "Incidents opened", "inc.opened"),
-        "inc.opened.avg4w": fact(opened_avg, "number", "Opened, 4-week average", "inc.opened"),
-        "inc.opened.delta_vs_avg4w_pct": fact(_delta_pct(current["opened"], opened_avg), "pct", "Opened vs 4-week avg"),
-        "inc.resolved": fact(current["resolved"], "count", "Incidents resolved", "inc.resolved"),
-        "inc.resolved.avg4w": fact(resolved_avg, "number", "Resolved, 4-week average", "inc.resolved"),
-        "inc.backlog": fact(backlog_now["total"], "count", "Open backlog at week end", "inc.backlog"),
-        "inc.backlog.delta": fact(
-            backlog_now_all - backlog_prev_all, "count", "Backlog change (arrivals - resolutions)"
-        ),
-        "inc.backlog.stale_excluded": fact(
-            backlog_now_all - backlog_now["total"], "count", "Stale open excluded from backlog", "inc.stale_open"
-        ),
-        "inc.sla.pct": fact(sla_now["pct"], "pct", "SLA met (resolved this week)", "inc.sla.pct"),
-        "inc.sla.pct.avg4w": fact(sla_avg, "pct", "SLA met, 4-week average", "inc.sla.pct"),
-        "inc.sla.delta_pp_vs_4w": fact(
-            round(sla_now["pct"] - sla_avg, 2) if sla_now["pct"] is not None and sla_avg is not None else None,
-            "pp",
-            "SLA vs 4-week avg",
-        ),
-        "inc.sla.source": fact(src, "text", "SLA source"),
-        "inc.mttr.median_h": fact(mttr_now["median_h"], "hours", "MTTR median (hours)", "inc.mttr.median_h"),
-        "inc.mttr.median_h.avg4w": fact(mttr_avg, "hours", "MTTR median, 4-week average", "inc.mttr.median_h"),
-        "inc.mttr.delta_vs_avg4w_pct": fact(_delta_pct(mttr_now["median_h"], mttr_avg), "pct", "MTTR vs 4-week avg"),
-        "inc.p1p2.opened": fact(len(p1p2), "count", "P1/P2 opened", "inc.p1p2.opened"),
-        "inc.reopen.pct": fact(quality["reopen_pct"], "pct", "Reopen rate", "inc.reopen.pct"),
-        "inc.reassign.avg": fact(quality["reassign_avg"], "number", "Avg reassignments", "inc.reassign.avg"),
-        "inc.stale_open": fact(
-            metrics.stale_open_count(conn, f), "count", "Stale open (not in active export)", "inc.stale_open"
-        ),
-        "attention.count": fact(att["count"], "count", "Tickets needing attention", "attention.count"),
-        "chg.count": fact(chg["count"], "count", "Changes closed", "chg.count"),
-        "chg.success.pct": fact(chg["success_pct"], "pct", "Change success rate", "chg.success.pct"),
-        "chg.failed": fact(len(chg["failed"]), "count", "Changes not fully successful"),
-        "renewals.90d.count": fact(
-            sum(1 for r in renewals_90 if r["days_to_end"] is not None and 0 <= r["days_to_end"] <= 90),
-            "count",
-            "Contracts ending within 90 days",
-            "renewals.count",
-        ),
-        "notice.30d.count": fact(
-            sum(1 for r in renewals_90 if r["days_to_notice"] is not None and 0 <= r["days_to_notice"] <= 30),
-            "count",
-            "Notice deadlines within 30 days",
-            "notice.count",
-        ),
-        "license.idle_cost": fact(
-            round(sum(x["idle_cost_base"] or 0 for x in outliers if (x["utilization"] or 1) < 0.70), 2),
-            "eur",
-            "Idle license cost (under-used lines)",
-            "license.idle_cost",
-        ),
-        "findings.system_detected.count": fact(len(findings), "count", "System-detected risks"),
-    }
-
-    tables = {
-        "volume_trend_12w": table(
-            "Incident volume, last 12 weeks",
-            [
-                ("period", "Week", "text"),
-                ("opened", "Opened", "count"),
-                ("resolved", "Resolved", "count"),
-                ("net", "Net", "count"),
-            ],
-            vol,
-        ),
-        "sla_by_priority": table(
-            "SLA by priority (resolved this week)",
-            [
-                ("priority", "Priority", "text"),
-                ("total", "Resolved", "count"),
-                ("met", "Met", "count"),
-                ("pct", "SLA %", "pct"),
-            ],
-            [{"priority": f"P{p}", **v} for p, v in sorted(sla_now["by_priority"].items())],
-        ),
-        "backlog_aging_by_group": table(
-            "Backlog aging by assignment group (week end)",
-            [
-                ("group", "Group", "text"),
-                ("total", "Open", "count"),
-                ("0-7d", "0-7d", "count"),
-                ("8-30d", "8-30d", "count"),
-                ("31-90d", "31-90d", "count"),
-                (">90d", ">90d", "count"),
-            ],
-            [{"group": g, **v} for g, v in list(backlog_now["by_group"].items())[:25]],
-        ),
-        "attention": table(
-            "Needs attention (open incidents)",
-            [
-                ("number", "Number", "text"),
-                ("priority", "P", "count"),
-                ("app", "Application", "text"),
-                ("state", "State", "text"),
-                ("assignment_group", "Group", "text"),
-                ("age_days", "Age (days)", "number"),
-                ("reasons", "Why", "text"),
-                ("short_description", "Short description", "text"),
-            ],
-            att["items"][:100],
-        ),
-        "top_apps": table(
-            "Top applications by incidents opened",
-            [
-                ("app", "Application", "text"),
-                ("family", "Family", "text"),
-                ("opened", "Opened", "count"),
-                ("p1p2", "P1/P2", "count"),
-            ],
-            metrics.top_apps(conn, f, period),
-        ),
-        "p1p2": table(
-            "P1/P2 incidents opened this week",
-            [
-                ("number", "Number", "text"),
-                ("priority", "P", "count"),
-                ("app", "Application", "text"),
-                ("state", "State", "text"),
-                ("assignment_group", "Group", "text"),
-                ("opened_at", "Opened (UTC)", "datetime"),
-                ("short_description", "Short description", "text"),
-            ],
-            p1p2,
-        ),
-        "changes_failed": table(
-            "Changes closed with issues or unsuccessful",
-            [
-                ("number", "Number", "text"),
-                ("app", "Application", "text"),
-                ("change_type", "Type", "text"),
-                ("close_code", "Close code", "text"),
-                ("closed_at", "Closed (UTC)", "datetime"),
-                ("short_description", "Short description", "text"),
-            ],
-            chg["failed"],
-        ),
-        "category_breakdown": table(
-            "ServiceNow category vs AI app-owner category (incidents opened)",
-            [
-                ("sn_category", "ServiceNow category", "text"),
-                ("am_category", "AI category", "text"),
-                ("n", "Incidents", "count"),
-            ],
-            metrics.category_breakdown(conn, f, period),
-        ),
-        "renewals_90d": table(
-            "Commercial watchlist: renewals and notice deadlines (next 90 days)",
-            [
-                ("contract_number", "Contract", "text"),
-                ("vendor", "Vendor", "text"),
-                ("app", "Application", "text"),
-                ("product", "Product", "text"),
-                ("end_date", "End date", "date"),
-                ("days_to_end", "Days to end", "count"),
-                ("notice_deadline", "Notice deadline", "date"),
-                ("days_to_notice", "Days to notice", "count"),
-                ("auto_renew", "Auto-renew", "count"),
-                ("annual_value_base", "Annual value", "eur"),
-            ],
-            renewals_90,
-        ),
-        "license_outliers": table(
-            "Commercial watchlist: license utilization outliers",
-            [
-                ("license_id", "License", "text"),
-                ("app", "Application", "text"),
-                ("product", "Product", "text"),
-                ("entitled_qty", "Entitled", "number"),
-                ("active_qty_90d", "Active 90d", "number"),
-                ("utilization", "Utilization", "ratio"),
-                ("assigned_ratio", "Assigned", "ratio"),
-                ("idle_cost_base", "Idle cost / yr", "eur"),
-            ],
-            outliers,
-        ),
-        "cost_variance": table(
-            f"Commercial watchlist: cost vs budget ({' & '.join(cost_months)}, |variance| >= 10%)",
-            [
-                ("key", "Application / category", "text"),
-                ("actual", "Actual", "eur"),
-                ("budget", "Budget", "eur"),
-                ("variance_pct", "Variance %", "pct"),
-            ],
-            cost_rows,
-        ),
-        "findings": table(
-            "System-detected risks (rule findings)",
-            [
-                ("severity", "Severity", "text"),
-                ("kind", "Kind", "text"),
-                ("title", "Finding", "text"),
-                ("subject_id", "Subject", "text"),
-            ],
-            findings,
-        ),
-    }
-    return facts, tables, src
-
-
-BUILDERS = {"weekly": weekly}
+    module, rdef = report(report_key)
+    require_enabled(paths, module.key)
+    settings = load_settings(paths)
+    period = parse_period(period_label, settings.reporting_tz, settings.fiscal_year_start)
+    if period.kind not in rdef.period_kinds:
+        raise ValidationFailed(
+            f"The {report_key} report needs a {' or '.join(rdef.period_kinds)} period (got {period.label})"
+        )
+    if rdef.needs_vendor and not vendor_id:
+        raise ValidationFailed(f"The {report_key} report needs --vendor")
+    if vendor_id and not rdef.needs_vendor:
+        raise ValidationFailed(f"The {report_key} report does not take --vendor")
+    if vendor_id and not conn.execute("SELECT 1 FROM vendor WHERE vendor_id = ?", (vendor_id,)).fetchone():
+        raise ValidationFailed(f"Unknown vendor '{vendor_id}'")
+    data_date = data_as_of(conn, settings)
+    as_of = min(period.end_local, data_date) if data_date else period.end_local
+    window = dataclasses.replace(period, end_local=max(period.start_local, min(period.end_local, as_of)))
+    return SnapshotRequest(conn, paths, settings, rdef, period, vendor_id, as_of, data_date, window)
 
 
 def create_snapshot(
     conn: sqlite3.Connection, paths: Paths, report_key: str, period_label: str, vendor_id: str | None = None
 ) -> Snapshot:
-    if report_key not in BUILDERS:
-        raise ValidationFailed(f"Report '{report_key}' is not available yet (available: {', '.join(BUILDERS)})")
-    settings = load_settings(paths)
-    period = parse_period(period_label, settings.reporting_tz, settings.fiscal_year_start)
-    if report_key == "weekly" and period.kind != "week":
-        raise ValidationFailed("The weekly report needs an ISO week period such as 2026-W35")
+    from sed.ingest.freshness import import_freshness
+    from sed.modules import load_ref
+
+    req = build_request(conn, paths, report_key, period_label, vendor_id)
+    parts: SnapshotParts = load_ref(req.report.builder)(req)
     meta = db.all_meta(conn)
-    facts, tables, src = BUILDERS[report_key](conn, paths, settings, period)
-    freshness = metrics.freshness(conn)
+    freshness = parts.freshness if parts.freshness is not None else import_freshness(conn)
     batches = [
         dict(r)
         for r in conn.execute(
-            "SELECT batch_id, file_name, file_sha256, mapping_name, imported_at FROM import_batch WHERE status = "
-            "'completed' "
-            "ORDER BY batch_id"
+            "SELECT batch_id, file_name, file_sha256, mapping_name, imported_at FROM import_batch "
+            "WHERE status = 'completed' ORDER BY batch_id"
         )
     ]
+    provenance = {
+        "ai_runs": parts.ai_runs,
+        "ai_derived_tables": list(parts.ai_derived_tables),
+        "ai_derived_facts": list(parts.ai_derived_facts),
+        "period_end": req.period.end_local.isoformat(),
+        "data_as_of": req.data_as_of.isoformat() if req.data_as_of else None,
+        "suppressed_findings": _suppressed_findings(conn, req.as_of),
+    }
     body = {
         "report_key": report_key,
-        "period": period.label,
+        "period": req.period.label,
         "vendor_id": vendor_id,
-        "as_of": period.end_local.isoformat(),
+        "as_of": req.as_of.isoformat(),
         "data_class": meta.get("data_class", "synthetic"),
-        "reporting_tz": settings.reporting_tz,
-        "sla_source": src,
-        "facts": facts,
-        "tables": tables,
+        "reporting_tz": req.settings.reporting_tz,
+        "sla_source": parts.sla_source,
+        "facts": parts.facts,
+        "tables": parts.tables,
+        "provenance": provenance,
     }
     canonical = json.dumps(body, sort_keys=True, ensure_ascii=False, default=str)
     sha = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     created = db.utc_now()
-    snapshot_id = f"snap-{report_key}-{period.label}-{sha[:12]}"
+    snapshot_id = f"snap-{report_key}-{req.period.label}{'-' + vendor_id if vendor_id else ''}-{sha[:12]}"
     snap = Snapshot(
-        snapshot_id,
-        report_key,
-        period.label,
-        vendor_id,
-        body["as_of"],
-        body["data_class"],
-        settings.reporting_tz,
-        src,
-        facts,
-        tables,
-        freshness,
-        batches,
-        sha,
-        created,
-        _git_commit(),
+        snapshot_id=snapshot_id,
+        report_key=report_key,
+        period=req.period.label,
+        vendor_id=vendor_id,
+        as_of=body["as_of"],
+        data_class=body["data_class"],
+        reporting_tz=req.settings.reporting_tz,
+        sla_source=parts.sla_source,
+        facts=parts.facts,
+        tables=parts.tables,
+        freshness=freshness,
+        input_batches=batches,
+        sha256=sha,
+        created_at=created,
+        git_commit=_git_commit(),
+        ai_runs=list(parts.ai_runs),
+        ai_derived_tables=list(parts.ai_derived_tables),
+        ai_derived_facts=list(parts.ai_derived_facts),
+        period_end=provenance["period_end"],
+        data_as_of=provenance["data_as_of"],
+        suppressed_findings=provenance["suppressed_findings"],
     )
     with db.write_tx(conn):
         conn.execute(
             "INSERT OR IGNORE INTO report_snapshot (snapshot_id, report_key, period, vendor_id, as_of, created_at, "
-            "git_commit, "
-            "facts_json, tables_json, sla_source, reporting_tz, freshness_json, input_batches_json, data_class, "
-            "sha256) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "git_commit, facts_json, tables_json, sla_source, reporting_tz, freshness_json, input_batches_json, "
+            "data_class, sha256, provenance_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 snapshot_id,
                 report_key,
-                period.label,
+                req.period.label,
                 vendor_id,
                 snap.as_of,
                 created,
                 snap.git_commit,
-                json.dumps(facts, ensure_ascii=False, default=str),
-                json.dumps(tables, ensure_ascii=False, default=str),
-                src,
-                settings.reporting_tz,
+                json.dumps(parts.facts, ensure_ascii=False, default=str),
+                json.dumps(parts.tables, ensure_ascii=False, default=str),
+                parts.sla_source,
+                req.settings.reporting_tz,
                 json.dumps(freshness, default=str),
                 json.dumps([b["batch_id"] for b in batches]),
                 snap.data_class,
                 sha,
+                json.dumps(provenance, ensure_ascii=False, default=str),
             ),
         )
     return snap

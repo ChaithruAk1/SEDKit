@@ -13,8 +13,7 @@ from typing import Any
 
 import xlsxwriter
 
-from sed.metrics import METRICS
-from sed.reports.snapshot import Snapshot
+from sed.reports.snapshot import Snapshot, format_provenance_line, render_view
 from sed.reports.specs import ReportSpec
 
 FORMATS = {
@@ -45,6 +44,9 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     wb = xlsxwriter.Workbook(
         str(out_path), {"strings_to_formulas": False, "strings_to_urls": False, "strings_to_numbers": False}
     )
+    from sed.modules import metric_definitions
+
+    view = render_view(snapshot, ai_mode)
     wb.set_properties({"title": f"{spec.title} {snapshot.period}", "comments": f"snapshot {snapshot.snapshot_id}"})
     fmts = {k: wb.add_format(v) for k, v in FORMATS.items()}
     bold = wb.add_format({"bold": True})
@@ -70,16 +72,16 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     summary.write_row(row, 0, ["Indicator", "Value", "Comparison", "Change"], bold)
     row += 1
     for kpi in spec.kpis:
-        f = snapshot.facts.get(kpi.fact)
+        f = view.facts.get(kpi.fact)
         if not f:
             continue
         summary.write_string(row, 0, f["label"])
         _write_value(summary, row, 1, f["value"], fmts.get(f["unit"], fmts["text"]))
-        if kpi.compare and kpi.compare in snapshot.facts:
-            c = snapshot.facts[kpi.compare]
+        if kpi.compare and kpi.compare in view.facts:
+            c = view.facts[kpi.compare]
             _write_value(summary, row, 2, c["value"], fmts.get(c["unit"], fmts["text"]))
-        if kpi.delta and kpi.delta in snapshot.facts:
-            d = snapshot.facts[kpi.delta]
+        if kpi.delta and kpi.delta in view.facts:
+            d = view.facts[kpi.delta]
             _write_value(summary, row, 3, d["value"], fmts.get(d["unit"], fmts["text"]))
         row += 1
     summary.set_column(0, 0, 42)
@@ -87,11 +89,18 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     chart_row = row + 2
 
     for sheet_spec in spec.sheets:
-        tbl = snapshot.tables.get(sheet_spec.table)
+        if sheet_spec.table in view.excluded_tables:
+            ws = wb.add_worksheet(sheet_spec.sheet)
+            ws.write_string(0, 0, snapshot.tables[sheet_spec.table]["title"], bold)
+            ws.write_string(2, 0, "AI-derived content excluded (--ai none).")
+            continue
+        tbl = view.tables.get(sheet_spec.table)
         if tbl is None:
             continue
         ws = wb.add_worksheet(sheet_spec.sheet)
         ws.write_string(0, 0, tbl["title"], bold)
+        if sheet_spec.table in snapshot.ai_derived_tables:
+            ws.write_string(1, 0, "AI-assisted: see the Provenance sheet for runs and sample accuracy.")
         columns = tbl["columns"]
         rows = tbl["rows"]
         header_row = 2
@@ -134,9 +143,10 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
 
     defs = wb.add_worksheet("Definitions")
     defs.write_row(0, 0, ["Metric key", "Unit", "Definition"], bold)
-    used = sorted({f["definition"] for f in snapshot.facts.values() if f.get("definition")})
+    definitions = metric_definitions()
+    used = sorted({f["definition"] for f in view.facts.values() if f.get("definition")})
     for i, key in enumerate(used, start=1):
-        unit, text = METRICS.get(key, ("", ""))
+        unit, text = definitions.get(key, ("", ""))
         defs.write_string(i, 0, key)
         defs.write_string(i, 1, unit)
         defs.write_string(i, 2, text)
@@ -154,7 +164,9 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
         ("Snapshot id", snapshot.snapshot_id),
         ("Snapshot sha256", snapshot.sha256),
         ("AI content mode", ai_mode),
-        ("AI runs used", "none"),
+        ("AI runs used", _ai_runs_text(snapshot, view, ai_mode)),
+        ("Data as of", snapshot.data_as_of or "n/a"),
+        ("Period end (exclusive)", snapshot.period_end or "n/a"),
         ("Generated at (UTC)", generated_at),
         ("Code version", snapshot.git_commit or "n/a"),
         ("Person columns", "pseudonymized (P-...) unless display names are enabled on the real profile"),
@@ -163,7 +175,17 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     for i, (k, v) in enumerate(items, start=1):
         prov.write_string(i, 0, k)
         prov.write_string(i, 1, str(v))
-    r = len(items) + 2
+    r = len(items) + 1
+    for line in [format_provenance_line(run) for run in view.ai_runs]:
+        r += 1
+        prov.write_string(r, 1, line)
+    if snapshot.suppressed_findings:
+        r += 2
+        prov.write_string(r, 0, "Suppressed / acknowledged rule findings", bold)
+        for sf in snapshot.suppressed_findings:
+            r += 1
+            prov.write_row(r, 0, [sf["kind"], sf["title"], sf["status"], str(sf.get("suppress_until") or "")])
+    r += 2
     prov.write_string(r, 0, "Data freshness", bold)
     prov.write_row(r + 1, 0, ["Source mapping", "Last import (UTC)", "Files", "Latest as-of"], bold)
     for i, fr in enumerate(snapshot.freshness, start=r + 2):
@@ -189,6 +211,12 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     prov.set_column(4, 4, 66)
     wb.close()
     return out_path
+
+
+def _ai_runs_text(snapshot: Snapshot, view: Any, ai_mode: str) -> str:
+    if ai_mode == "none":
+        return "excluded (--ai none)" if snapshot.ai_runs else "none"
+    return ", ".join(run["run_id"] for run in view.ai_runs) or "none"
 
 
 def _write_value(ws: Any, row: int, col: int, value: Any, fmt: Any) -> None:

@@ -163,6 +163,17 @@ class AiSettings(StrictModel):
     max_items_per_run: int = Field(8_000, ge=1)
     backfill_days: int = Field(90, ge=1)
     claim_lease_hours: int = Field(6, ge=1)
+    review_sample_size: int = Field(30, ge=1)
+    lowest_conf_sample: int = Field(30, ge=0)
+    low_confidence_threshold: float = Field(0.5, ge=0, le=1)
+
+
+class ReportSettings(StrictModel):
+    template_map: str = "neutral"
+
+
+class ApiSettings(StrictModel):
+    port: int = Field(8000, ge=1024, le=65535)
 
 
 class Settings(StrictModel):
@@ -174,6 +185,8 @@ class Settings(StrictModel):
     as_of: date | None = None
     thresholds: Thresholds = Thresholds()
     ai: AiSettings = AiSettings()
+    reports: ReportSettings = ReportSettings()
+    api: ApiSettings = ApiSettings()
 
     @field_validator("pii_mode")
     @classmethod

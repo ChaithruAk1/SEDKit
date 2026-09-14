@@ -1365,7 +1365,7 @@
               "type": "str"
             },
             {
-              "default": "xlsx,md",
+              "default": null,
               "is_flag": false,
               "kind": "option",
               "multiple": false,
@@ -1400,6 +1400,61 @@
               "required": false,
               "type": "str"
             },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "template_map",
+              "opts": [
+                "--template-map"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "List the reports of every enabled module.",
+          "name": "list",
+          "params": [
             {
               "default": null,
               "is_flag": false,
@@ -1478,6 +1533,103 @@
               ],
               "required": false,
               "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Print a template's layouts and placeholders (idx, type, size) for writing a template map.",
+          "name": "template-inspect",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "file",
+              "opts": [
+                "file"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Render every slide kind with dummy content for visual sign-off of a template map.",
+          "name": "template-proof",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "template_map",
+              "opts": [
+                "--map"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "out",
+              "opts": [
+                "--out"
+              ],
+              "required": false,
+              "type": "path"
             },
             {
               "default": null,
