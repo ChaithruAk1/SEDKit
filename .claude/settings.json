@@ -9,6 +9,10 @@
       "PowerShell(uv run sed:*)",
       "Read(./.claude/skills/**)"
     ],
+    "ask": [
+      "Bash(uv run sed review:*)",
+      "PowerShell(uv run sed review:*)"
+    ],
     "deny": [
       "WebFetch",
       "WebSearch"

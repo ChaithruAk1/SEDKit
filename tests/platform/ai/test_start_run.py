@@ -299,6 +299,35 @@ def test_resume_returns_only_non_ingested_batches_and_extends_leases(ops_profile
     assert len(leases) == 100 and sum(1 for r in leases if r[0] > "2001") == 50
 
 
+def test_resume_skips_items_another_run_claimed_after_the_leases_expired(ops_profile_rw):
+    import shutil
+
+    paths = ops_profile_rw.paths
+    first = start(paths, limit=20)
+    conn = db.connect(paths.db)
+    try:
+        with db.write_tx(conn):
+            conn.execute(
+                "UPDATE ai_claim SET lease_expires_at = '2000-01-01T00:00:00Z' WHERE run_id = ?", (first.run_id,)
+            )
+    finally:
+        conn.close()
+    second = start(paths, limit=5)
+    stolen = query(paths, "SELECT COUNT(*) FROM ai_claim WHERE run_id = ?", second.run_id)[0][0]
+    assert stolen == 5
+
+    out = Path(first.out_dir)
+    shutil.rmtree(out)
+    planned = start_run(paths, SKILL, StartParams(resume=first.run_id, dry_run=True))
+    assert planned.status == "planned" and not out.exists(), "a dry run writes no files"
+
+    resumed = start_run(paths, SKILL, StartParams(resume=first.run_id))
+    assert resumed.status == "running" and out.is_dir()
+    leases = query(paths, "SELECT lease_expires_at FROM ai_claim WHERE run_id = ?", first.run_id)
+    assert len(leases) == 15 and all(r[0] > "2001" for r in leases)
+    assert query(paths, "SELECT COUNT(*) FROM ai_claim WHERE run_id = ?", second.run_id)[0][0] == 5
+
+
 def test_resume_of_unknown_or_finished_run_exits_4(ops_profile_rw):
     from sed.ai.runs import finish_run
 

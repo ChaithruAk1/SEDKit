@@ -333,10 +333,30 @@ const SCHEMAS = {
 
 const SKILL = 'sed-triage-batch'
 const SUPPORTED_STEPS = ['triage']
-const A = args || {}
+const ARG_KEYS = [
+  'profile', 'steps', 'scope', 'limit', 'batchSize', 'maxItems', 'triageModel', 'claudeVersion', 'resumeRunIds',
+  'cliPrefix',
+]
 
 function fail(message) {
   throw new Error(`sed-analyze: ${message}`)
+}
+
+// Wrong-shaped args must stop the workflow: silently falling back to defaults would start a new unlimited run on the
+// synthetic profile instead of the intended resume or profile.
+if (args !== undefined && args !== null && (typeof args !== 'object' || Array.isArray(args))) {
+  fail(`args must be an object such as {"profile": "synthetic"} (got ${Array.isArray(args) ? 'an array' : typeof args}; pass JSON values, not a JSON string)`)
+}
+const A = args || {}
+const UNKNOWN_ARGS = Object.keys(A).filter((key) => !ARG_KEYS.includes(key))
+if (UNKNOWN_ARGS.length) fail(`unknown args: ${UNKNOWN_ARGS.join(', ')} (allowed: ${ARG_KEYS.join(', ')})`)
+if (A.steps !== undefined && A.steps !== null && !Array.isArray(A.steps)) fail('steps must be an array such as ["triage"]')
+if (A.resumeRunIds !== undefined && A.resumeRunIds !== null) {
+  if (typeof A.resumeRunIds !== 'object' || Array.isArray(A.resumeRunIds)) {
+    fail('resumeRunIds must be an object such as {"triage": "<run id>"}')
+  }
+  const unknownSteps = Object.keys(A.resumeRunIds).filter((key) => !SUPPORTED_STEPS.includes(key))
+  if (unknownSteps.length) fail(`resumeRunIds has unknown steps: ${unknownSteps.join(', ')}`)
 }
 
 function optionalInt(name, value) {

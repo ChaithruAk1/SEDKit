@@ -47,6 +47,33 @@ def _same_dir(a: Path, b: Path) -> bool:
     return os.path.normcase(str(a)) == os.path.normcase(str(b))
 
 
+def _changed_inputs(run_dir: Path, manifest_sha: str | None, batch_name: str) -> list[str]:
+    """Run files an agent read for this batch that no longer match start-run's record: manifest.json (against
+    ai_run.input_manifest_sha), the shared context files and the batch's aux files (against the manifest). Agents may
+    write inside runs/, so a changed shared context.md would otherwise mislead every later batch."""
+    try:
+        data = (run_dir / "manifest.json").read_bytes()
+        manifest = json.loads(data)
+    except (OSError, ValueError):
+        return ["manifest.json"]
+    if manifest_sha and sha256_bytes(data) != manifest_sha:
+        return ["manifest.json"]
+    entries = list(manifest.get("context") or [])
+    for b in manifest.get("batches") or []:
+        if b.get("batch") == batch_name:
+            entries += list(b.get("aux") or [])
+    changed = []
+    for entry in entries:
+        rel = str(entry.get("file") or "")
+        try:
+            ok = bool(rel) and sha256_bytes((run_dir / rel).read_bytes()) == entry.get("sha256")
+        except OSError:
+            ok = False
+        if not ok:
+            changed.append(rel or "(unnamed input)")
+    return changed
+
+
 def _error_dicts(errors: list[IngestError]) -> list[dict[str, Any]]:
     return [{"loc": e.loc, "msg": e.msg, "ref": e.ref} for e in errors]
 
@@ -137,6 +164,11 @@ def ingest_file(paths: Paths, run_id: str, file: str | Path) -> dict[str, Any]:
         if packet_sha != batch["packet_sha"]:
             raise _reject(
                 conn, batch_id, [IngestError("packet", f"packet {batch['packet_path']} changed or is missing")]
+            )
+        changed = _changed_inputs(paths.runs / run_id, run["input_manifest_sha"], batch_name)
+        if changed:
+            raise _reject(
+                conn, batch_id, [IngestError("packet", f"run input changed or is missing: {', '.join(changed)}")]
             )
         refs = {
             r["ref"]: WorkItem(r["item_id"], r["stage"], r["input_hash"], {})

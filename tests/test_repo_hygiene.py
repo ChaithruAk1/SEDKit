@@ -156,6 +156,8 @@ def test_committed_settings_allow_both_shell_tools():
     allow = data["permissions"]["allow"]
     assert "Bash(uv run sed:*)" in allow and "PowerShell(uv run sed:*)" in allow
     assert data["env"] == {"UV_NO_SYNC": "1", "PYTHONUTF8": "1"}
+    # Review verdicts and run approval are human decisions: an ask rule overrides the blanket allow for agents.
+    assert {"Bash(uv run sed review:*)", "PowerShell(uv run sed review:*)"} <= set(data["permissions"]["ask"])
 
 
 def test_project_skills_prefixed_and_named():

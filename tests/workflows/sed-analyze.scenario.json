@@ -618,6 +618,39 @@
         "throws": "scope has an invalid value",
         "agent_labels": []
       }
+    },
+    {
+      "name": "args passed as a JSON string are rejected",
+      "args": "{\"profile\":\"eval-a\",\"scope\":\"period:2026-08\",\"limit\":50}",
+      "responses": {},
+      "expect": {
+        "throws": "args must be an object",
+        "agent_labels": []
+      }
+    },
+    {
+      "name": "a misspelled resume key is rejected instead of starting a new run",
+      "args": {
+        "profile": "synthetic",
+        "resumeRunId": "20260901T000000-triage-batch-abcd"
+      },
+      "responses": {},
+      "expect": {
+        "throws": "unknown args: resumeRunId",
+        "agent_labels": []
+      }
+    },
+    {
+      "name": "resumeRunIds must be an object keyed by step",
+      "args": {
+        "profile": "synthetic",
+        "resumeRunIds": "20260901T000000-triage-batch-abcd"
+      },
+      "responses": {},
+      "expect": {
+        "throws": "resumeRunIds must be an object",
+        "agent_labels": []
+      }
     }
   ]
 }

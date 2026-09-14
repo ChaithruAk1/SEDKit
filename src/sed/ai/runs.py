@@ -383,6 +383,9 @@ def _resume(conn, paths, settings, handler, skill, params, data_date) -> RunPlan
     if run["status"] != "running":
         raise PreconditionFailed(f"Run {params.resume} is {run['status']}; only running runs can be resumed")
     ctx = run_context(conn, paths, settings, run)
+    # The stored params come from the first start (resume unset); the handler must know this is a resume, so items
+    # another run claimed after the leases expired are skipped instead of failing the whole resume as busy.
+    ctx.params = ctx.params.model_copy(update={"resume": run["run_id"], "dry_run": params.dry_run})
     rows = conn.execute(
         "SELECT batch_id, seq, packet_path, item_count FROM ai_batch WHERE run_id = ? AND status <> 'ingested' "
         "ORDER BY seq",
@@ -431,7 +434,8 @@ def _resume(conn, paths, settings, handler, skill, params, data_date) -> RunPlan
         "longest_line_chars": longest,
         "claimed": 0 if params.dry_run else len(items),
     }
-    (run_dir / "out").mkdir(parents=True, exist_ok=True)
+    if not params.dry_run:
+        (run_dir / "out").mkdir(parents=True, exist_ok=True)
     return RunPlan(
         run_id=run["run_id"],
         skill=skill,
