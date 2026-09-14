@@ -67,9 +67,11 @@ def ai_start_run(
     plan = start_run(paths_for(profile, data_dir), skill, params)
 
     def human(p: dict) -> None:
-        console().print(f"run {p['run_id']} ({p['status']}): {p['plan']}")
+        console().print(f"run {p['run_id']} ({p['status']}): {p['plan']}", markup=False)
         for item in p["inputs"]:
-            console().print(f"  {item['batch']}: {item['items']} items, {item['chars']} chars -> {item['out']}")
+            console().print(
+                f"  {item['batch']}: {item['items']} items, {item['chars']} chars -> {item['out']}", markup=False
+            )
 
     emit(plan.model_dump(), as_json, human)
 
@@ -87,7 +89,7 @@ def ai_ingest(
     from sed.ai.ingest import ingest_file
 
     result = ingest_file(paths_for(profile, data_dir), run_id, file)
-    emit(result, as_json, lambda p: console().print(f"{p['batch']}: {p['status']} ({p['items']} items)"))
+    emit(result, as_json, lambda p: console().print(f"{p['batch']}: {p['status']} ({p['items']} items)", markup=False))
 
 
 @ai_app.command("finish-run")
@@ -102,7 +104,11 @@ def ai_finish_run(
     from sed.ai.runs import finish_run
 
     summary = finish_run(paths_for(profile, data_dir), run_id)
-    emit(summary.model_dump(), as_json, lambda p: console().print(f"run {p['run_id']}: {p['status']} {p['counts']}"))
+    emit(
+        summary.model_dump(),
+        as_json,
+        lambda p: console().print(f"run {p['run_id']}: {p['status']} {p['counts']}", markup=False),
+    )
 
 
 @ai_app.command("runs")
@@ -122,7 +128,9 @@ def ai_runs(
 
     def human(p: dict) -> None:
         for r in p["runs"]:
-            console().print(f"{r['run_id']}  {r['status']:<10} {r['skill']}  accuracy={r['sample_accuracy']}")
+            console().print(
+                f"{r['run_id']}  {r['status']:<10} {r['skill']}  accuracy={r['sample_accuracy']}", markup=False
+            )
 
     emit({"runs": rows}, as_json, human)
 
@@ -162,10 +170,11 @@ def review_sample(
             label, ticket = card["label"], card["ticket"]
             console().print(
                 f"[{card['sample_kind']}] {card['item_id']}|{card['stage']}  {label.get('am_category')}/"
-                f"{label.get('am_subcategory')}  conf={label.get('confidence')}  {ticket.get('short_description')}"
+                f"{label.get('am_subcategory')}  conf={label.get('confidence')}  {ticket.get('short_description')}",
+                markup=False,
             )
         if p.get("template"):
-            console().print(f"Verdicts template: {p['template']}")
+            console().print(f"Verdicts template: {p['template']}", markup=False)
 
     emit(result, as_json, human)
 
