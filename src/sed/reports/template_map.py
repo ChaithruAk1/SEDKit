@@ -145,11 +145,14 @@ def find_map_file(name_or_path: str, paths: Paths | None) -> Path:
         raise ValidationFailed(
             f"'{value}' is a template, not a template map; pass a {MAP_SUFFIX} file that names it in 'template:'"
         )
-    if _looks_like_path(value):
+    bare_file_name = value.lower().endswith(MAP_SUFFIX) and "/" not in value and "\\" not in value
+    if _looks_like_path(value) and (Path(value).is_file() or not bare_file_name):
         path = Path(value)
         if not path.is_file():
             raise ValidationFailed(f"Template map file not found: {path}")
         return path.resolve()
+    if bare_file_name:  # "corporate.map.yaml" given as a name: look it up like "corporate"
+        value = value[: -len(MAP_SUFFIX)]
     if not _NAME_RE.match(value):
         raise ValidationFailed(f"Invalid template map name '{value}'")
     candidates = []

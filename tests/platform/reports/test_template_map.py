@@ -118,8 +118,11 @@ def test_data_dir_config_templates_take_precedence(tmp_path):
     assert loaded.sha256 != load_template_map("neutral").sha256
     explicit = write_map(tmp_path / "elsewhere" / "neutral.map.yaml", neutral_data() | {"classification_label": "Path"})
     assert load_template_map(str(explicit), paths).map.classification_label == "Path"
+    assert load_template_map("neutral.map.yaml", paths).path == local.resolve()
     with pytest.raises(ValidationFailed, match="not found"):
         load_template_map("no-such-map", paths)
+    with pytest.raises(ValidationFailed, match="not found"):
+        load_template_map(str(tmp_path / "missing" / "x.map.yaml"), paths)
 
 
 def test_slide_size_mismatch_exits_2(tmp_path):
