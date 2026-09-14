@@ -4,8 +4,8 @@ Everything that `sed.metrics` / `sed.analytics` already computes is called from 
 aggregates those modules do not offer (quarter/year-to-date cost totals, problem status, Jira delivery, upcoming
 changes, portfolio health, vendor contracts) plus small calendar and risk helpers. Conventions match `sed.metrics`:
 bounds are half-open `[start, end)`, ticket timestamps are ISO-8601 UTC text compared as strings, contract dates are
-ISO dates, and cost lines are bucketed by their `period` (YYYY-MM). Budgets use the latest budget version, exactly
-like `metrics.cost_vs_budget`.
+ISO dates, and cost lines are bucketed by their `period` (YYYY-MM). Budgets use the newest budget version per month,
+exactly like `metrics.cost_vs_budget`.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from typing import Any
 
 from sed.analytics import SEVERITY_ORDER
 from sed.calendar import Period, parse_period, parse_utc, shift_label
+from sed.metrics import BUDGET_SUM, BUDGET_VERSION_JOIN
 from sed.paths import Paths
 from sed.settings import load_layered
 
@@ -88,18 +89,39 @@ def variance_pct(actual: float | None, budget: float | None) -> float | None:
 # ---------------------------------------------------------------------------
 
 
-def latest_budget_version(conn: sqlite3.Connection) -> str | None:
-    return conn.execute("SELECT MAX(as_of) FROM cost_line WHERE line_type = 'budget'").fetchone()[0]
-
-
 def actual_months(conn: sqlite3.Connection, months: list[str]) -> set[str]:
-    """The months among `months` for which any actual cost line was imported (for any application or vendor)."""
+    """The months among `months` with an imported actual cost line in the base currency (any application or vendor).
+
+    A month whose actual lines all lack an FX rate counts as not imported, so it is never reported as zero spend.
+    """
     if not months:
         return set()
     rows = conn.execute(
-        f"SELECT DISTINCT period FROM cost_line WHERE line_type = 'actual' AND period IN ({_marks(months)})", months
+        "SELECT DISTINCT period FROM cost_line WHERE line_type = 'actual' AND amount_base IS NOT NULL "
+        f"AND period IN ({_marks(months)})",
+        months,
     ).fetchall()
     return {r[0] for r in rows}
+
+
+def unconverted_lines(conn: sqlite3.Connection, months: list[str], *, vendor_id: str | None = None) -> int:
+    """Cost lines in `months` with an amount but no base-currency amount (no FX rate); every cost total leaves them
+    out, so the reports show this count next to the totals."""
+    if not months:
+        return 0
+    vendor_clause, params = ("AND vendor_id = ?", [vendor_id]) if vendor_id else ("", [])
+    return int(
+        conn.execute(
+            "SELECT COUNT(*) FROM cost_line WHERE amount IS NOT NULL AND amount_base IS NULL "
+            f"AND period IN ({_marks(months)}) {vendor_clause}",
+            [*months, *params],
+        ).fetchone()[0]
+    )
+
+
+def fx_note(count: int) -> str:
+    """Label suffix for cost facts when lines without an FX rate were left out."""
+    return f" (excl. {count} lines without FX rate)" if count else ""
 
 
 def cost_months(conn: sqlite3.Connection, start: date, end: date) -> list[str]:
@@ -122,7 +144,7 @@ def like_for_like_months(conn: sqlite3.Connection, months: list[str], period: Pe
 
 
 def cost_totals(conn: sqlite3.Connection, months: list[str], *, vendor_id: str | None = None) -> dict[str, Any]:
-    """Actual and (latest-version) budget totals in base currency over `months`, optionally for one vendor.
+    """Actual and budget (newest version per month) totals in base currency over `months`, optionally for one vendor.
 
     `actual` is None when no actual cost line exists for any of the months (nothing imported yet, or no month to
     report), and 0.0 when actuals exist but none were booked to the vendor.
@@ -131,10 +153,9 @@ def cost_totals(conn: sqlite3.Connection, months: list[str], *, vendor_id: str |
         return {"actual": None, "budget": None}
     vendor_clause, params = ("AND c.vendor_id = ?", [vendor_id]) if vendor_id else ("", [])
     row = conn.execute(
-        "SELECT SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END), "
-        "SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS ? THEN c.amount_base END) "
-        f"FROM cost_line c WHERE c.period IN ({_marks(months)}) {vendor_clause}",
-        [latest_budget_version(conn), *months, *params],
+        f"SELECT SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END), {BUDGET_SUM} "
+        f"FROM cost_line c {BUDGET_VERSION_JOIN} WHERE c.period IN ({_marks(months)}) {vendor_clause}",
+        [*months, *params],
     ).fetchone()
     actual = _money(row[0] or 0.0) if actual_months(conn, months) else None
     return {"actual": actual, "budget": _money(row[1])}
@@ -151,9 +172,9 @@ def cost_by_month(conn: sqlite3.Connection, months: list[str], *, vendor_id: str
     vendor_clause, params = ("AND c.vendor_id = ?", [vendor_id]) if vendor_id else ("", [])
     rows = conn.execute(
         "SELECT c.period, SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END) AS actual, "
-        "SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS ? THEN c.amount_base END) AS budget "
-        f"FROM cost_line c WHERE c.period IN ({_marks(months)}) {vendor_clause} GROUP BY c.period",
-        [latest_budget_version(conn), *months, *params],
+        f"{BUDGET_SUM} AS budget FROM cost_line c {BUDGET_VERSION_JOIN} "
+        f"WHERE c.period IN ({_marks(months)}) {vendor_clause} GROUP BY c.period",
+        [*months, *params],
     ).fetchall()
     by_period = {r["period"]: r for r in rows}
     covered = actual_months(conn, months)

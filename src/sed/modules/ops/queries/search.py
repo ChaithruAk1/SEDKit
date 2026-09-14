@@ -9,6 +9,7 @@ joined for those rows only.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from typing import Any
 
@@ -25,6 +26,7 @@ SORTS = {
 }
 APPROVED = ("approved",)
 WITH_DRAFTS = ("approved", "completed")
+CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
 
 
 def fts_query(text: str | None) -> str | None:
@@ -33,6 +35,7 @@ def fts_query(text: str | None) -> str | None:
     if not text:
         return None
     parts = []
+    text = CONTROL_CHARS.sub(" ", text)  # FTS5 cannot parse a NUL inside a phrase
     for token in text.split()[:MAX_TOKENS]:
         prefix = token.endswith("*")
         core = token.rstrip("*")
@@ -63,7 +66,7 @@ ROW_COLUMNS = (
     "t.ticket_id, t.number, t.kind, t.priority, t.state, t.is_open, t.stale_open, t.app_id, a.name AS app_name, "
     "v.name AS vendor_name, t.assignment_group, t.opened_at, t.resolved_at, t.short_description, "
     "t.category AS sn_category, l.am_category, l.am_subcategory, l.confidence AS label_confidence, "
-    "l.run_id AS label_run_id"
+    "l.run_id AS label_run_id, lr.status AS label_run_status"
 )
 
 
@@ -88,6 +91,7 @@ def _row_from(r: sqlite3.Row) -> dict[str, Any]:
         "am_subcategory": r["am_subcategory"],
         "label_confidence": r["label_confidence"],
         "label_run_id": r["label_run_id"],
+        "label_run_status": r["label_run_status"],
     }
 
 
@@ -102,6 +106,7 @@ def rows_for(
         f"SELECT t.rowid AS _rowid, {ROW_COLUMNS}{extra} FROM ticket t "
         "LEFT JOIN application a ON a.app_id = t.app_id LEFT JOIN vendor v ON v.vendor_id = t.vendor_id "
         f"LEFT JOIN ai_ticket_label l ON l.rowid = {current_label_sql(statuses)} "
+        "LEFT JOIN ai_run lr ON lr.run_id = l.run_id "
         f"WHERE t.rowid IN ({marks(rowids)})"
     )
     by_id = {r["_rowid"]: r for r in conn.execute(sql, rowids)}
@@ -177,7 +182,8 @@ def search(
             )
         ]
     except sqlite3.OperationalError as exc:
-        if match is not None and "fts5" in str(exc).lower():
+        message = str(exc).lower()
+        if match is not None and "locked" not in message and "busy" not in message:
             raise ValidationFailed("Search text could not be parsed", {"q": q}) from exc
         raise
     return TicketPage(page=page, page_size=page_size, total=total, items=ticket_rows(ctx.conn, ids, f.include_drafts))
@@ -190,11 +196,14 @@ DETAIL_COLUMNS = (
 )
 
 
-def detail(conn: sqlite3.Connection, ticket_id: str) -> TicketDetail | None:
+def detail(conn: sqlite3.Connection, ticket_id: str, include_drafts: bool = False) -> TicketDetail | None:
+    """One ticket with every AI label that may be shown: labels on the ticket's current content hash from approved runs,
+    plus completed (unreviewed) runs when include_drafts is set. Rejected, running and failed runs are never shown."""
     found = conn.execute("SELECT rowid FROM ticket WHERE ticket_id = ?", (ticket_id,)).fetchone()
     if not found:
         return None
-    rows = rows_for(conn, [found[0]], APPROVED, DETAIL_COLUMNS)
+    statuses = label_statuses(include_drafts)
+    rows = rows_for(conn, [found[0]], statuses, DETAIL_COLUMNS)
     if not rows:
         return None
     r = rows[0]
@@ -212,9 +221,12 @@ def detail(conn: sqlite3.Connection, ticket_id: str) -> TicketDetail | None:
         )
         for lr in conn.execute(
             "SELECT l.stage, l.run_id, r.status AS run_status, l.am_category, l.am_subcategory, l.symptom_key, "
-            "l.misfiled_as, l.confidence, l.rationale FROM ai_ticket_label l LEFT JOIN ai_run r ON r.run_id = l.run_id "
-            "WHERE l.ticket_id = ? ORDER BY r.run_seq DESC, l.stage",
-            (ticket_id,),
+            "l.misfiled_as, l.confidence, l.rationale FROM ai_ticket_label l JOIN ai_run r ON r.run_id = l.run_id "
+            "JOIN ticket t ON t.ticket_id = l.ticket_id "
+            f"WHERE l.ticket_id = ? AND r.status IN ({marks(statuses)}) "
+            "AND l.input_hash = CASE l.stage WHEN 'open' THEN t.open_hash ELSE t.resolved_hash END "
+            "ORDER BY r.run_seq DESC, l.stage",
+            (ticket_id, *statuses),
         )
     ]
     return TicketDetail(

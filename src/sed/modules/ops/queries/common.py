@@ -27,11 +27,13 @@ FINDINGS_SCAN_LIMIT = 100_000
 # Definitions for KPI keys that are not in sed.metrics.METRICS (shown as dashboard tooltips).
 KPI_DEFINITIONS: dict[str, str] = {
     "cost.actual.ytd": "Actual cost (base currency) for the complete fiscal-year months before the as-of month.",
-    "cost.budget.ytd": "Budget (latest budget version, base currency) for the same fiscal-year-to-date months.",
+    "cost.budget.ytd": "Budget (newest budget version per month, base currency) for the same fiscal-year-to-date "
+    "months.",
     "cost.variance.ytd_pct": "(actual - budget) / budget for the fiscal-year-to-date months.",
     "renewals.90d.count": "Active contracts (not non-renewing/terminated/expired) ending within 90 days of as-of.",
     "notice.30d.count": "Active contracts whose notice deadline falls within 30 days of as-of.",
-    "license.idle_cost": "Idle cost of under-used license lines (utilization below 70%): max(entitled - active_90d, 0) "
+    "license.idle_cost": "Idle cost of under-used license lines (utilization below the license_utilization low risk "
+    "rule, default 70%): max(entitled - active_90d, 0) "
     "x unit cost, base currency.",
     "review.queue.count": "Items awaiting human review: AI findings in draft or update_pending, plus completed AI runs "
     "not yet approved or rejected.",
@@ -160,12 +162,13 @@ class Window:
     end_iso: str
 
 
-def last_full_period(ctx: Context, kind: str) -> Period:
-    """Latest week or month whose exclusive local end is on or before as-of (a closed period, D20)."""
+def last_full_period(ctx: Context, kind: str, before: date | None = None) -> Period:
+    """Latest week or month whose exclusive local end is on or before `before` (default as-of): a closed period, D20."""
+    day = ctx.as_of if before is None else before
     if kind == "week":
-        return ctx.parse(week_label(ctx.as_of - timedelta(days=7)))
+        return ctx.parse(week_label(day - timedelta(days=7)))
     if kind == "month":
-        return ctx.parse(month_label(ctx.as_of.replace(day=1) - timedelta(days=1)))
+        return ctx.parse(month_label(day.replace(day=1) - timedelta(days=1)))
     raise ValidationFailed(f"Unsupported granularity '{kind}'")
 
 
@@ -178,17 +181,18 @@ def trend_periods(end: Period, n: int) -> list[Period]:
 
 
 def series_end(ctx: Context, granularity: str) -> Period:
-    """The last period of a trend series.
+    """The last period of a trend series: always a closed week or month, so no bucket is partial or counts tickets
+    after as-of.
 
-    Without a period filter: the last full week or month before as-of. With a period of the same granularity: that
-    period. With a coarser period (e.g. a quarter): the week or month holding its last day that is before as-of.
+    Without a period filter: the last full week or month before as-of. With a period of the same granularity that has
+    ended by as-of: that period. Otherwise (a coarser period such as a quarter, or a period still in progress): the
+    last full week or month ending by both the period end and as-of.
     """
     if ctx.filters.period:
         period = ctx.parse(ctx.filters.period)
-        if period.kind == granularity:
+        if period.kind == granularity and period.end_local <= ctx.as_of:
             return period
-        day = min(period.last_day, ctx.as_of - timedelta(days=1))
-        return ctx.parse(week_label(day) if granularity == "week" else month_label(day))
+        return last_full_period(ctx, granularity, min(period.end_local, ctx.as_of))
     return last_full_period(ctx, granularity)
 
 

@@ -170,3 +170,27 @@ def test_costs_match_cost_vs_budget(ctx, ro_conn):
             expected[key]["budget"],
             expected[key]["variance_pct"],
         )
+
+
+@pytest.mark.parametrize(
+    ("as_of", "period", "granularity", "end"),
+    [
+        (date(2026, 9, 1), "2026-Q3", "week", "2026-W35"),  # the quarter is in progress: last closed week
+        (date(2026, 9, 1), "2026-W36", "week", "2026-W35"),  # the selected week is in progress
+        (date(2026, 9, 1), "2026-W30", "week", "2026-W30"),  # a closed week is kept
+        (date(2026, 8, 20), "2026-Q3", "week", "2026-W33"),  # never a bucket past an explicit as-of
+        (date(2026, 8, 20), "2026-08", "month", "2026-07"),
+        (date(2026, 9, 1), "2026-Q2", "month", "2026-06"),
+    ],
+)
+def test_series_end_is_always_a_closed_bucket(ops_profile, ro_conn, as_of, period, granularity, end):
+    ctx = build_context(ro_conn, ops_profile.paths, CommonFilters(period=period, as_of=as_of))
+    assert series_end(ctx, granularity).label == end
+
+
+def test_previous_period_keeps_the_fiscal_year_start():
+    q3 = parse_period("2026-Q3", TZ, 4)
+    assert (q3.start_local, q3.previous().start_local) == (date(2025, 10, 1), date(2025, 7, 1))
+    assert parse_period("2026-Q1", TZ, 4).previous().start_local == date(2025, 1, 1)
+    assert parse_period("FY2026", TZ, 4).previous().start_local == date(2024, 4, 1)
+    assert parse_period("2026-Q3", TZ).previous().start_local == date(2026, 4, 1)

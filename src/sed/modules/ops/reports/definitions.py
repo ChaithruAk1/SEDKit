@@ -25,7 +25,7 @@ REPORT_DEFINITIONS: dict[str, tuple[str, str]] = {
     ),
     "cost.budget.qtd": (
         "eur",
-        "Budget lines of the latest budget version for the same months as cost.actual.qtd.",
+        "Budget lines (newest budget version per month) for the same months as cost.actual.qtd.",
     ),
     "cost.variance.qtd_pct": ("pct", "(cost.actual.qtd - cost.budget.qtd) / cost.budget.qtd."),
     "cost.actual.ytd": (
@@ -33,7 +33,15 @@ REPORT_DEFINITIONS: dict[str, tuple[str, str]] = {
         "Actual cost lines (base currency) from the first month of the fiscal year up to the as-of date, for the "
         "complete months of that range that have imported actuals.",
     ),
-    "cost.budget.ytd": ("eur", "Budget lines of the latest budget version for the same months as cost.actual.ytd."),
+    "cost.budget.ytd": (
+        "eur",
+        "Budget lines (newest budget version per month) for the same months as cost.actual.ytd.",
+    ),
+    "cost.unconverted_lines.count": (
+        "count",
+        "Cost lines in the quarter-to-date and year-to-date months that have an amount but no base-currency amount "
+        "(their currency has no rate in fx.yaml); every cost total above leaves them out.",
+    ),
     "renewals.2q.count": (
         "count",
         "Active contracts (not non-renewing, terminated or expired) whose end date is in [as_of, as_of + 182 days).",
@@ -49,6 +57,11 @@ REPORT_DEFINITIONS: dict[str, tuple[str, str]] = {
     ),
     # vendor
     "vendor.name": ("text", "Vendor name from the vendor master."),
+    "vendor.spend.unconverted_lines.count": (
+        "count",
+        "The vendor's cost lines in the reported and comparison months that have an amount but no base-currency "
+        "amount (no rate in fx.yaml); vendor spend leaves them out.",
+    ),
     "vendor.contracts.count": (
         "count",
         "Contracts with the vendor that are not terminated or expired and have not ended before the as-of date "

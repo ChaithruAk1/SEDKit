@@ -1196,6 +1196,8 @@ export interface components {
             label_confidence: number | null;
             /** Label Run Id */
             label_run_id: string | null;
+            /** Label Run Status */
+            label_run_status?: string | null;
             /** Labels */
             labels: components["schemas"]["LabelOut"][];
             /** Made Sla */
@@ -1262,6 +1264,8 @@ export interface components {
             label_confidence: number | null;
             /** Label Run Id */
             label_run_id: string | null;
+            /** Label Run Status */
+            label_run_status?: string | null;
             /** Number */
             number: string;
             /** Opened At */
@@ -3021,7 +3025,10 @@ export interface operations {
     };
     ops_ticket_detail: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also show labels of completed, not yet reviewed AI runs */
+                include_drafts?: boolean;
+            };
             header?: never;
             path: {
                 ticket_id: string;

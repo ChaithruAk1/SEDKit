@@ -17,6 +17,8 @@ WEEK_RE = re.compile(r"^(\d{4})-W(\d{2})$")
 MONTH_RE = re.compile(r"^(\d{4})-(\d{2})$")
 QUARTER_RE = re.compile(r"^(\d{4})-Q([1-4])$")
 FY_RE = re.compile(r"^FY(\d{4})$")
+# Years a period label may name: keeps date arithmetic on neighbouring periods inside Python's date range.
+MIN_YEAR, MAX_YEAR = 1900, 9998
 
 
 @dataclass(frozen=True)
@@ -47,10 +49,20 @@ class Period:
     def last_day(self) -> date:
         return self.end_local - timedelta(days=1)
 
+    @property
+    def fiscal_year_start(self) -> int:
+        """First month of the fiscal year this quarter or fiscal year was parsed with (1 for weeks and months)."""
+        if self.kind == "quarter":
+            return (self.start_local.month - 1 - 3 * (int(self.label[-1]) - 1)) % 12 + 1
+        if self.kind == "year":
+            return self.start_local.month
+        return 1
+
     def previous(self, n: int = 1) -> Period:
+        """The period `n` steps earlier, with the same fiscal-year start."""
         p = self
         for _ in range(n):
-            p = parse_period(shift_label(p.label, -1, p.kind), p.tz)
+            p = parse_period(shift_label(p.label, -1, p.kind), p.tz, self.fiscal_year_start)
         return p
 
 
@@ -76,6 +88,9 @@ def fiscal_quarter_start(fy_label_year: int, quarter: int, fiscal_year_start: in
 
 def parse_period(label: str, tz: str, fiscal_year_start: int = 1) -> Period:
     label = label.strip()
+    year_match = re.match(r"^(?:FY)?(\d{4})", label)
+    if year_match and not MIN_YEAR <= int(year_match.group(1)) <= MAX_YEAR:
+        raise ValidationFailed(f"Period '{label}' is outside the years {MIN_YEAR}-{MAX_YEAR}")
     if m := WEEK_RE.match(label):
         year, week = int(m.group(1)), int(m.group(2))
         try:

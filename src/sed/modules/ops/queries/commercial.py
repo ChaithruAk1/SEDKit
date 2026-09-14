@@ -56,12 +56,8 @@ GROUP_COLUMNS = {
 }
 
 
-def latest_budget_version(ctx: Context) -> str | None:
-    return ctx.conn.execute("SELECT MAX(as_of) FROM cost_line WHERE line_type = 'budget'").fetchone()[0]
-
-
 def cost_rows(ctx: Context, months: list[str], group_by: str) -> list[CostRow]:
-    """Actual vs budget (latest budget version) per group for the given months, largest actual first."""
+    """Actual vs budget (newest budget version per month) per group for the given months, largest actual first."""
     if not months:
         return []
     key_sql, label_sql = GROUP_COLUMNS[group_by]
@@ -69,13 +65,13 @@ def cost_rows(ctx: Context, months: list[str], group_by: str) -> list[CostRow]:
     sql = (
         f"SELECT {key_sql} AS key, {label_sql} AS label, "
         "SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END) AS actual, "
-        "SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS ? THEN c.amount_base END) AS budget "
-        "FROM cost_line c LEFT JOIN application a ON a.app_id = c.app_id "
+        f"{metrics.BUDGET_SUM} AS budget "
+        f"FROM cost_line c {metrics.BUDGET_VERSION_JOIN} LEFT JOIN application a ON a.app_id = c.app_id "
         "LEFT JOIN vendor v ON v.vendor_id = c.vendor_id "
         f"WHERE c.period IN ({marks(months)}) AND {where_sql(clauses)} GROUP BY key ORDER BY actual DESC, key"
     )
     out = []
-    for r in ctx.conn.execute(sql, [latest_budget_version(ctx), *months, *params]):
+    for r in ctx.conn.execute(sql, [*months, *params]):
         actual, budget = r["actual"] or 0.0, r["budget"]
         out.append(
             CostRow(
@@ -95,10 +91,9 @@ def cost_totals(ctx: Context, months: list[str]) -> tuple[float | None, float | 
         return None, None
     clauses, params = entity_filter_sql(ctx.filters, "c")
     row = ctx.conn.execute(
-        "SELECT SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END), "
-        "SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS ? THEN c.amount_base END) FROM cost_line c "
-        f"WHERE c.period IN ({marks(months)}) AND {where_sql(clauses)}",
-        [latest_budget_version(ctx), *months, *params],
+        f"SELECT SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END), {metrics.BUDGET_SUM} "
+        f"FROM cost_line c {metrics.BUDGET_VERSION_JOIN} WHERE c.period IN ({marks(months)}) AND {where_sql(clauses)}",
+        [*months, *params],
     ).fetchone()
     actual, budget = row[0], row[1]
     return (round(actual, 2) if actual is not None else None, round(budget, 2) if budget is not None else None)
@@ -175,11 +170,10 @@ def licenses(ctx: Context) -> LicensesOut:
     )
 
 
-def under_used_idle_cost(rows: list[dict[str, Any]]) -> float:
-    """Idle cost of under-used lines (the weekly report's license.idle_cost fact)."""
+def under_used_idle_cost(rows: list[dict[str, Any]], low: float = UNDER_USED) -> float:
+    """Idle cost of lines used below `low` (the reports' license.idle_cost fact; pass license_low_threshold)."""
     return round(
-        sum(r["idle_cost_base"] or 0 for r in rows if r["utilization"] is not None and r["utilization"] < UNDER_USED),
-        2,
+        sum(r["idle_cost_base"] or 0 for r in rows if r["utilization"] is not None and r["utilization"] < low), 2
     )
 
 
@@ -189,15 +183,10 @@ def vendor_trend(ctx: Context, months: int, *, min_tickets: int = 20) -> VendorT
     last = parse_period(shift_label(f"{as_of.year}-{as_of.month:02d}", -1), ctx.tz)
     periods = [parse_period(shift_label(last.label, -k), ctx.tz) for k in range(months - 1, -1, -1)]
     source = metrics.sla_source(ctx.conn)
-    breach = {
-        "task_sla": "(SELECT MAX(has_breached) FROM task_sla s WHERE s.ticket_id = t.ticket_id "
-        "AND s.sla_type = 'resolution')",
-        "made_sla": "(1 - COALESCE(t.made_sla, 1))",
-    }.get(source, "0")
     clauses, params = ticket_filter_sql(ctx.filters)
     sql = (
         "SELECT t.vendor_id, v.name, t.resolved_at, (julianday(t.resolved_at) - julianday(t.opened_at)) * 24.0, "
-        f"COALESCE({breach}, 1 - COALESCE(t.made_sla, 1)), COALESCE(t.reassignment_count, 0) "
+        f"CASE WHEN {metrics.sla_met_sql(source)} THEN 0 ELSE 1 END, COALESCE(t.reassignment_count, 0) "
         "FROM ticket t JOIN vendor v ON v.vendor_id = t.vendor_id WHERE t.kind = 'incident' "
         f"AND t.resolved_at >= ? AND t.resolved_at < ? AND {where_sql(clauses)}"
     )

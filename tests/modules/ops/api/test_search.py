@@ -188,8 +188,12 @@ def test_ai_labels_follow_run_status_and_content_hash(ops_profile_rw):
     assert page(client, am_category="Access", include_drafts="true")["total"] == 0, "label on an outdated hash"
 
     detail = client.get(f"/api/ops/tickets/{quote(ticket_id, safe='')}").json()
-    assert detail["am_category"] is None
+    assert detail["am_category"] is None and detail["labels"] == [], "unreviewed labels need include_drafts"
+    detail = client.get(f"/api/ops/tickets/{quote(ticket_id, safe='')}?include_drafts=true").json()
+    assert (detail["am_category"], detail["label_run_status"]) == ("Integration", "completed")
     assert [(x["run_status"], x["am_category"]) for x in detail["labels"]] == [("completed", "Integration")]
+    stale = client.get(f"/api/ops/tickets/{quote(stale_ticket, safe='')}?include_drafts=true").json()
+    assert stale["labels"] == [], "a label on an outdated content hash is not shown"
 
     conn = db.connect(paths.db)
     try:
@@ -199,4 +203,24 @@ def test_ai_labels_follow_run_status_and_content_hash(ops_profile_rw):
         conn.close()
     approved = page(client, am_category="Integration")
     assert approved["total"] == 1 and approved["items"][0]["am_category"] == "Integration"
+    assert approved["items"][0]["label_run_status"] == "approved"
     assert client.get(f"/api/ops/tickets/{quote(ticket_id, safe='')}").json()["am_category"] == "Integration"
+
+
+def test_hand_edited_urls_get_validation_errors_not_internal_errors(ops_profile):
+    from tests.fixtures.api import api_client
+    from tests.platform.api.conftest import assert_envelope
+
+    client = api_client(ops_profile.paths)
+    cases = [
+        ("/api/ops/tickets", {"page": 10**17, "page_size": 200}),
+        ("/api/ops/overview", {"period": "0000-01"}),
+        ("/api/ops/overview", {"as_of": "0001-01-03"}),
+        ("/api/ops/tickets/backlog", {"as_of": "9999-12-31"}),
+        ("/api/ops/tickets", {"period": "9999-12"}),
+    ]
+    for path, params in cases:
+        assert_envelope(client.get(path, params=params), 422, "validation")
+    for q in ("time\x00out", "\x00"):
+        response = client.get("/api/ops/tickets", params={"q": q})
+        assert response.status_code == 200, (q, response.text[:200])

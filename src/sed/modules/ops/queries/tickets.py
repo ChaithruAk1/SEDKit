@@ -45,15 +45,7 @@ AGING_KEYS = ("d0_7", "d8_30", "d31_90", "d90p")
 
 def met_expr(source: str) -> str:
     """SQL expression that is truthy when a resolved incident met its resolution SLA (same as metrics.sla)."""
-    if source == "task_sla":
-        return (
-            "(COALESCE((SELECT MAX(s.has_breached) FROM task_sla s WHERE s.ticket_id = t.ticket_id "
-            "AND s.sla_type = 'resolution'), t.made_sla = 0, 0) = 0)"
-        )
-    if source == "made_sla":
-        return "COALESCE(t.made_sla, 1)"
-    cases = " ".join(f"WHEN {p} THEN {h}" for p, h in metrics.INCIDENT_TARGET_H.items())
-    return f"({HOURS_EXPR} <= (CASE t.priority {cases} ELSE 120 END))"
+    return metrics.sla_met_sql(source)
 
 
 def _incident_where(ctx: Context, kind: str = "incident") -> tuple[str, list[Any]]:

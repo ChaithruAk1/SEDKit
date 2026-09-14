@@ -83,6 +83,8 @@ def build(req: SnapshotRequest) -> SnapshotParts:
     ytd_months = queries.cost_months(conn, queries.fiscal_year_start_date(period.start_local, fys), cutoff)
     qtd = queries.cost_totals(conn, qtd_months)
     ytd = queries.cost_totals(conn, ytd_months)
+    unconverted = queries.unconverted_lines(conn, sorted(set(qtd_months) | set(ytd_months)))
+    fx = queries.fx_note(unconverted)
     full_quarter = queries.complete_months(period.start_local, period.end_local)
     suffix = "" if qtd_months == full_quarter else " (to date)"
 
@@ -122,12 +124,15 @@ def build(req: SnapshotRequest) -> SnapshotParts:
         "period.label": fact(period.label, "text", "Period"),
         "period.start": fact(period.start_local.isoformat(), "date", "Period start"),
         "period.end": fact(period.last_day.isoformat(), "date", "Period end"),
-        "cost.actual.qtd": fact(qtd["actual"], "eur", f"Actual spend, quarter{suffix}", "cost.actual.qtd"),
+        "cost.actual.qtd": fact(qtd["actual"], "eur", f"Actual spend, quarter{suffix}{fx}", "cost.actual.qtd"),
         "cost.budget.qtd": fact(qtd["budget"], "eur", f"Budget, quarter{suffix}", "cost.budget.qtd"),
         "cost.variance.qtd_pct": fact(
             queries.variance_pct(qtd["actual"], qtd["budget"]), "pct", "Variance vs budget", "cost.variance.qtd_pct"
         ),
-        "cost.actual.ytd": fact(ytd["actual"], "eur", "Actual spend, year to date", "cost.actual.ytd"),
+        "cost.actual.ytd": fact(ytd["actual"], "eur", f"Actual spend, year to date{fx}", "cost.actual.ytd"),
+        "cost.unconverted_lines.count": fact(
+            unconverted, "count", "Cost lines left out (no FX rate)", "cost.unconverted_lines.count"
+        ),
         "cost.budget.ytd": fact(ytd["budget"], "eur", "Budget, year to date", "cost.budget.ytd"),
         "license.idle_cost": fact(
             round(sum((x["idle_cost_base"] or 0.0 for x in idle), 0.0), 2),

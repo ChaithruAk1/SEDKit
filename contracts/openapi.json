@@ -2864,6 +2864,17 @@
             ],
             "title": "Label Run Id"
           },
+          "label_run_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Run Status"
+          },
           "labels": {
             "items": {
               "$ref": "#/components/schemas/LabelOut"
@@ -3186,6 +3197,17 @@
               }
             ],
             "title": "Label Run Id"
+          },
+          "label_run_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Run Status"
           },
           "number": {
             "title": "Number",
@@ -6026,6 +6048,7 @@
             "required": false,
             "schema": {
               "default": 1,
+              "maximum": 100000,
               "minimum": 1,
               "title": "Page",
               "type": "integer"
@@ -7078,6 +7101,18 @@
             "schema": {
               "title": "Ticket Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Also show labels of completed, not yet reviewed AI runs",
+            "in": "query",
+            "name": "include_drafts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Also show labels of completed, not yet reviewed AI runs",
+              "title": "Include Drafts",
+              "type": "boolean"
             }
           }
         ],

@@ -10,7 +10,10 @@ from datetime import date
 from fastapi import Query, Request
 
 from sed import db
-from sed.errors import PreconditionFailed
+from sed.errors import PreconditionFailed, ValidationFailed
+
+# as_of values outside this range would overflow the date arithmetic of period and window bounds.
+AS_OF_MIN, AS_OF_MAX = date(1900, 1, 1), date(9998, 12, 31)
 
 
 def _paths(request: Request):
@@ -61,6 +64,8 @@ def common_filters(
     as_of: date | None = Query(None, description="YYYY-MM-DD (default: data as-of)"),
     include_drafts: bool = Query(False, description="Include unapproved AI content"),
 ) -> CommonFilters:
+    if as_of is not None and not AS_OF_MIN <= as_of <= AS_OF_MAX:
+        raise ValidationFailed(f"as_of must be between {AS_OF_MIN} and {AS_OF_MAX}", {"as_of": as_of.isoformat()})
     return CommonFilters(list(app), family, vendor, group, period, as_of, include_drafts)
 
 

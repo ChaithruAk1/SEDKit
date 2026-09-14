@@ -60,6 +60,8 @@ def build(req: SnapshotRequest) -> SnapshotParts:
     prev_months = queries.like_for_like_months(conn, months, period)
     spend = queries.cost_totals(conn, months, vendor_id=vendor_id)
     prev_spend = queries.cost_totals(conn, prev_months, vendor_id=vendor_id)
+    unconverted = queries.unconverted_lines(conn, sorted(set(months) | set(prev_months)), vendor_id=vendor_id)
+    fx = queries.fx_note(unconverted)
     spend_suffix = "" if months == queries.complete_months(period.start_local, period.end_local) else " (to date)"
 
     sla = metrics.sla(conn, f, window, src)
@@ -122,7 +124,10 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             "Annual contract value",
             "vendor.contracts.annual_value",
         ),
-        "vendor.spend.period": fact(spend["actual"], "eur", f"Vendor spend{spend_suffix}", "vendor.spend.period"),
+        "vendor.spend.period": fact(spend["actual"], "eur", f"Vendor spend{spend_suffix}{fx}", "vendor.spend.period"),
+        "vendor.spend.unconverted_lines.count": fact(
+            unconverted, "count", "Vendor cost lines left out (no FX rate)", "vendor.spend.unconverted_lines.count"
+        ),
         "vendor.spend.prev_period": fact(
             prev_spend["actual"], "eur", f"Vendor spend, {prev_period.label} (same months)", "vendor.spend.prev_period"
         ),

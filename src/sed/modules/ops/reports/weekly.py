@@ -1,6 +1,8 @@
 """Weekly Application Operations Review snapshot builder (moved from sed.reports.snapshot in M2 Phase 0).
 
-The only semantic change from M1: as-of-dependent calls use `req.as_of` (= min(period end, data as-of)).
+Aggregates of the current week use `req.window` (the week clamped to the data date, so an open week is reported to
+date and labelled so); backlog and attention are measured at the end of that window; as-of-dependent calls
+(renewals, licenses, rule findings) use `req.as_of`.
 """
 
 from __future__ import annotations
@@ -8,6 +10,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from sed import analytics, metrics
+from sed.modules.ops.reports import queries
 from sed.modules.ops.reports.ai_provenance import weekly_ai
 from sed.reports.snapshot import SnapshotParts, SnapshotRequest, fact, table
 
@@ -34,34 +37,38 @@ def _months_before(as_of: date, n: int) -> list[str]:
 
 
 def build(req: SnapshotRequest) -> SnapshotParts:
-    conn, paths, settings, period = req.conn, req.paths, req.settings, req.period
+    conn, paths, settings, period, window = req.conn, req.paths, req.settings, req.period, req.window
     f = metrics.Filters()
     as_of_date = req.as_of
+    partial = window.end_local < period.end_local
+    suffix = " (to date)" if partial else ""
     previous = [period.previous(k) for k in range(1, 5)]
-    trend_periods = [period.previous(k) for k in range(11, 0, -1)] + [period]
+    trend_periods = [period.previous(k) for k in range(11, 0, -1)] + [window]
     src = metrics.sla_source(conn)
 
     vol = metrics.volume_trend(conn, f, trend_periods)
     current = vol[-1]
     prev_vol = vol[-5:-1]
-    sla_now = metrics.sla(conn, f, period, src)
+    sla_now = metrics.sla(conn, f, window, src)
     sla_prev = [metrics.sla(conn, f, p, src)["pct"] for p in previous]
-    mttr_now = metrics.mttr(conn, f, period)
+    mttr_now = metrics.mttr(conn, f, window)
     mttr_prev = [metrics.mttr(conn, f, p)["median_h"] for p in previous]
-    backlog_now = metrics.backlog(conn, f, period.end_utc)
-    backlog_now_all = metrics.backlog(conn, f, period.end_utc, exclude_stale=False)["total"]
+    backlog_now = metrics.backlog(conn, f, window.end_utc)
+    backlog_now_all = metrics.backlog(conn, f, window.end_utc, exclude_stale=False)["total"]
     backlog_prev_all = metrics.backlog(conn, f, period.start_utc, exclude_stale=False)["total"]
-    quality = metrics.quality(conn, f, period)
-    att = metrics.attention(conn, f, period.end_utc, settings.thresholds)
-    chg = metrics.changes(conn, period)
-    p1p2 = metrics.p1p2_opened(conn, f, period)
+    quality = metrics.quality(conn, f, window)
+    att = metrics.attention(conn, f, window.end_utc, settings.thresholds)
+    chg = metrics.changes(conn, window)
+    p1p2 = metrics.p1p2_opened(conn, f, window)
+    p1p2_count = metrics.volume_trend(conn, metrics.Filters(priorities=[1, 2]), [window])[0]["opened"]
     renewals_90 = metrics.renewals(conn, as_of_date, 90)
     licenses = metrics.license_utilization(conn, as_of_date)
+    low = queries.license_low_threshold(paths)
     outliers = [
         x
         for x in licenses
         if x["utilization"] is not None
-        and (x["utilization"] < 0.70 or x["utilization"] > 1.0 or (x["assigned_ratio"] or 0) > 1.0)
+        and (x["utilization"] < low or x["utilization"] > 1.0 or (x["assigned_ratio"] or 0) > 1.0)
     ]
     cost_months = _months_before(as_of_date, 2)
     cost_rows = [
@@ -79,19 +86,27 @@ def build(req: SnapshotRequest) -> SnapshotParts:
         "period.label": fact(period.label, "text", "Period"),
         "period.start": fact(period.start_local.isoformat(), "date", "Period start"),
         "period.end": fact(period.last_day.isoformat(), "date", "Period end"),
-        "inc.opened": fact(current["opened"], "count", "Incidents opened", "inc.opened"),
+        "inc.opened": fact(current["opened"], "count", f"Incidents opened{suffix}", "inc.opened"),
         "inc.opened.avg4w": fact(opened_avg, "number", "Opened, 4-week average", "inc.opened"),
-        "inc.opened.delta_vs_avg4w_pct": fact(_delta_pct(current["opened"], opened_avg), "pct", "Opened vs 4-week avg"),
-        "inc.resolved": fact(current["resolved"], "count", "Incidents resolved", "inc.resolved"),
+        # A partial week's count is not comparable with full-week averages, so no delta is reported for it.
+        "inc.opened.delta_vs_avg4w_pct": fact(
+            None if partial else _delta_pct(current["opened"], opened_avg), "pct", "Opened vs 4-week avg"
+        ),
+        "inc.resolved": fact(current["resolved"], "count", f"Incidents resolved{suffix}", "inc.resolved"),
         "inc.resolved.avg4w": fact(resolved_avg, "number", "Resolved, 4-week average", "inc.resolved"),
-        "inc.backlog": fact(backlog_now["total"], "count", "Open backlog at week end", "inc.backlog"),
+        "inc.backlog": fact(
+            backlog_now["total"],
+            "count",
+            "Open backlog at the as-of date" if partial else "Open backlog at week end",
+            "inc.backlog",
+        ),
         "inc.backlog.delta": fact(
             backlog_now_all - backlog_prev_all, "count", "Backlog change (arrivals - resolutions)"
         ),
         "inc.backlog.stale_excluded": fact(
             backlog_now_all - backlog_now["total"], "count", "Stale open excluded from backlog", "inc.stale_open"
         ),
-        "inc.sla.pct": fact(sla_now["pct"], "pct", "SLA met (resolved this week)", "inc.sla.pct"),
+        "inc.sla.pct": fact(sla_now["pct"], "pct", f"SLA met (resolved this week){suffix}", "inc.sla.pct"),
         "inc.sla.pct.avg4w": fact(sla_avg, "pct", "SLA met, 4-week average", "inc.sla.pct"),
         "inc.sla.delta_pp_vs_4w": fact(
             round(sla_now["pct"] - sla_avg, 2) if sla_now["pct"] is not None and sla_avg is not None else None,
@@ -99,17 +114,17 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             "SLA vs 4-week avg",
         ),
         "inc.sla.source": fact(src, "text", "SLA source"),
-        "inc.mttr.median_h": fact(mttr_now["median_h"], "hours", "MTTR median (hours)", "inc.mttr.median_h"),
+        "inc.mttr.median_h": fact(mttr_now["median_h"], "hours", f"MTTR median (hours){suffix}", "inc.mttr.median_h"),
         "inc.mttr.median_h.avg4w": fact(mttr_avg, "hours", "MTTR median, 4-week average", "inc.mttr.median_h"),
         "inc.mttr.delta_vs_avg4w_pct": fact(_delta_pct(mttr_now["median_h"], mttr_avg), "pct", "MTTR vs 4-week avg"),
-        "inc.p1p2.opened": fact(len(p1p2), "count", "P1/P2 opened", "inc.p1p2.opened"),
+        "inc.p1p2.opened": fact(p1p2_count, "count", f"P1/P2 opened{suffix}", "inc.p1p2.opened"),
         "inc.reopen.pct": fact(quality["reopen_pct"], "pct", "Reopen rate", "inc.reopen.pct"),
         "inc.reassign.avg": fact(quality["reassign_avg"], "number", "Avg reassignments", "inc.reassign.avg"),
         "inc.stale_open": fact(
             metrics.stale_open_count(conn, f), "count", "Stale open (not in active export)", "inc.stale_open"
         ),
         "attention.count": fact(att["count"], "count", "Tickets needing attention", "attention.count"),
-        "chg.count": fact(chg["count"], "count", "Changes closed", "chg.count"),
+        "chg.count": fact(chg["count"], "count", f"Changes closed{suffix}", "chg.count"),
         "chg.success.pct": fact(chg["success_pct"], "pct", "Change success rate", "chg.success.pct"),
         "chg.failed": fact(len(chg["failed"]), "count", "Changes not fully successful"),
         "renewals.90d.count": fact(
@@ -125,7 +140,7 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             "notice.count",
         ),
         "license.idle_cost": fact(
-            round(sum(x["idle_cost_base"] or 0 for x in outliers if (x["utilization"] or 1) < 0.70), 2),
+            round(sum(x["idle_cost_base"] or 0 for x in outliers if x["utilization"] < low), 2),
             "eur",
             "Idle license cost (under-used lines)",
             "license.idle_cost",
@@ -188,7 +203,7 @@ def build(req: SnapshotRequest) -> SnapshotParts:
                 ("opened", "Opened", "count"),
                 ("p1p2", "P1/P2", "count"),
             ],
-            metrics.top_apps(conn, f, period),
+            metrics.top_apps(conn, f, window),
         ),
         "p1p2": table(
             "P1/P2 incidents opened this week",
@@ -222,7 +237,7 @@ def build(req: SnapshotRequest) -> SnapshotParts:
                 ("am_category", "AI category", "text"),
                 ("n", "Incidents", "count"),
             ],
-            metrics.category_breakdown(conn, f, period),
+            metrics.category_breakdown(conn, f, window),
         ),
         "renewals_90d": table(
             "Commercial watchlist: renewals and notice deadlines (next 90 days)",

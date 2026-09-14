@@ -49,9 +49,16 @@ METRICS: dict[str, tuple[str, str]] = {
         "count",
         "Active contracts whose notice deadline (end_date - notice_period_days) falls within the window.",
     ),
-    "license.idle_cost": ("eur", "Sum over licenses of max(entitled - active_90d, 0) x unit cost (base currency)."),
+    "license.idle_cost": (
+        "eur",
+        "Sum over under-used license lines (utilization below the license_utilization 'low' risk rule, default 70%) "
+        "of max(entitled - active_90d, 0) x unit cost (base currency).",
+    ),
     "license.utilization": ("pct", "active_90d / entitled from the latest usage snapshot on or before as_of."),
-    "cost.variance.pct": ("pct", "(actual - budget) / budget for the compared months."),
+    "cost.variance.pct": (
+        "pct",
+        "(actual - budget) / budget for the compared months; each month uses its newest imported budget version.",
+    ),
     "vendor.sla.delta_pp": (
         "pp",
         "Average monthly SLA % of the last 3 months minus the 3 months before, for "
@@ -63,6 +70,14 @@ METRICS: dict[str, tuple[str, str]] = {
         "reopened, ping-pong reassignments or unassigned.",
     ),
 }
+
+# Budget lines count only for the newest budget version imported for their month, so importing next fiscal year's
+# budget file (a new as_of) does not hide the budgets of earlier months. Use with cost_line aliased as `c`.
+BUDGET_VERSION_JOIN = (
+    "LEFT JOIN (SELECT period AS bv_period, MAX(as_of) AS bv_as_of FROM cost_line WHERE line_type = 'budget' "
+    "GROUP BY period) bv ON bv.bv_period = c.period"
+)
+BUDGET_SUM = "SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS bv.bv_as_of THEN c.amount_base END)"
 
 
 @dataclass
@@ -168,6 +183,19 @@ def sla(conn: sqlite3.Connection, f: Filters, period: Period, source: str | None
     total = sum(v["total"] for v in by_priority.values())
     met = sum(v["met"] for v in by_priority.values())
     return {"pct": _pct(met, total), "met": met, "total": total, "source": src, "by_priority": by_priority}
+
+
+def sla_met_sql(source: str) -> str:
+    """SQL (ticket alias `t`) that is true when a resolved incident met its resolution SLA, counted as sla() does."""
+    if source == "task_sla":
+        return (
+            "(COALESCE((SELECT MAX(s.has_breached) FROM task_sla s WHERE s.ticket_id = t.ticket_id "
+            "AND s.sla_type = 'resolution'), t.made_sla = 0, 0) = 0)"
+        )
+    if source == "made_sla":
+        return "COALESCE(t.made_sla, 1)"
+    cases = " ".join(f"WHEN {p} THEN {h}" for p, h in INCIDENT_TARGET_H.items())
+    return f"({_hours_expr('t.opened_at', 't.resolved_at')} <= (CASE t.priority {cases} ELSE 120 END))"
 
 
 def mttr(conn: sqlite3.Connection, f: Filters, period: Period) -> dict[str, Any]:
@@ -446,14 +474,13 @@ def cost_vs_budget(conn: sqlite3.Connection, months: list[str], group_by: str = 
         "app_category": "COALESCE(a.name, c.app_raw) || ' / ' || COALESCE(c.cost_category, '')",
     }[group_by]
     marks = ", ".join("?" for _ in months)
-    latest_budget = conn.execute("SELECT MAX(as_of) FROM cost_line WHERE line_type = 'budget'").fetchone()[0]
     rows = conn.execute(
         f"SELECT {col} AS key, SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END) AS actual, "
-        f"SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS ? THEN c.amount_base END) AS budget "
-        "FROM cost_line c LEFT JOIN application a ON a.app_id = c.app_id LEFT JOIN vendor v ON v.vendor_id = "
-        "c.vendor_id "
+        f"{BUDGET_SUM} AS budget "
+        f"FROM cost_line c {BUDGET_VERSION_JOIN} LEFT JOIN application a ON a.app_id = c.app_id "
+        "LEFT JOIN vendor v ON v.vendor_id = c.vendor_id "
         f"WHERE c.period IN ({marks}) GROUP BY key ORDER BY actual DESC",
-        [latest_budget, *months],
+        months,
     ).fetchall()
     out = []
     for r in rows:
@@ -483,14 +510,9 @@ def vendor_sla_trend(
     last = parse_period(shift_label(f"{as_of.year}-{as_of.month:02d}", -1), tz)
     periods = [parse_period(shift_label(last.label, -k), tz) for k in range(months - 1, -1, -1)]
     src = sla_source(conn)
-    breach_expr = {
-        "task_sla": "(SELECT MAX(has_breached) FROM task_sla s "
-        "WHERE s.ticket_id = t.ticket_id AND s.sla_type = 'resolution')",
-        "made_sla": "(1 - COALESCE(t.made_sla, 1))",
-    }.get(src, "0")
     rows = conn.execute(
         f"SELECT t.vendor_id, v.name, t.resolved_at, {_hours_expr('t.opened_at', 't.resolved_at')} AS hours, "
-        f"COALESCE({breach_expr}, 1 - COALESCE(t.made_sla, 1)) AS breached, COALESCE(t.reassignment_count, 0) AS "
+        f"CASE WHEN {sla_met_sql(src)} THEN 0 ELSE 1 END AS breached, COALESCE(t.reassignment_count, 0) AS "
         "reassign "
         "FROM ticket t JOIN vendor v ON v.vendor_id = t.vendor_id WHERE t.kind = 'incident' "
         "AND t.resolved_at >= ? AND t.resolved_at < ?",

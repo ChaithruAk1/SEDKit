@@ -30,7 +30,7 @@ from sed.modules.ops.api_models import (
     OpsFiltersOut,
     RenewalRow,
 )
-from sed.modules.ops.queries.commercial import latest_budget_version, license_dicts, license_row, under_used_idle_cost
+from sed.modules.ops.queries.commercial import license_dicts, license_row, under_used_idle_cost
 from sed.modules.ops.queries.common import (
     Context,
     findings_by_app,
@@ -46,6 +46,7 @@ from sed.modules.ops.queries.common import (
 )
 from sed.modules.ops.queries.search import ticket_rows
 from sed.modules.ops.queries.tickets import backlog_summary, mttr_stats, resolved_rows, volume_rows
+from sed.modules.ops.reports.queries import license_low_threshold
 
 OPEN_TICKETS_LIMIT = 20
 CHANGES_LIMIT = 20
@@ -127,10 +128,9 @@ def _cost_by_app(ctx: Context, months: list[str], app_id: str | None = None) -> 
         return {}
     extra, params = ("AND c.app_id = ?", [app_id]) if app_id else ("AND c.app_id IS NOT NULL", [])
     rows = ctx.conn.execute(
-        "SELECT c.app_id, SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END), "
-        "SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS ? THEN c.amount_base END) FROM cost_line c "
-        f"WHERE c.period IN ({marks(months)}) {extra} GROUP BY c.app_id",
-        [latest_budget_version(ctx), *months, *params],
+        f"SELECT c.app_id, SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END), {metrics.BUDGET_SUM} "
+        f"FROM cost_line c {metrics.BUDGET_VERSION_JOIN} WHERE c.period IN ({marks(months)}) {extra} GROUP BY c.app_id",
+        [*months, *params],
     ).fetchall()
     return {r[0]: [None if r[1] is None else round(r[1], 2), None if r[2] is None else round(r[2], 2)] for r in rows}
 
@@ -233,9 +233,9 @@ def _monthly_cost(ctx: Context, app_id: str, months: list[str]) -> list[CostRow]
         r["period"]: r
         for r in ctx.conn.execute(
             "SELECT c.period, SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END) AS actual, "
-            "SUM(CASE WHEN c.line_type = 'budget' AND c.as_of IS ? THEN c.amount_base END) AS budget "
-            f"FROM cost_line c WHERE c.app_id = ? AND c.period IN ({marks(months)}) GROUP BY c.period",
-            [latest_budget_version(ctx), app_id, *months],
+            f"{metrics.BUDGET_SUM} AS budget FROM cost_line c {metrics.BUDGET_VERSION_JOIN} "
+            f"WHERE c.app_id = ? AND c.period IN ({marks(months)}) GROUP BY c.period",
+            [app_id, *months],
         )
     }
     out = []
@@ -325,7 +325,12 @@ def _app_kpis(
         kpi("cost.budget.ytd", "Budget YTD", budget_ytd, currency),
         kpi("license.annual_cost", "License cost per year", app.annual_license_cost_base, currency),
         kpi("license.utilization", "License utilization", app.license_utilization, "ratio"),
-        kpi("license.idle_cost", "Idle license cost (under-used lines)", under_used_idle_cost(licenses), currency),
+        kpi(
+            "license.idle_cost",
+            "Idle license cost (under-used lines)",
+            under_used_idle_cost(licenses, license_low_threshold(ctx.paths)),
+            currency,
+        ),
         kpi(
             "contracts.annual_value",
             "Active contract value per year",

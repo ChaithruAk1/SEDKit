@@ -74,6 +74,7 @@ class TicketRow(ApiModel):
     am_subcategory: str | None
     label_confidence: float | None
     label_run_id: str | None
+    label_run_status: str | None = None
 
 
 class TicketPage(ApiModel):

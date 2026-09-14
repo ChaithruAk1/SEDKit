@@ -117,7 +117,7 @@ def tickets(
     sn_category: str | None = None,
     am_category: str | None = None,
     sort: Literal["opened_desc", "opened_asc", "priority", "updated_desc"] = "opened_desc",
-    page: int = Query(1, ge=1),
+    page: int = Query(1, ge=1, le=100_000),
     page_size: int = Query(50, ge=1, le=200),
     f: CommonFilters = Depends(common_filters),
     conn: sqlite3.Connection = Depends(read_conn),
@@ -139,8 +139,12 @@ def tickets(
 
 
 @router.get("/tickets/{ticket_id}", response_model=TicketDetail)
-def ticket_detail(ticket_id: str, conn: sqlite3.Connection = Depends(read_conn)) -> TicketDetail:
-    found = search.detail(conn, ticket_id)
+def ticket_detail(
+    ticket_id: str,
+    include_drafts: bool = Query(False, description="Also show labels of completed, not yet reviewed AI runs"),
+    conn: sqlite3.Connection = Depends(read_conn),
+) -> TicketDetail:
+    found = search.detail(conn, ticket_id, include_drafts)
     if found is None:
         raise HTTPException(status_code=404, detail=f"Unknown ticket '{ticket_id}'")
     return found

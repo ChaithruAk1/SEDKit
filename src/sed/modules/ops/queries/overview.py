@@ -38,6 +38,7 @@ from sed.modules.ops.queries.common import (
     ytd_months,
 )
 from sed.modules.ops.queries.tickets import backlog_summary, mttr_stats, resolved_rows
+from sed.modules.ops.reports.queries import license_low_threshold
 
 TOP_RISKS = 5
 
@@ -147,7 +148,7 @@ def overview(ctx: Context) -> OpsOverview:
         round(100.0 * (actual_ytd - budget_ytd) / budget_ytd, 2) if actual_ytd is not None and budget_ytd else None
     )
     renewals_90 = renewal_rows(ctx, 90)
-    idle = under_used_idle_cost(license_dicts(ctx))
+    idle = under_used_idle_cost(license_dicts(ctx), license_low_threshold(ctx.paths))
     queue = review_queue_count(conn)
     attention_count = attention_data(ctx, 1)["count"]
     currency = ctx.settings.base_currency.lower()
