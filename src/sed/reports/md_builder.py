@@ -5,11 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from sed.reports.snapshot import Snapshot, render_view
+from sed.reports.snapshot import Snapshot, money_prefix, render_view
 from sed.reports.specs import ReportSpec
 
 
-def _fmt(f: dict[str, Any] | None) -> str:
+def _fmt(f: dict[str, Any] | None, currency: str = "EUR") -> str:
     if not f or f["value"] is None:
         return "n/a"
     v, unit = f["value"], f["unit"]
@@ -20,7 +20,7 @@ def _fmt(f: dict[str, Any] | None) -> str:
     if unit == "hours":
         return f"{v:.1f} h"
     if unit == "eur":
-        return f"€{v:,.0f}"
+        return f"{money_prefix(currency)}{v:,.0f}"
     if unit == "number":
         return f"{v:,.1f}"
     if unit == "count":
@@ -41,6 +41,8 @@ def render_weekly_md(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> s
     renewals = view.tables["renewals_90d"]["rows"]
     critical = [f for f in findings if f.get("severity") in {"critical", "high"}]
     lines = []
+    if ai_mode == "draft":
+        lines.append("> **DRAFT** – may include unapproved AI content.\n")
     if snapshot.data_class == "synthetic":
         lines.append("> **SYNTHETIC DATA** – generated test data, not for distribution.\n")
     lines += [
@@ -59,7 +61,7 @@ def render_weekly_md(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> s
         f"- **Changes:** {_fmt(F['chg.count'])} closed, {_fmt(F['chg.success.pct'])} successful.",
         f"- **Commercial:** {_fmt(F['renewals.90d.count'])} contracts end within 90 days, "
         f"{_fmt(F['notice.30d.count'])} notice deadlines within 30 days; idle license cost "
-        f"{_fmt(F['license.idle_cost'])}/yr.",
+        f"{_fmt(F['license.idle_cost'], snapshot.base_currency)}/yr.",
     ]
     if critical:
         lines.append("")

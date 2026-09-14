@@ -67,6 +67,7 @@ class Snapshot:
     period_end: str = ""
     data_as_of: str | None = None
     suppressed_findings: list[dict[str, Any]] = field(default_factory=list)
+    base_currency: str = "EUR"  # the currency of every "eur"-unit amount (settings.base_currency)
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,9 @@ class SnapshotParts:
     ai_runs: list[AiRunProvenance] = field(default_factory=list)
     ai_derived_tables: list[str] = field(default_factory=list)
     ai_derived_facts: list[str] = field(default_factory=list)
+    # When set, the provenance lists only suppressed findings about these (subject_type, subject_id) pairs, so a vendor
+    # review never shows other vendors' acknowledged findings. None lists every suppressed finding.
+    suppressed_subjects: set[tuple[str, str]] | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +163,21 @@ def render_view(snapshot: Snapshot, ai_mode: str) -> RenderView:
     )
 
 
+CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£"}
+
+
+def money_prefix(currency: str | None) -> str:
+    """Prefix for amounts in the base currency: a symbol for EUR, USD and GBP, else the ISO code and a space."""
+    code = (currency or "EUR").upper()
+    return CURRENCY_SYMBOLS.get(code, f"{code} ")
+
+
+def money_num_format(currency: str | None) -> str:
+    """Excel / chart number format for whole amounts in the base currency."""
+    prefix = money_prefix(currency)
+    return f"{prefix}#,##0" if prefix.strip() in CURRENCY_SYMBOLS.values() else f'"{prefix}"#,##0'
+
+
 def _git_commit() -> str | None:
     try:
         out = subprocess.run(
@@ -174,13 +193,19 @@ def _git_commit() -> str | None:
         return None
 
 
-def _suppressed_findings(conn: sqlite3.Connection, as_of: date) -> list[dict[str, Any]]:
+def _suppressed_findings(
+    conn: sqlite3.Connection, as_of: date, subjects: set[tuple[str, str]] | None = None
+) -> list[dict[str, Any]]:
     rows = conn.execute(
-        "SELECT stable_key, kind, title, status, suppress_until FROM finding WHERE origin = 'rule' "
-        "AND (status = 'acknowledged' OR (status = 'active' AND suppress_until > ?)) ORDER BY kind, title",
+        "SELECT stable_key, kind, title, status, suppress_until, subject_type, subject_id FROM finding "
+        "WHERE origin = 'rule' AND (status = 'acknowledged' OR (status = 'active' AND suppress_until > ?)) "
+        "ORDER BY kind, title",
         (as_of.isoformat(),),
     ).fetchall()
-    return [dict(r) for r in rows]
+    keys = ("stable_key", "kind", "title", "status", "suppress_until")
+    return [
+        {k: r[k] for k in keys} for r in rows if subjects is None or (r["subject_type"], r["subject_id"]) in subjects
+    ]
 
 
 def build_request(
@@ -233,7 +258,8 @@ def create_snapshot(
         "ai_derived_facts": list(parts.ai_derived_facts),
         "period_end": req.period.end_local.isoformat(),
         "data_as_of": req.data_as_of.isoformat() if req.data_as_of else None,
-        "suppressed_findings": _suppressed_findings(conn, req.as_of),
+        "suppressed_findings": _suppressed_findings(conn, req.as_of, parts.suppressed_subjects),
+        "base_currency": req.settings.base_currency,
     }
     body = {
         "report_key": report_key,
@@ -246,6 +272,8 @@ def create_snapshot(
         "facts": parts.facts,
         "tables": parts.tables,
         "provenance": provenance,
+        # A new import always gives a new snapshot, so the stored freshness and batches match what was rendered.
+        "input_batches": [b["batch_id"] for b in batches],
     }
     canonical = json.dumps(body, sort_keys=True, ensure_ascii=False, default=str)
     sha = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -273,9 +301,10 @@ def create_snapshot(
         period_end=provenance["period_end"],
         data_as_of=provenance["data_as_of"],
         suppressed_findings=provenance["suppressed_findings"],
+        base_currency=req.settings.base_currency,
     )
     with db.write_tx(conn):
-        conn.execute(
+        cur = conn.execute(
             "INSERT OR IGNORE INTO report_snapshot (snapshot_id, report_key, period, vendor_id, as_of, created_at, "
             "git_commit, facts_json, tables_json, sla_source, reporting_tz, freshness_json, input_batches_json, "
             "data_class, sha256, provenance_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -298,6 +327,17 @@ def create_snapshot(
                 json.dumps(provenance, ensure_ascii=False, default=str),
             ),
         )
+        if cur.rowcount == 0:  # the same snapshot exists: artifacts must show what is stored for it
+            stored = conn.execute(
+                "SELECT created_at, git_commit, freshness_json FROM report_snapshot WHERE snapshot_id = ?",
+                (snapshot_id,),
+            ).fetchone()
+            snap = dataclasses.replace(
+                snap,
+                created_at=stored["created_at"],
+                git_commit=stored["git_commit"],
+                freshness=json.loads(stored["freshness_json"] or "[]"),
+            )
     return snap
 
 

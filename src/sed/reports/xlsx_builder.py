@@ -13,7 +13,7 @@ from typing import Any
 
 import xlsxwriter
 
-from sed.reports.snapshot import Snapshot, format_provenance_line, render_view
+from sed.reports.snapshot import Snapshot, format_provenance_line, money_num_format, render_view
 from sed.reports.specs import ReportSpec
 
 FORMATS = {
@@ -28,6 +28,7 @@ FORMATS = {
     "date": {},
     "datetime": {},
 }
+DRAFT_BANNER = "DRAFT - may include unapproved AI content"
 STYLES = {
     "bad": {"bg_color": "#F8D7DA", "font_color": "#842029"},
     "warn": {"bg_color": "#FFF3CD", "font_color": "#664D03"},
@@ -49,14 +50,24 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     view = render_view(snapshot, ai_mode)
     wb.set_properties({"title": f"{spec.title} {snapshot.period}", "comments": f"snapshot {snapshot.snapshot_id}"})
     fmts = {k: wb.add_format(v) for k, v in FORMATS.items()}
+    fmts["eur"] = wb.add_format({"num_format": money_num_format(snapshot.base_currency)})
     bold = wb.add_format({"bold": True})
     title_fmt = wb.add_format({"bold": True, "font_size": 16})
     banner = wb.add_format({"bold": True, "font_color": "#FFFFFF", "bg_color": "#B02A37"})
     wrap = wb.add_format({"text_wrap": True, "valign": "top"})
     styles = {k: wb.add_format(v) for k, v in STYLES.items()}
+    # In draft mode every sheet starts with a DRAFT banner row (and a red tab), so a copied sheet keeps the warning.
+    top = 1 if ai_mode == "draft" else 0
 
-    summary = wb.add_worksheet("Summary")
-    row = 0
+    def add_sheet(name: str):
+        ws = wb.add_worksheet(name)
+        if top:
+            ws.merge_range(0, 0, 0, 5, DRAFT_BANNER, banner)
+            ws.set_tab_color("#B02A37")
+        return ws
+
+    summary = add_sheet("Summary")
+    row = top
     if snapshot.data_class == "synthetic":
         summary.merge_range(row, 0, row, 5, "SYNTHETIC DATA - generated test data, not for distribution", banner)
         row += 2
@@ -90,20 +101,20 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
 
     for sheet_spec in spec.sheets:
         if sheet_spec.table in view.excluded_tables:
-            ws = wb.add_worksheet(sheet_spec.sheet)
-            ws.write_string(0, 0, snapshot.tables[sheet_spec.table]["title"], bold)
-            ws.write_string(2, 0, "AI-derived content excluded (--ai none).")
+            ws = add_sheet(sheet_spec.sheet)
+            ws.write_string(top, 0, snapshot.tables[sheet_spec.table]["title"], bold)
+            ws.write_string(top + 2, 0, "AI-derived content excluded (--ai none).")
             continue
         tbl = view.tables.get(sheet_spec.table)
         if tbl is None:
             continue
-        ws = wb.add_worksheet(sheet_spec.sheet)
-        ws.write_string(0, 0, tbl["title"], bold)
+        ws = add_sheet(sheet_spec.sheet)
+        ws.write_string(top, 0, tbl["title"], bold)
         if sheet_spec.table in snapshot.ai_derived_tables:
-            ws.write_string(1, 0, "AI-assisted: see the Provenance sheet for runs and sample accuracy.")
+            ws.write_string(top + 1, 0, "AI-assisted: see the Provenance sheet for runs and sample accuracy.")
         columns = tbl["columns"]
         rows = tbl["rows"]
-        header_row = 2
+        header_row = top + 2
         if rows:
             data = [[r.get(c["key"]) for c in columns] for r in rows]
             ws.add_table(
@@ -141,11 +152,11 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
             width = 48 if c["key"] in {"short_description", "title", "reasons", "product", "key"} else 16
             ws.set_column(c_idx, c_idx, width, wrap if width > 40 else None)
 
-    defs = wb.add_worksheet("Definitions")
-    defs.write_row(0, 0, ["Metric key", "Unit", "Definition"], bold)
+    defs = add_sheet("Definitions")
+    defs.write_row(top, 0, ["Metric key", "Unit", "Definition"], bold)
     definitions = metric_definitions()
     used = sorted({f["definition"] for f in view.facts.values() if f.get("definition")})
-    for i, key in enumerate(used, start=1):
+    for i, key in enumerate(used, start=top + 1):
         unit, text = definitions.get(key, ("", ""))
         defs.write_string(i, 0, key)
         defs.write_string(i, 1, unit)
@@ -153,9 +164,10 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     defs.set_column(0, 0, 26)
     defs.set_column(2, 2, 110, wrap)
 
-    prov = wb.add_worksheet("Provenance")
+    prov = add_sheet("Provenance")
     items = [
         ("Data class", snapshot.data_class.upper()),
+        ("Base currency", snapshot.base_currency),
         ("Report", spec.title),
         ("Period", snapshot.period),
         ("As of", snapshot.as_of),
@@ -171,11 +183,11 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
         ("Code version", snapshot.git_commit or "n/a"),
         ("Person columns", "pseudonymized (P-...) unless display names are enabled on the real profile"),
     ]
-    prov.write_row(0, 0, ["Item", "Value"], bold)
-    for i, (k, v) in enumerate(items, start=1):
+    prov.write_row(top, 0, ["Item", "Value"], bold)
+    for i, (k, v) in enumerate(items, start=top + 1):
         prov.write_string(i, 0, k)
         prov.write_string(i, 1, str(v))
-    r = len(items) + 1
+    r = top + len(items) + 1
     for line in [format_provenance_line(run) for run in view.ai_runs]:
         r += 1
         prov.write_string(r, 1, line)

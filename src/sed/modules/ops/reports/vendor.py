@@ -241,4 +241,10 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             risks,
         ),
     }
-    return SnapshotParts(facts=facts, tables=tables, sla_source=src, freshness=metrics.freshness(conn))
+    return SnapshotParts(
+        facts=facts,
+        tables=tables,
+        sla_source=src,
+        freshness=metrics.freshness(conn),
+        suppressed_subjects=subjects,  # never list other vendors' acknowledged findings
+    )

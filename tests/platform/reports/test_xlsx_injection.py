@@ -55,3 +55,32 @@ def test_formula_injection_strings_are_plain_text_in_pptx(tmp_path):
     text = slide_text(open_deck(out).slides[0], notes=False)
     for value in INJECTIONS:
         assert value in text
+
+
+def test_formula_injection_strings_stay_strings_in_chart_workbooks(tmp_path):
+    """python-pptx embeds each chart's data in a workbook; imported category names must not become formulas there."""
+    import re
+    import zipfile
+
+    from sed.reports.specs import ChartSpec
+
+    spec = ReportSpec(
+        report="weekly",
+        title="Injection",
+        kpis=[],
+        sheets=[],
+        slides=[SlideSpec(kind="bar_chart", table="small", chart=ChartSpec(categories="name", series=["value"]))],
+    )
+    out = tmp_path / "chart_injection.pptx"
+    build_pptx(
+        _snapshot(), spec, load_template_map("neutral"), out, ai_mode="none", generated_at="2026-09-01T00:00:00Z"
+    )
+    with zipfile.ZipFile(out) as deck:
+        embedded = [name for name in deck.namelist() if name.startswith("ppt/embeddings/") and name.endswith(".xlsx")]
+        assert embedded
+        for name in embedded:
+            with zipfile.ZipFile(deck.open(name)) as book:
+                xml = "".join(book.read(n).decode("utf-8") for n in book.namelist() if n.endswith(".xml"))
+                assert not re.search(r"<f[ >]", xml), name
+                assert not re.search(r"<hyperlink[ >/]", xml), name
+                assert "<t>=HYPERLINK(" in xml, "the category survives as plain text"

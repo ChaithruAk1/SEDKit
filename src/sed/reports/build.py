@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -18,10 +19,16 @@ from sed.reports.xlsx_builder import build_xlsx
 AI_MODES = {"approved", "none", "draft"}
 
 
+def _file_part(value: str) -> str:
+    """A filename-safe segment: letters, digits, '-', '_' and '.' only, never a relative path component."""
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", value).strip(".")
+    return safe or "_"
+
+
 def artifact_name(snapshot: Snapshot, ext: str, ai_mode: str) -> str:
     parts = [snapshot.report_key, snapshot.period]
     if snapshot.vendor_id:
-        parts.append(snapshot.vendor_id)
+        parts.append(_file_part(snapshot.vendor_id))
     if snapshot.data_class == "synthetic":
         parts.append("SYNTHETIC")
     if ai_mode == "draft":

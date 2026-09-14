@@ -16,14 +16,23 @@ Ticket and contract text in snapshot tables is untrusted data: it is only ever p
 
 from __future__ import annotations
 
+import functools
 import math
 import re
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from sed.errors import ValidationFailed
-from sed.reports.snapshot import RenderView, Snapshot, format_provenance_line, render_view
+from sed.reports.snapshot import (
+    RenderView,
+    Snapshot,
+    format_provenance_line,
+    money_num_format,
+    money_prefix,
+    render_view,
+)
 from sed.reports.specs import KpiSpec, ReportSpec, SlideSpec
 from sed.reports.template_map import EMU_PER_INCH, LayoutSpec, LoadedTemplateMap, open_template, resolve_layout
 
@@ -49,7 +58,6 @@ _NUMBER_FORMATS = {
     "pp": '+0.0" pp";-0.0" pp"',
     "ratio": "0%",
     "hours": '0.0" h"',
-    "eur": "€#,##0",
 }
 _SEVERITY_COLORS = {"critical": "B02A37", "high": "B02A37", "medium": "C55A11", "low": "595959"}
 _MUTED = "595959"
@@ -67,8 +75,10 @@ def clean_text(value: Any, *, single_line: bool = False) -> str:
     return text
 
 
-def format_value(value: Any, unit: str, *, empty: str = "") -> str:
-    """Format a fact or cell value by unit (count, pct, pp, ratio, hours, eur, date, datetime, number, text)."""
+def format_value(value: Any, unit: str, *, empty: str = "", currency: str = "EUR") -> str:
+    """Format a fact or cell value by unit (count, pct, pp, ratio, hours, eur, date, datetime, number, text).
+
+    `eur` is the unit of base-currency amounts; `currency` (the snapshot's base currency) picks the symbol."""
     if value is None or value == "":
         return empty
     if isinstance(value, bool):
@@ -91,7 +101,7 @@ def format_value(value: Any, unit: str, *, empty: str = "") -> str:
         if unit == "hours":
             return f"{v:,.1f} h"
         if unit == "eur":
-            return f"€{v:,.0f}"
+            return f"{money_prefix(currency)}{v:,.0f}"
         return f"{v:,.1f}"
     text = clean_text(value, single_line=True)
     if unit == "datetime":
@@ -101,10 +111,35 @@ def format_value(value: Any, unit: str, *, empty: str = "") -> str:
     return text
 
 
-def _fact_text(fact: dict[str, Any] | None) -> str:
+def _fact_text(fact: dict[str, Any] | None, currency: str = "EUR") -> str:
     if not fact:
         return "n/a"
-    return format_value(fact.get("value"), fact.get("unit", "text"), empty="n/a")
+    return format_value(fact.get("value"), fact.get("unit", "text"), empty="n/a", currency=currency)
+
+
+@functools.cache
+def _chart_data_class() -> type:
+    """CategoryChartData whose embedded workbook stores text as text: python-pptx opens it with xlsxwriter's defaults,
+    which turn a category such as '=HYPERLINK(...)' from imported data into a live formula."""
+    from pptx.chart.data import CategoryChartData
+    from pptx.chart.xlsx import CategoryWorkbookWriter
+    from xlsxwriter import Workbook
+
+    class SafeWorkbookWriter(CategoryWorkbookWriter):
+        @contextmanager
+        def _open_worksheet(self, xlsx_file: Any) -> Any:
+            options = {"in_memory": True, "strings_to_formulas": False, "strings_to_urls": False}
+            workbook = Workbook(xlsx_file, options)
+            worksheet = workbook.add_worksheet()
+            yield workbook, worksheet
+            workbook.close()
+
+    class SafeCategoryChartData(CategoryChartData):
+        @property
+        def _workbook_writer(self) -> SafeWorkbookWriter:
+            return SafeWorkbookWriter(self)
+
+    return SafeCategoryChartData
 
 
 def _truncate(text: str, limit: int) -> str:
@@ -188,10 +223,20 @@ def effective_slides(spec: ReportSpec, snapshot: Snapshot | None = None) -> list
 
 
 def check_spec_refs(snapshot: Snapshot, spec: ReportSpec) -> None:
-    """Every fact, table, column and chart series a slide references must exist in the snapshot (else exit 2)."""
+    """Every fact, table, column and chart series a slide references must exist in the snapshot (else exit 2).
+
+    Fact tokens in titles, subtitles and notes count too, and a malformed token (anything left starting with '{{')
+    is an error rather than literal text on the slide.
+    """
     errors: list[dict[str, str]] = []
     for i, s in enumerate(effective_slides(spec, snapshot)):
         loc = f"slides[{i}]"
+        for name, text in (("title", s.title), ("subtitle", s.subtitle), ("notes", s.notes)):
+            for key in _FACT_TOKEN.findall(text or ""):
+                if key not in snapshot.facts:
+                    errors.append({"loc": f"{loc}.{name}", "msg": f"fact '{key}' is not in the snapshot"})
+            if "{{" in _FACT_TOKEN.sub("", text or ""):
+                errors.append({"loc": f"{loc}.{name}", "msg": "malformed fact token (use {{f:<fact_key>}})"})
         for k in s.kpis or []:
             for key in (k.fact, k.compare, k.delta):
                 if key and key not in snapshot.facts:
@@ -446,7 +491,8 @@ class _Deck:
             "vendor": self.snapshot.vendor_id or "",
             "data_class": self.snapshot.data_class.upper(),
         }
-        text = _FACT_TOKEN.sub(lambda m: _fact_text(view.facts.get(m.group(1))), text or "")
+        currency = self.snapshot.base_currency
+        text = _FACT_TOKEN.sub(lambda m: _fact_text(view.facts.get(m.group(1)), currency), text or "")
         return clean_text(_NAMED_TOKEN.sub(lambda m: str(values[m.group(1)]), text))
 
     def _font(
@@ -747,19 +793,24 @@ class _Deck:
                     "size": label_pt,
                     "color": "404040",
                 },
-                {"text": _fact_text(fact), "size": value_pt, "bold": True, "color": self.tmap.series_colors[0][1:]},
+                {
+                    "text": _fact_text(fact, self.snapshot.base_currency),
+                    "size": value_pt,
+                    "bold": True,
+                    "color": self.tmap.series_colors[0][1:],
+                },
             ]
             for key in (k.compare, k.delta):
                 other = view.facts.get(key or "")
                 if other:
                     label = _truncate(clean_text(other.get("label"), single_line=True), 40)
-                    paragraphs.append({"text": f"{label}: {_fact_text(other)}", "size": small, "color": _MUTED})
+                    text = f"{label}: {_fact_text(other, self.snapshot.base_currency)}"
+                    paragraphs.append({"text": text, "size": small, "color": _MUTED})
             for para in paragraphs:
                 para["align"] = PP_ALIGN.LEFT  # auto shapes centre text by default
             self._write(tf, paragraphs)
 
     def _chart(self, slide: Any, box: list[float], s: SlideSpec, tbl: dict[str, Any], rows: list[dict]) -> None:
-        from pptx.chart.data import CategoryChartData
         from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
         from pptx.util import Pt
 
@@ -767,8 +818,11 @@ class _Deck:
         assert chart_spec is not None  # guaranteed by SlideSpec validation
         columns = {c["key"]: c for c in tbl["columns"]}
         unit = columns[chart_spec.series[0]].get("format", "number")
-        number_format = _NUMBER_FORMATS.get(unit, "General")
-        data = CategoryChartData(number_format=number_format)
+        if unit == "eur":
+            number_format = money_num_format(self.snapshot.base_currency)
+        else:
+            number_format = _NUMBER_FORMATS.get(unit, "General")
+        data = _chart_data_class()(number_format=number_format)
         cat_unit = columns[chart_spec.categories].get("format", "text")
         data.categories = [format_value(r.get(chart_spec.categories), cat_unit, empty="(blank)") for r in rows]
         for key in chart_spec.series:
@@ -838,7 +892,11 @@ class _Deck:
         all_rows = tbl["rows"]
         weights = []
         for c in cols:
-            longest = max([len(format_value(r.get(c["key"]), c.get("format", "text"))) for r in all_rows] or [0])
+            currency = self.snapshot.base_currency
+            longest = max(
+                [len(format_value(r.get(c["key"]), c.get("format", "text"), currency=currency)) for r in all_rows]
+                or [0]
+            )
             weights.append(min(45, max(4, len(str(c["label"])), longest)))
         total = sum(weights)
         widths = [int(_emu(w) * wt / total) for wt in weights]
@@ -858,7 +916,8 @@ class _Deck:
             label = _truncate(clean_text(c["label"], single_line=True), per_line * max_lines)
             self._cell(header, label, pt, bold=True, color="FFFFFF", align=PP_ALIGN.RIGHT if numeric else None)
             for ri, row in enumerate(rows, start=1):
-                text = _truncate(format_value(row.get(c["key"]), c.get("format", "text")), per_line * max_lines)
+                value = format_value(row.get(c["key"]), c.get("format", "text"), currency=self.snapshot.base_currency)
+                text = _truncate(value, per_line * max_lines)
                 cell = table.cell(ri, ci)
                 self._cell(cell, text, pt, bold=emphasis and ci == 0, align=PP_ALIGN.RIGHT if numeric else None)
         for r in range(n_rows):
@@ -892,10 +951,15 @@ class _Deck:
             if severity:
                 color = _SEVERITY_COLORS.get(severity.lower(), _MUTED)
                 runs.append({"text": f"[{severity.upper()}] ", "bold": True, "color": color, "size": head_pt})
-            head = format_value(row.get(head_col), col_defs[head_col].get("format", "text"))
+            head = format_value(
+                row.get(head_col), col_defs[head_col].get("format", "text"), currency=self.snapshot.base_currency
+            )
             runs.append({"text": _truncate(head, per_line * 2 - 12), "size": head_pt})
             paragraphs.append({"runs": runs, "size": head_pt, "space_after": 0})
-            details = [format_value(row.get(c), col_defs[c].get("format", "text")) for c in detail_cols]
+            details = [
+                format_value(row.get(c), col_defs[c].get("format", "text"), currency=self.snapshot.base_currency)
+                for c in detail_cols
+            ]
             detail = " · ".join(d for d in details if d)
             paragraphs.append(
                 {"text": _truncate(detail, per_line * 2) or " ", "size": detail_pt, "color": _MUTED, "space_after": 6}
