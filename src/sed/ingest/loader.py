@@ -5,6 +5,10 @@ scan inbox -> sha256 dedupe -> choose mapping -> read -> map + transform -> PII 
 
 Reading, mapping and scrubbing happen BEFORE any write transaction; each chunk is a short transaction so agents
 and the API are never blocked for long.
+
+The engine is module-agnostic: targets, their order, batch column and snapshot scope come from the enabled modules'
+`ingest_targets`, and module-specific steps (alias seeding, overrides, reresolve re-linking) from their
+`ingest_hooks` (see `sed.ingest.target` and `sed.ingest.hooks`), both reached through the module registry.
 """
 
 from __future__ import annotations
@@ -19,16 +23,18 @@ from pathlib import Path
 from typing import Any
 
 from sed import db
+from sed import modules as registry
 from sed.errors import PreconditionFailed, SedError, ValidationFailed
+from sed.ingest.hooks import ImportSession, RelinkUpdate
 from sed.ingest.mapping import MappingSpec, choose_mapping, load_all_mappings, resolve_as_of, resolve_columns
 from sed.ingest.pii import PiiConfig, PiiProcessor
 from sed.ingest.readers import RawTable
 from sed.ingest.resolve import Resolver, mark_resolved, refresh_suggestions
-from sed.ingest.targets import KIND_ORDER, TARGET_ORDER, TARGETS, Ctx, Reject, Target
+from sed.ingest.target import Ctx, Reject, Target
 from sed.ingest.transforms import TransformError, apply_transform
 from sed.paths import Paths
 from sed.salt import require_salt
-from sed.settings import load_layered, load_settings, read_yaml
+from sed.settings import load_layered, load_settings
 
 CHUNK = 5000
 MANIFEST = "_manifest.json"
@@ -125,12 +131,23 @@ def _check_data_class(paths: Paths, entries: list[Entry], opts: ImportOptions) -
         )
 
 
-def _target_order(entry: Entry) -> tuple[int, int, int, str]:
-    spec = entry.spec
-    assert spec is not None
-    kind_rank = KIND_ORDER.get(spec.constants.get("kind", ""), 0)
-    mode_rank = 1 if spec.load_mode == "active_snapshot" else 0
-    return (TARGET_ORDER.index(spec.target), mode_rank, kind_rank, entry.path.name)
+def plan_order(entries: list[Entry], targets: dict[str, Target]) -> list[Entry]:
+    """Matched entries in dependency order: Target.order, target name, active snapshots last, sort_key, file name."""
+    unknown = sorted({e.spec.target for e in entries if e.spec and e.spec.target not in targets})
+    if unknown:
+        raise ValidationFailed(
+            f"Mappings refer to ingest targets no enabled module declares: {unknown}", {"available": sorted(targets)}
+        )
+
+    def key(entry: Entry) -> tuple[Any, ...]:
+        spec = entry.spec
+        assert spec is not None
+        target = targets[spec.target]
+        mode_rank = 1 if spec.load_mode == "active_snapshot" else 0
+        sort_rank = target.sort_key(spec) if target.sort_key else 0
+        return (target.order, target.name, mode_rank, sort_rank, entry.path.name)
+
+    return sorted((e for e in entries if e.spec), key=key)
 
 
 def _move(path: Path, dest_dir: Path) -> Path:
@@ -242,15 +259,11 @@ def map_table(
 # ---------------------------------------------------------------------------
 
 
-def _batch_column(target: Target) -> str:
-    return "source_batch_id" if target.table == "doc_page" else "last_batch_id"
-
-
 def upsert_sql(target: Target) -> str:
-    cols = [*target.columns, _batch_column(target)]
+    cols = [*target.columns, target.batch_column]
     non_key = [c for c in target.columns if c not in target.key]
     placeholders = ", ".join("?" for _ in cols)
-    updates = ", ".join(f"{c} = excluded.{c}" for c in [*non_key, _batch_column(target)])
+    updates = ", ".join(f"{c} = excluded.{c}" for c in [*non_key, target.batch_column])
     differs = " OR ".join(f"{target.table}.{c} IS NOT excluded.{c}" for c in non_key) or "0"
     if target.updated_field:
         u = target.updated_field
@@ -306,31 +319,6 @@ def write_rows(conn, target: Target, rows: list[dict[str, Any]], batch_id: int) 
 # ---------------------------------------------------------------------------
 
 
-def _seed_config_aliases(paths: Paths, resolver: Resolver) -> int:
-    seeded = 0
-    aliases_file = paths.config / "aliases.yaml"
-    if aliases_file.is_file():
-        for kind, mapping in (read_yaml(aliases_file) or {}).items():
-            for raw, target_id in (mapping or {}).items():
-                resolver.add_alias(kind, raw, str(target_id), "seed")
-                seeded += 1
-    ci_file = paths.config / "ops" / "ci_to_app.yaml"
-    if ci_file.is_file():
-        for ci, app in (read_yaml(ci_file) or {}).items():
-            resolver.add_alias("ci", ci, str(app), "seed")
-            seeded += 1
-    return seeded
-
-
-def _apply_vendor_group_overrides(paths: Paths, resolver: Resolver) -> None:
-    groups = load_layered("ops/vendor_groups.yaml", paths).get("groups") or {}
-    for group, vendor in groups.items():
-        vendor_id = resolver.resolve("vendor", vendor, record_unmapped=False)
-        if vendor and not vendor_id:
-            resolver.unmapped["vendor"][str(vendor)] += 1
-        resolver.set_group(group, vendor_id, None)
-
-
 def run_import(paths: Paths, opts: ImportOptions) -> dict[str, Any]:
     if not paths.db.exists():
         raise PreconditionFailed(f"No database for profile '{paths.profile}'; run `sed init` first.")
@@ -350,6 +338,8 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
     pii_cfg = PiiConfig.from_dict(load_layered("pii.yaml", paths))
     fx = {k.upper(): float(v) for k, v in (load_layered("fx.yaml", paths).get("rates") or {}).items()}
     mappings = load_all_mappings(paths)
+    targets: dict[str, Target] = registry.ingest_targets(paths)
+    hooks = registry.ingest_hooks(paths)
     pii_mode = meta.get("pii_mode", "pseudonymize")
     display_names = bool(settings.display_names and paths.data_class == "real" and pii_mode == "pseudonymize")
 
@@ -381,7 +371,7 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
             entry.spec, entry.table, entry.score = choose_mapping(entry.path, mappings, opts.mapping)
         except SedError as exc:
             entry.error = exc.to_dict()
-    planned = sorted((e for e in entries if e.spec), key=_target_order)
+    planned = plan_order(entries, targets)
     unmatched = [e for e in entries if not e.spec]
 
     if not opts.dry_run and planned:
@@ -401,8 +391,10 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
         pii.register_many(row[name_col] for row in people.rows)
 
     resolver = Resolver(conn)
-    seeded = _seed_config_aliases(paths, resolver)
-    if seeded and not opts.dry_run:
+    session = ImportSession(conn, paths, resolver, opts)
+    for hook in hooks:
+        hook.session_start(session)
+    if resolver.pending and not opts.dry_run:
         with db.write_tx(conn):
             resolver.flush(None)
 
@@ -414,9 +406,7 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
 
     for entry in planned:
         try:
-            result = _import_entry(
-                conn, paths, opts, entry, resolver, pii, salt, settings.base_currency, fx, display_names
-            )
+            result = _import_entry(session, entry, targets, hooks, pii, salt, settings.base_currency, fx, display_names)
         except SedError as exc:
             result = {"file": entry.path.name, "mapping": entry.spec.name, "status": "error", "error": exc.to_dict()}
             if entry.in_inbox and opts.move_files and not opts.dry_run and exc.exit_code == 2:
@@ -425,8 +415,8 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
 
     if not opts.dry_run:
         with db.write_tx(conn):
-            refresh_suggestions(conn)
-            mark_resolved(conn)
+            refresh_suggestions(conn, hooks)
+            mark_resolved(conn, hooks)
 
     errors = [r for r in results if r["status"] == "error"]
     return {
@@ -444,13 +434,25 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
     }
 
 
-def _import_entry(conn, paths, opts, entry, resolver, pii, salt, base_currency, fx, display_names) -> dict[str, Any]:
+def _import_entry(
+    session: ImportSession,
+    entry: Entry,
+    targets: dict[str, Target],
+    hooks: list[Any],
+    pii: PiiProcessor,
+    salt: bytes,
+    base_currency: str,
+    fx: dict[str, float],
+    display_names: bool,
+) -> dict[str, Any]:
+    conn, paths, opts, resolver = session.conn, session.paths, session.opts, session.resolver
     spec, table = entry.spec, entry.table
-    target = TARGETS[spec.target]
+    assert spec is not None and table is not None
+    target = targets[spec.target]
     as_of = resolve_as_of(spec, entry.path, opts.as_of)
-    if spec.target == "ticket" and spec.constants.get("kind") in {"incident", "sc_req_item"}:
-        _apply_vendor_group_overrides(paths, resolver)
-    ctx = Ctx(conn, resolver, pii, salt, None, as_of, base_currency, fx, dict(spec.constants))
+    for hook in hooks:
+        hook.before_target(session, target, spec)
+    ctx = Ctx(conn, resolver, pii, salt, None, as_of, base_currency, fx, dict(spec.constants), state=session.state)
     mapped = map_table(spec, table, target, ctx, pii, display_names, opts.sample_rows)
     rows = mapped.rows
     if spec.load_mode == "append_snapshot" and not as_of:
@@ -529,12 +531,10 @@ def _import_entry(conn, paths, opts, entry, resolver, pii, salt, base_currency, 
 
     try:
         if spec.load_mode == "append_snapshot" and target.snapshot_field:
+            filters = target.snapshot_filters(as_of, spec.constants)
+            where = " AND ".join(f"{column} = ?" for column in filters)
             with db.write_tx(conn):
-                if target.table == "cost_line":
-                    line_type = (spec.constants.get("line_type") or "budget").lower()
-                    conn.execute("DELETE FROM cost_line WHERE as_of = ? AND line_type = ?", (as_of, line_type))
-                else:
-                    conn.execute(f"DELETE FROM {target.table} WHERE {target.snapshot_field} = ?", (as_of,))
+                conn.execute(f"DELETE FROM {target.table} WHERE {where}", tuple(filters.values()))
         stats = write_rows(conn, target, rows, batch_id)
 
         post: dict[str, Any] = {}
@@ -543,7 +543,8 @@ def _import_entry(conn, paths, opts, entry, resolver, pii, salt, base_currency, 
                 for key in soft_delete_keys:
                     where = " AND ".join(f"{k} = ?" for k in target.key)
                     conn.execute(
-                        f"UPDATE {target.table} SET is_deleted = 1, last_batch_id = ? WHERE {where}", (batch_id, *key)
+                        f"UPDATE {target.table} SET is_deleted = 1, {target.batch_column} = ? WHERE {where}",
+                        (batch_id, *key),
                     )
                 post["soft_deleted"] = len(soft_delete_keys)
             if spec.load_mode == "active_snapshot" and target.active_scope:
@@ -618,44 +619,27 @@ def _apply_active_snapshot(conn, target: Target, rows: list[dict[str, Any]], as_
 
 
 def reresolve(paths: Paths) -> dict[str, int]:
-    """Re-link rows from stored raw values after aliases changed (no re-import)."""
+    """Re-link rows from stored raw values after aliases changed (no re-import).
+
+    Every enabled module's hooks compute their RelinkUpdates first (reads only); all updates, the unmapped-value
+    bookkeeping and the suggestion refresh are then applied in one write transaction. The result has one count per
+    re-linked table (in hook order) plus unmapped_marked_resolved.
+    """
     conn = db.connect(paths.db)
     try:
-        resolver = Resolver(conn)
-        _apply_vendor_group_overrides(paths, resolver)
-        counts: dict[str, int] = {}
-        updates: dict[str, list[tuple[Any, ...]]] = {
-            k: [] for k in ("ticket", "contract", "license", "cost_line", "application")
-        }
-        for r in conn.execute(
-            "SELECT ticket_id, business_service_raw, cmdb_ci_raw, assignment_group, app_id, vendor_id FROM ticket"
-        ):
-            app = resolver.resolve_app(r["business_service_raw"], r["cmdb_ci_raw"])
-            vendor = resolver.vendor_for_group(r["assignment_group"])
-            if app != r["app_id"] or vendor != r["vendor_id"]:
-                updates["ticket"].append((app, vendor, r["ticket_id"]))
-        for table, key in (("contract", "contract_id"), ("license", "license_id"), ("cost_line", "cost_line_id")):
-            for r in conn.execute(f"SELECT {key}, app_raw, vendor_raw, app_id, vendor_id FROM {table}"):
-                app = resolver.resolve("app", r["app_raw"], record_unmapped=False)
-                vendor = resolver.resolve("vendor", r["vendor_raw"], record_unmapped=False)
-                if (app, vendor) != (r["app_id"], r["vendor_id"]):
-                    updates[table].append((app, vendor, r[key]))
-        for r in conn.execute("SELECT app_id, vendor_raw, primary_vendor_id FROM application"):
-            vendor = resolver.resolve("vendor", r["vendor_raw"], record_unmapped=False)
-            if vendor != r["primary_vendor_id"]:
-                updates["application"].append((vendor, r["app_id"]))
-        resolver.unmapped.clear()
+        hooks = registry.ingest_hooks(paths)
+        session = ImportSession(conn, paths, Resolver(conn))
+        updates: list[RelinkUpdate] = []
+        for hook in hooks:
+            updates += hook.relink(session)
+        session.resolver.unmapped.clear()
         with db.write_tx(conn):
-            conn.executemany("UPDATE ticket SET app_id = ?, vendor_id = ? WHERE ticket_id = ?", updates["ticket"])
-            conn.executemany("UPDATE contract SET app_id = ?, vendor_id = ? WHERE contract_id = ?", updates["contract"])
-            conn.executemany("UPDATE license SET app_id = ?, vendor_id = ? WHERE license_id = ?", updates["license"])
-            conn.executemany(
-                "UPDATE cost_line SET app_id = ?, vendor_id = ? WHERE cost_line_id = ?", updates["cost_line"]
-            )
-            conn.executemany("UPDATE application SET primary_vendor_id = ? WHERE app_id = ?", updates["application"])
-            counts = {k: len(v) for k, v in updates.items()}
-            counts["unmapped_marked_resolved"] = mark_resolved(conn)
-            refresh_suggestions(conn)
+            counts: dict[str, int] = {}
+            for update in updates:
+                conn.executemany(update.sql, update.rows)
+                counts[update.table] = counts.get(update.table, 0) + len(update.rows)
+            counts["unmapped_marked_resolved"] = mark_resolved(conn, hooks)
+            refresh_suggestions(conn, hooks)
         return counts
     finally:
         conn.close()

@@ -1,8 +1,11 @@
-"""Canonical import targets: keys, written columns, derived fields and post-load hooks.
+"""Ops import targets (legacy location owned by the ops module): keys, written columns, derived fields, post-load.
 
 A mapping produces a record of canonical field values (already PII-processed: person fields are pseudonyms,
 free-text fields are scrubbed; the pre-scrub text is available separately for content hashes). Each target turns
 that record into a DB row, resolving references through the Resolver and rejecting rows it cannot use.
+
+The generic types live in `sed.ingest.target` and are re-exported here. The ops manifest registers `TARGETS`
+(`ingest_targets="sed.ingest.targets:TARGETS"`); the loader reaches this file only through the registry.
 """
 
 from __future__ import annotations
@@ -11,13 +14,15 @@ import hashlib
 import json
 import re
 import sqlite3
-from collections.abc import Callable
-from dataclasses import dataclass, field
 from datetime import date, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sed.ingest.pii import PiiProcessor, text_hash
+from sed.ingest.pii import text_hash
 from sed.ingest.resolve import Resolver, normalize_alias
+from sed.ingest.target import Ctx, Reject, Target
+
+if TYPE_CHECKING:
+    from sed.ingest.mapping import MappingSpec
 
 CLOSED_STATES = {
     "resolved",
@@ -38,75 +43,87 @@ TICKET_PREFIX_KIND = {
     "CHG": "change_request",
     "PRB": "problem",
 }
+KIND_ORDER = {"problem": 0, "change_request": 1, "incident": 2, "sc_req_item": 3}
 
 
-class Reject(Exception):
-    """Row cannot be loaded; reason is recorded in row_reject."""
+# ---------------------------------------------------------------------------
+# ops lookups (per file, cached on the Ctx) and the assignment-group directory (per import session)
+# ---------------------------------------------------------------------------
+
+GROUPS_STATE_KEY = "ops.groups"
 
 
-@dataclass
-class Ctx:
-    conn: sqlite3.Connection
-    resolver: Resolver
-    pii: PiiProcessor
-    salt: bytes
-    batch_id: int | None
-    as_of: str | None
-    base_currency: str
-    fx_rates: dict[str, float]
-    constants: dict[str, Any]
-    warnings: dict[str, int] = field(default_factory=dict)
-    _ticket_ids: set[str] | None = None
-    _license_ids: set[str] | None = None
-    _contract_ids: set[str] | None = None
+def ticket_exists(ctx: Ctx, ticket_id: str) -> bool:
+    ids = ctx.cached("ops.ticket_ids", lambda: {r[0] for r in ctx.conn.execute("SELECT ticket_id FROM ticket")})
+    return ticket_id in ids
 
-    def warn(self, message: str) -> None:
-        self.warnings[message] = self.warnings.get(message, 0) + 1
 
-    def to_base(self, amount: float | None, currency: str | None) -> float | None:
-        if amount is None:
-            return None
-        cur = (currency or self.base_currency).upper()
-        rate = self.fx_rates.get(cur)
-        if rate is None:
-            self.warn(f"no FX rate for currency {cur}")
-            return None
-        return round(amount * rate, 2)
+def license_exists(ctx: Ctx, license_id: str) -> bool:
+    sql = "SELECT license_id FROM license WHERE is_deleted = 0"
+    ids = ctx.cached("ops.license_ids", lambda: {r[0] for r in ctx.conn.execute(sql)})
+    return license_id in ids
 
-    def ticket_exists(self, ticket_id: str) -> bool:
-        if self._ticket_ids is None:
-            self._ticket_ids = {r[0] for r in self.conn.execute("SELECT ticket_id FROM ticket")}
-        return ticket_id in self._ticket_ids
 
-    def license_exists(self, license_id: str) -> bool:
-        if self._license_ids is None:
-            self._license_ids = {r[0] for r in self.conn.execute("SELECT license_id FROM license WHERE is_deleted = 0")}
-        return license_id in self._license_ids
-
-    def contract_id_for(self, raw: Any) -> str | None:
-        if raw in (None, ""):
-            return None
-        if self._contract_ids is None:
-            self._contract_ids = {r[0] for r in self.conn.execute("SELECT contract_id FROM contract")}
-        value = str(raw).strip()
-        if value in self._contract_ids:
-            return value
-        self.resolver.unmapped["contract"][value] += 1
+def contract_id_for(ctx: Ctx, raw: Any) -> str | None:
+    if raw in (None, ""):
         return None
+    ids = ctx.cached("ops.contract_ids", lambda: {r[0] for r in ctx.conn.execute("SELECT contract_id FROM contract")})
+    value = str(raw).strip()
+    if value in ids:
+        return value
+    ctx.resolver.unmapped["contract"][value] += 1
+    return None
 
 
-@dataclass
-class Target:
-    name: str
-    table: str
-    key: tuple[str, ...]
-    columns: tuple[str, ...]
-    build: Callable[[dict[str, Any], dict[str, Any], Ctx], dict[str, Any]]
-    updated_field: str | None = None
-    soft_delete: bool = False
-    snapshot_field: str | None = None  # append_snapshot: rows with this value are replaced
-    active_scope: tuple[str, str] | None = None  # active_snapshot: (column, value) scope, e.g. ("kind", "incident")
-    after_load: Callable[[Ctx, list[dict[str, Any]]], None] | None = None
+class GroupDirectory:
+    """Assignment group -> (vendor_id, app_id) for one import session.
+
+    Loaded from the active assignment_group rows when the session starts, then updated by group files and by the
+    vendor-group overrides (config/ops/vendor_groups.yaml).
+    """
+
+    def __init__(self) -> None:
+        self.group_vendor: dict[str, str | None] = {}
+        self.group_app: dict[str, str | None] = {}
+
+    @classmethod
+    def load(cls, conn: sqlite3.Connection) -> GroupDirectory:
+        directory = cls()
+        for row in conn.execute("SELECT name, vendor_id, app_id FROM assignment_group WHERE is_deleted = 0"):
+            directory.set_group(row["name"], row["vendor_id"], row["app_id"])
+        return directory
+
+    def set_group(self, name: str, vendor_id: str | None, app_id: str | None) -> None:
+        key = normalize_alias(name)
+        self.group_vendor[key] = vendor_id
+        self.group_app[key] = app_id
+
+    def vendor_for_group(self, resolver: Resolver, group: Any) -> str | None:
+        if group in (None, ""):
+            return None
+        return resolver.valid_target("vendor", self.group_vendor.get(normalize_alias(group)))
+
+
+def group_directory(state: dict[str, Any], conn: sqlite3.Connection) -> GroupDirectory:
+    """The session's group directory, loaded from the database on first use."""
+    directory = state.get(GROUPS_STATE_KEY)
+    if directory is None:
+        directory = state[GROUPS_STATE_KEY] = GroupDirectory.load(conn)
+    return directory
+
+
+def resolve_app(resolver: Resolver, business_service: Any, ci: Any) -> str | None:
+    """Business service name first, then the CI via cmdb_rel / ci_to_app aliases."""
+    for kind, raw in (("app", business_service), ("ci", ci), ("app", ci)):
+        if raw not in (None, ""):
+            hit = resolver.resolve(kind, raw, record_unmapped=False)
+            if hit:
+                return hit
+    if business_service not in (None, ""):
+        resolver.unmapped["app"][str(business_service).strip()] += 1
+    elif ci not in (None, ""):
+        resolver.unmapped["ci"][str(ci).strip()] += 1
+    return None
 
 
 def _req(rec: dict[str, Any], name: str) -> Any:
@@ -199,7 +216,7 @@ def build_group(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str,
     app_raw = rec.get("application")
     vendor_id = ctx.resolver.resolve("vendor", vendor_raw)
     app_id = ctx.resolver.resolve("app", app_raw)
-    ctx.resolver.set_group(name, vendor_id, app_id)
+    group_directory(ctx.state, ctx.conn).set_group(name, vendor_id, app_id)
     return {
         "name": name,
         "vendor_raw": vendor_raw,
@@ -251,7 +268,7 @@ def build_license(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[st
         "vendor_raw": rec.get("vendor"),
         "vendor_id": ctx.resolver.resolve("vendor", rec.get("vendor")),
         "contract_raw": rec.get("contract_number"),
-        "contract_id": ctx.contract_id_for(rec.get("contract_number")),
+        "contract_id": contract_id_for(ctx, rec.get("contract_number")),
         "product": rec.get("product"),
         "license_metric": rec.get("license_metric"),
         "entitled_qty": rec.get("entitled_qty"),
@@ -262,7 +279,7 @@ def build_license(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[st
 
 def build_license_usage(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     license_id = str(_req(rec, "license_id"))
-    if not ctx.license_exists(license_id):
+    if not license_exists(ctx, license_id):
         raise Reject("unknown license_id (not in license inventory)")
     as_of = rec.get("as_of_date") or ctx.as_of
     if not as_of:
@@ -308,7 +325,7 @@ def build_cost_line(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[
         "vendor_raw": rec.get("vendor"),
         "vendor_id": ctx.resolver.resolve("vendor", rec.get("vendor")),
         "contract_raw": rec.get("contract_number"),
-        "contract_id": ctx.contract_id_for(rec.get("contract_number")),
+        "contract_id": contract_id_for(ctx, rec.get("contract_number")),
         "period": period,
         "line_type": line_type,
         "cost_category": rec.get("cost_category"),
@@ -364,7 +381,7 @@ def build_ticket(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str
         "kind": kind,
         "number": number,
         "sys_id": rec.get("sys_id"),
-        "app_id": ctx.resolver.resolve_app(rec.get("business_service"), rec.get("cmdb_ci")),
+        "app_id": resolve_app(ctx.resolver, rec.get("business_service"), rec.get("cmdb_ci")),
         "cmdb_ci_raw": rec.get("cmdb_ci"),
         "business_service_raw": rec.get("business_service"),
         "short_description": rec.get("short_description"),
@@ -380,7 +397,7 @@ def build_ticket(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str
         "assignment_group": group,
         "assigned_to_pid": rec.get("assigned_to"),
         "caller_pid": rec.get("caller"),
-        "vendor_id": ctx.resolver.vendor_for_group(group),
+        "vendor_id": group_directory(ctx.state, ctx.conn).vendor_for_group(ctx.resolver, group),
         "opened_at": opened,
         "resolved_at": resolved,
         "closed_at": closed,
@@ -410,7 +427,7 @@ def build_task_sla(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[s
     if not kind:
         raise Reject(f"cannot infer ticket kind from task number {task!r}")
     ticket_id = f"{kind}:{task}"
-    if not ctx.ticket_exists(ticket_id):
+    if not ticket_exists(ctx, ticket_id):
         raise Reject("task_sla for a ticket that is not imported")
     name = str(_req(rec, "sla_name"))
     lowered = name.lower()
@@ -515,6 +532,16 @@ def _cols(*names: str) -> tuple[str, ...]:
     return names
 
 
+def ticket_kind_rank(spec: MappingSpec) -> int:
+    """Ticket files of one import: problems, then changes, incidents and requested items."""
+    return KIND_ORDER.get(spec.constants.get("kind", ""), 0)
+
+
+def cost_line_snapshot_scope(constants: dict[str, Any]) -> dict[str, Any]:
+    """A budget/forecast file replaces only its own line type for its as-of version."""
+    return {"line_type": (constants.get("line_type") or "budget").lower()}
+
+
 def build_person(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     """People directory rows only grow the (hash-only) person dictionary; nothing is written to a table."""
     if not rec.get("name"):
@@ -523,7 +550,7 @@ def build_person(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str
 
 
 TARGETS: dict[str, Target] = {
-    "person_directory": Target("person_directory", "", ("pid",), ("pid",), build_person),
+    "person_directory": Target("person_directory", "", ("pid",), ("pid",), build_person, order=10),
     "vendor": Target(
         "vendor",
         "vendor",
@@ -532,6 +559,7 @@ TARGETS: dict[str, Target] = {
         build_vendor,
         soft_delete=True,
         after_load=after_vendor,
+        order=20,
     ),
     "application": Target(
         "application",
@@ -552,6 +580,7 @@ TARGETS: dict[str, Target] = {
         build_application,
         soft_delete=True,
         after_load=after_application,
+        order=30,
     ),
     "ci_rel": Target(
         "ci_rel",
@@ -561,6 +590,7 @@ TARGETS: dict[str, Target] = {
         build_ci_rel,
         soft_delete=True,
         after_load=after_ci_rel,
+        order=40,
     ),
     "assignment_group": Target(
         "assignment_group",
@@ -569,6 +599,7 @@ TARGETS: dict[str, Target] = {
         _cols("name", "vendor_raw", "vendor_id", "app_raw", "app_id", "is_deleted"),
         build_group,
         soft_delete=True,
+        order=50,
     ),
     "contract": Target(
         "contract",
@@ -597,6 +628,7 @@ TARGETS: dict[str, Target] = {
         ),
         build_contract,
         soft_delete=True,
+        order=60,
     ),
     "license": Target(
         "license",
@@ -618,6 +650,7 @@ TARGETS: dict[str, Target] = {
         ),
         build_license,
         soft_delete=True,
+        order=70,
     ),
     "license_usage": Target(
         "license_usage",
@@ -626,6 +659,7 @@ TARGETS: dict[str, Target] = {
         _cols("license_id", "as_of_date", "assigned_qty", "active_qty_90d"),
         build_license_usage,
         snapshot_field="as_of_date",
+        order=80,
     ),
     "cost_line": Target(
         "cost_line",
@@ -650,6 +684,8 @@ TARGETS: dict[str, Target] = {
         ),
         build_cost_line,
         snapshot_field="as_of",
+        order=90,
+        snapshot_scope=cost_line_snapshot_scope,
     ),
     "ticket": Target(
         "ticket",
@@ -700,6 +736,8 @@ TARGETS: dict[str, Target] = {
         build_ticket,
         updated_field="sys_updated_on",
         active_scope=("kind", "incident"),
+        order=100,
+        sort_key=ticket_kind_rank,
     ),
     "task_sla": Target(
         "task_sla",
@@ -717,6 +755,7 @@ TARGETS: dict[str, Target] = {
             "sla_sys_id",
         ),
         build_task_sla,
+        order=110,
     ),
     "work_item": Target(
         "work_item",
@@ -745,6 +784,7 @@ TARGETS: dict[str, Target] = {
         ),
         build_work_item,
         updated_field="updated",
+        order=120,
     ),
     "doc_page": Target(
         "doc_page",
@@ -765,27 +805,30 @@ TARGETS: dict[str, Target] = {
         build_doc_page,
         updated_field="last_updated",
         soft_delete=True,
+        order=130,
+        batch_column="source_batch_id",
     ),
 }
 
-# Dependency order for multi-file imports.
-TARGET_ORDER = [
-    "person_directory",
-    "vendor",
-    "application",
-    "ci_rel",
-    "assignment_group",
-    "contract",
-    "license",
-    "license_usage",
-    "cost_line",
-    "ticket",
-    "task_sla",
-    "work_item",
-    "doc_page",
-]
-KIND_ORDER = {"problem": 0, "change_request": 1, "incident": 2, "sc_req_item": 3}
+# Dependency order for multi-file imports (derived from Target.order; kept for compatibility).
+TARGET_ORDER = [t.name for t in sorted(TARGETS.values(), key=lambda t: t.order)]
 
 
 def normalize_key_part(value: Any) -> str:
     return normalize_alias(value)
+
+
+__all__ = [
+    "KIND_ORDER",
+    "TARGETS",
+    "TARGET_ORDER",
+    "Ctx",
+    "GroupDirectory",
+    "Reject",
+    "Target",
+    "contract_id_for",
+    "group_directory",
+    "license_exists",
+    "resolve_app",
+    "ticket_exists",
+]
