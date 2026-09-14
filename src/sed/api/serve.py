@@ -83,7 +83,10 @@ def acquire_lock(paths: Paths, *, port: int, pid: int | None = None, reuse_own: 
     for _ in range(3):
         holder = db.serve_lock_holder(lock)
         if holder is not None and not (reuse_own and holder == pid):
-            raise PreconditionFailed(f"`sed serve` is already running for profile '{paths.profile}' (pid {holder}).")
+            raise PreconditionFailed(
+                f"`sed serve` is already running for profile '{paths.profile}' (pid {holder}). If it is not, delete "
+                f"{lock}."
+            )
         try:
             fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
         except FileExistsError:
@@ -91,7 +94,7 @@ def acquire_lock(paths: Paths, *, port: int, pid: int | None = None, reuse_own: 
                 lock.unlink()  # stale (dead pid) or our own reloader's: replace it
             continue
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(f"{pid} {port}\n")
+            fh.write(f"{pid} {port} {db.process_start_token(pid) or '-'}\n")
         return lock
     raise PreconditionFailed(f"Cannot create {lock}; another `sed serve` may be starting.")
 
@@ -118,6 +121,8 @@ def serve_lock(paths: Paths, *, port: int) -> Iterator[Path]:
 
 def bind_socket(port: int) -> socket.socket:
     """Listening socket on 127.0.0.1 only. Exclusive on Windows, so no other process can bind the same port."""
+    if not 0 <= port <= 65535:
+        raise ValidationFailed(f"--port must be between 0 and 65535 (got {port})")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):

@@ -158,9 +158,29 @@ def test_lock_refuses_a_live_holder_and_replaces_a_stale_one(profile):
         sleeper.wait(timeout=30)
     # The holder is gone: its lock is stale and gets replaced.
     lock = serve.acquire_lock(profile, port=8001)
-    assert lock.read_text(encoding="utf-8").split() == [str(os.getpid()), "8001"]
+    assert lock.read_text(encoding="utf-8").split() == [str(os.getpid()), "8001", db.process_start_token(os.getpid())]
     serve.release_lock(profile)
     assert not lock.exists()
+
+
+def test_a_lock_whose_pid_was_reused_by_another_process_is_stale(profile):
+    token = db.process_start_token(os.getpid())
+    assert token, "the start time of a live process is readable"
+    profile.serve_lock.write_text(f"{os.getpid()} 8000 {token}\n", encoding="utf-8")
+    assert db.serve_lock_holder(profile.serve_lock) == os.getpid()
+    profile.serve_lock.write_text(f"{os.getpid()} 8000 1\n", encoding="utf-8")  # written by an earlier process
+    assert db.serve_lock_holder(profile.serve_lock) is None
+    lock = serve.acquire_lock(profile, port=8001)
+    assert lock.read_text(encoding="utf-8").split()[:2] == [str(os.getpid()), "8001"]
+    serve.release_lock(profile)
+
+
+@pytest.mark.parametrize("port", [70000, -1])
+def test_an_out_of_range_port_is_a_validation_error(profile, port):
+    from sed.errors import ValidationFailed
+
+    with pytest.raises(ValidationFailed, match="between 0 and 65535"):
+        serve.bind_socket(port)
 
 
 def test_release_keeps_a_lock_that_belongs_to_another_process(profile):

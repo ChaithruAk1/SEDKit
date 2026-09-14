@@ -130,12 +130,17 @@ def enabled_keys(paths: Paths | None = None) -> frozenset[str]:
     if _override is not None:
         mods, keys = _override
         return keys if keys is not None else frozenset(m.key for m in mods)
-    try:
-        listed = load_layered("modules.yaml", paths).get("enabled")
-    except ValidationFailed:
-        listed = None
+    config = load_layered("modules.yaml", paths)  # a YAML error is a validation error, never "enable everything"
     base = {m.key for m in installed(include_extra=False)}
-    keys = set(listed) if isinstance(listed, list) else base
+    if "enabled" not in config:
+        keys = base
+    else:
+        listed = config["enabled"]
+        if not isinstance(listed, list) or not all(isinstance(k, str) for k in listed):
+            raise ValidationFailed(
+                "config/modules.yaml: 'enabled' must be a list of module keys", {"enabled": repr(listed)[:200]}
+            )
+        keys = set(listed)
     extra = {m.key for m in installed()} - base
     return frozenset(keys | extra)
 
@@ -277,7 +282,14 @@ def ingest_hooks(paths: Paths | None = None) -> list[Any]:
 
 
 def entities() -> dict[str, EntityRef]:
-    return {e.key: e for m in installed() for e in m.entities}
+    """Entity key -> EntityRef over the installed modules; two different definitions of one key are an error."""
+    out: dict[str, EntityRef] = {}
+    for m in installed():
+        for e in m.entities:
+            if e.key in out and out[e.key] != e:
+                raise ValidationFailed(f"Entity '{e.key}' is declared differently by two modules")
+            out[e.key] = e
+    return out
 
 
 def alias_kinds() -> tuple[str, ...]:
@@ -341,7 +353,8 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
     """Static checks of module declarations (no imports). Returns a list of problems; empty means valid."""
     mods = tuple(installed() if mods is None else mods)
     problems: list[str] = []
-    seen: dict[str, dict[str, str]] = {k: {} for k in ("module", "report", "skill", "nav", "cli", "table", "alias")}
+    spaces = ("module", "report", "skill", "nav", "cli", "table", "alias", "entity")
+    seen: dict[str, dict[str, str]] = {k: {} for k in spaces}
 
     def claim(space: str, name: str, owner: str) -> None:
         if name in seen[space]:
@@ -382,6 +395,8 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
             claim("table", table, m.key)
             if table in CORE_TABLES or table in PORTFOLIO_TABLES:
                 problems.append(f"{m.key}: table '{table}' is core-owned")
+        for e in m.entities:
+            claim("entity", e.key, m.key)
         entity_keys = {e.key for e in m.entities} | {e.key for other in mods for e in other.entities}
         for a in m.alias_kinds:
             claim("alias", a.key, m.key)

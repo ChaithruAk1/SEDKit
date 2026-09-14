@@ -91,6 +91,41 @@ def test_validate_flags_collisions_and_bad_names():
         assert fragment in problems, fragment
 
 
+def test_duplicate_entity_keys_are_rejected():
+    from sed.modules.contract import EntityRef
+
+    ops = modules.get("ops")
+    other = Module(key="delivery", title="Delivery", entities=(EntityRef("app", "delivery_app", "id", "title"),))
+    assert "duplicate entity 'app'" in "\n".join(modules.validate([ops, other]))
+    with modules.use_modules([ops, other]), pytest.raises(ValidationFailed, match="declared differently"):
+        modules.entities()
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("enabled: []\n", frozenset()),
+        ("enabled: [ops]\n", frozenset({"ops"})),
+        ("title: no enabled key\n", frozenset({"ops"})),
+        ("enabled: [\n", ValidationFailed),
+        ("enabled: none\n", ValidationFailed),
+        ("enabled:\n", ValidationFailed),
+        ("enabled:\n  - ops: false\n", ValidationFailed),
+    ],
+)
+def test_modules_yaml_is_validated(data_root, text, expected):
+    from sed.paths import get_paths
+
+    paths = get_paths("synthetic")
+    paths.config.mkdir(parents=True, exist_ok=True)
+    (paths.config / "modules.yaml").write_text(text, encoding="utf-8")
+    if expected is ValidationFailed:
+        with pytest.raises(ValidationFailed):
+            modules.enabled_keys(paths)
+    else:
+        assert modules.enabled_keys(paths) == expected
+
+
 def test_disabled_module_is_refused(tmp_path):
     ops = modules.get("ops")
     with modules.use_modules([ops], enabled_keys=set()):

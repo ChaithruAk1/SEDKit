@@ -175,10 +175,14 @@ def _module_checks(paths: Paths, root: Path, add) -> None:
     except SedError as exc:
         add(Check("modules_valid", "fail", f"{exc.message}: {exc.details}" if exc.details else exc.message))
         return
+    unknown = sorted(modules.enabled_keys(paths) - {m.key for m in modules.installed()})
+    warnings = [f"config/modules.yaml lists unknown module(s): {', '.join(unknown)}"] if unknown else []
+    if overlaps:
+        warnings.append("mapping globs overlap across modules: " + "; ".join(overlaps))
     if problems:
         add(Check("modules_valid", "fail", "; ".join(problems)))
-    elif overlaps:
-        add(Check("modules_valid", "warn", "mapping globs overlap across modules: " + "; ".join(overlaps)))
+    elif warnings:
+        add(Check("modules_valid", "warn", "; ".join(warnings)))
     else:
         add(Check("modules_valid", "ok", "enabled: " + ", ".join(m.key for m in modules.enabled(paths))))
 

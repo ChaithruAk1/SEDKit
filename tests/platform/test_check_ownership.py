@@ -83,6 +83,13 @@ def test_frozen_edit_is_a_violation(repo, capsys):
     assert [v["path"] for v in found] == ["src/core.py"] and "frozen" in found[0]["reason"]
 
 
+def test_committed_rename_of_a_frozen_file_into_an_owned_path_is_a_violation(repo, capsys):
+    git(repo, "mv", "src/core.py", "src/a/core.py")
+    git(repo, "commit", "-qm", "move core into ws-a")
+    found = violations(repo, capsys, "ws-a")
+    assert [v["path"] for v in found] == ["src/core.py"] and "frozen" in found[0]["reason"]
+
+
 def test_leftover_stub_is_a_violation(repo, capsys):
     write(repo, "src/a/impl.py", 'WS = "ws-a"\n\ndef f():\n    raise NotImplementedByWorkstream(WS)\n')
     git(repo, "commit", "-qam", "still a stub")

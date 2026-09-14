@@ -51,7 +51,9 @@ time, then gated merges and an adversarial review. Reuse it for large changes (a
 ## Lessons from M2
 
 - Frozen tests that assert a stub's status code will fail once the real code lands; plan those contract updates.
-- Parallel pytest sessions must not share pytest's numbered temp folders (the wrapper sets `--basetemp`).
+- Parallel pytest sessions must not share pytest's numbered temp folders: the wrapper gives each worktree its own
+  temp root (`PYTEST_DEBUG_TEMPROOT`). A fixed `--basetemp` is not enough, because pytest deletes it at the start
+  of every session.
 - Windows shells: pass Windows paths with forward slashes and quote paths with spaces; avoid backslashes in inline
   scripts.
 - Give agents a fixtures mode (for example the dashboard) so they can finish before the APIs they consume are merged.

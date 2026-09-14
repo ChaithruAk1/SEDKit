@@ -295,15 +295,53 @@ def pid_alive(pid: int) -> bool:
     return True
 
 
+def process_start_token(pid: int) -> str | None:
+    """An identifier of the process's start time (None when it cannot be read), so a reused pid is not mistaken for
+    the process that wrote a lock."""
+    if pid <= 0:
+        return None
+    if os.name == "nt":
+
+        class Filetime(ctypes.Structure):
+            _fields_ = [("low", ctypes.c_ulong), ("high", ctypes.c_ulong)]
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return None
+        try:
+            times = [Filetime() for _ in range(4)]
+            if not kernel32.GetProcessTimes(handle, *(ctypes.byref(t) for t in times)):
+                return None
+            return str((times[0].high << 32) | times[0].low)
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as fh:
+            return fh.read().rsplit(")", 1)[1].split()[19]  # field 22: starttime
+    except (OSError, IndexError):
+        return None
+
+
 def serve_lock_holder(lock_path: Path) -> int | None:
-    """PID of a live `sed serve` holding the lock, else None (stale locks are ignored)."""
+    """PID of a live `sed serve` holding the lock, else None (stale locks are ignored).
+
+    A lock records `pid port start-token`; when the token no longer matches the live process with that pid, the pid was
+    reused by an unrelated process after a crash and the lock is stale.
+    """
     if not lock_path.exists():
         return None
     try:
-        pid = int(lock_path.read_text(encoding="utf-8").strip().split()[0])
+        fields = lock_path.read_text(encoding="utf-8").strip().split()
+        pid = int(fields[0])
     except (ValueError, IndexError, OSError):
         return None
-    return pid if pid_alive(pid) else None
+    if not pid_alive(pid):
+        return None
+    recorded = fields[2] if len(fields) > 2 else None
+    if recorded is not None and process_start_token(pid) not in (None, recorded):
+        return None
+    return pid
 
 
 def inspect_backup(backup_file: Path) -> dict[str, Any]:

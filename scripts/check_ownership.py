@@ -52,7 +52,11 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def changed_paths(repo: Path, base: str) -> list[str]:
-    committed = _git(repo, "log", "--no-merges", "--name-only", "--format=", f"{base}..HEAD").splitlines()
+    # --no-renames: a committed rename lists both its source and its destination, so moving a frozen or other-owned
+    # file into an owned path is still a violation.
+    committed = _git(
+        repo, "log", "--no-merges", "--no-renames", "--name-only", "--format=", f"{base}..HEAD"
+    ).splitlines()
     paths = {p.strip() for p in committed if p.strip()}
     for line in _git(repo, "status", "--porcelain", "--untracked-files=all").splitlines():
         entry = line[3:]
