@@ -50,8 +50,9 @@ def _cells(rows: list[tuple]) -> list[str]:
     return [str(c) for r in rows for c in r if c is not None]
 
 
-def _artifact_runs(paths, fmt_path: str) -> list[str]:
-    rows = query(paths, "SELECT ai_run_ids_json FROM report_artifact WHERE path = ? ORDER BY built_at DESC", fmt_path)
+def _artifact_runs(paths, fmt_path: str, ai_mode: str) -> list[str]:
+    rows = query(paths, "SELECT ai_run_ids_json FROM report_artifact WHERE path = ? AND ai_mode = ?", fmt_path, ai_mode)
+    assert len(rows) == 1
     return json.loads(rows[0][0])
 
 
@@ -86,7 +87,7 @@ def test_walking_skeleton_in_process(ops_profile_rw, tmp_path):
     assert line in _cells(_sheet_rows(workbook, "Provenance"))
     definitions = {r[0] for r in _sheet_rows(workbook, "Definitions") if r and r[0]}
     assert definitions >= AI_FACT_KEYS
-    assert _artifact_runs(paths, str(workbook)) == [plan.run_id]
+    assert _artifact_runs(paths, str(workbook), "approved") == [plan.run_id]
     snapshot = query(paths, "SELECT facts_json FROM report_snapshot WHERE snapshot_id = ?", result["snapshot_id"])[0]
     facts = json.loads(snapshot[0])
     assert facts["ai.category.sample_accuracy_pct"]["value"] == round(100 * approval["sample_accuracy"], 1)
@@ -100,7 +101,7 @@ def test_walking_skeleton_in_process(ops_profile_rw, tmp_path):
     assert not {d for d in definitions if str(d).startswith("ai.category.")}
     provenance = _cells(_sheet_rows(workbook, "Provenance"))
     assert line not in provenance and "excluded (--ai none)" in provenance
-    assert _artifact_runs(paths, str(workbook)) == []
+    assert _artifact_runs(paths, str(workbook), "none") == []
 
 
 def _sed(data_dir: Path, *args: str, expect: int = 0) -> dict:

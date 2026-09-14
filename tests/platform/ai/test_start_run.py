@@ -328,3 +328,11 @@ def test_disabled_module_exits_4(ops_profile_rw):
 def test_unknown_skill_exits_2(ops_profile_rw):
     with pytest.raises(ValidationFailed, match="Unknown skill"):
         start_run(ops_profile_rw.paths, "sed-nope", StartParams(scope="new"))
+
+
+def test_unicode_line_breaks_inside_text_never_split_a_packet_line():
+    breaks = "".join(chr(c) for c in (0x85, 0x2028, 0x2029))
+    items = [WorkItem(f"x:{i}", "open", "h", {"desc": f"first{breaks}second"}) for i in range(3)]
+    (batch,) = packets.plan_batches(items, PacketLimits(max_items=10, max_chars=5000))
+    assert len(batch.text.splitlines()) == 3
+    assert all(json.loads(line)["desc"] == f"first{breaks}second" for line in batch.lines)

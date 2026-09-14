@@ -214,8 +214,15 @@ def _dry_run(conn, paths, settings, handler, skill, params, data_date, limits, m
     )
 
 
-def _insert_run(conn: sqlite3.Connection, paths: Paths, handler: Any, skill: str, params: StartParams, shash: str):
-    commit = git_commit()
+def _insert_run(
+    conn: sqlite3.Connection,
+    paths: Paths,
+    handler: Any,
+    skill: str,
+    params: StartParams,
+    shash: str,
+    commit: str | None,
+) -> str:
     for _ in range(RUN_ID_ATTEMPTS):
         run_id = new_run_id(skill)
         try:
@@ -248,9 +255,10 @@ def _real_run(conn, paths, settings, handler, skill, params, data_date, limits, 
     if not skill_dir.is_dir():
         raise PreconditionFailed(f"Skill folder {skill_dir.as_posix()} is missing; agents cannot follow the skill.")
     shash = skill_hash(repo_root(), skill, handler.config_inputs(paths))
+    commit = git_commit()  # outside the write transaction: never hold the write lock while running git
     try:
         with db.write_tx(conn):
-            run_id = _insert_run(conn, paths, handler, skill, params, shash)
+            run_id = _insert_run(conn, paths, handler, skill, params, shash, commit)
             run_dir = paths.runs / run_id
             ctx = RunContext(
                 conn, paths, settings, run_id, skill, params, data_date, run_dir, run_dir / "in", run_dir / "out"
@@ -403,7 +411,7 @@ def _resume(conn, paths, settings, handler, skill, params, data_date) -> RunPlan
             text = packet.read_bytes().decode("utf-8")
         except OSError as exc:
             raise PreconditionFailed(f"Packet file for {name} is missing: {packet.as_posix()}") from exc
-        longest = max([longest, *(len(line) for line in text.splitlines())])
+        longest = max([longest, *(len(line) for line in text.split("\n"))])
         aux = [run_dir / rel for rel in aux_by_batch.get(name, []) if rel]
         inputs.append(
             BatchInput(

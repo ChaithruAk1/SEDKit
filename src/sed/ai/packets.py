@@ -22,6 +22,7 @@ from sed.errors import ValidationFailed
 TRUNCATION_ORDER = ("desc", "close", "short")
 ELLIPSIS = "…"
 SAFE_FILE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$")
+UNICODE_BREAKS = {chr(0x85): r"\u0085", chr(0x2028): r"\u2028", chr(0x2029): r"\u2029"}
 
 
 def batch_name(seq: int) -> str:
@@ -33,7 +34,11 @@ def ref_for(index: int, width: int = 3) -> str:
 
 
 def _dumps(data: dict[str, Any]) -> str:
-    return json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str)
+    """Compact JSON; Unicode line and paragraph separators are escaped so a packet line never splits."""
+    text = json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str)
+    for raw, escaped in UNICODE_BREAKS.items():
+        text = text.replace(raw, escaped)
+    return text
 
 
 def render_line(ref: str, payload: dict[str, Any], max_line_chars: int) -> str:

@@ -32,6 +32,11 @@ from sed.paths import Paths
 from sed.settings import load_settings
 
 MAX_REPORTED_ERRORS = 200
+MAX_OUTPUT_BYTES = 10 * 1024 * 1024
+
+
+def _no_constants(value: str) -> Any:
+    raise ValueError(f"{value} is not valid JSON")
 
 
 def _as_path(file: str | Path) -> Path:
@@ -109,6 +114,8 @@ def ingest_file(paths: Paths, run_id: str, file: str | Path) -> dict[str, Any]:
         if batch is None or resolved.suffix.lower() != ".json":
             raise _reject(conn, None, [IngestError("file", f"'{resolved.name}' is not an output file of a batch")])
         try:
+            if resolved.stat().st_size > MAX_OUTPUT_BYTES:
+                raise _reject(conn, batch_id, [IngestError("file", f"larger than {MAX_OUTPUT_BYTES} bytes")])
             data = resolved.read_bytes()
         except OSError as exc:
             raise _reject(conn, batch_id, [IngestError("file", f"cannot read {resolved.as_posix()}: {exc}")]) from exc
@@ -138,7 +145,7 @@ def ingest_file(paths: Paths, run_id: str, file: str | Path) -> dict[str, Any]:
             )
         }
         try:
-            raw = json.loads(data.decode("utf-8-sig"))
+            raw = json.loads(data.decode("utf-8-sig"), parse_constant=_no_constants)
         except (UnicodeDecodeError, ValueError) as exc:
             raise _reject(conn, batch_id, [IngestError("(root)", f"invalid JSON: {exc}")]) from exc
         errors: list[IngestError] = []

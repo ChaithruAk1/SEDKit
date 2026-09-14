@@ -250,3 +250,15 @@ def test_cli_ingest_prints_the_error_envelope(running):
     ok = CliRunner().invoke(app, [*argv[:3], str(fake_output(plan, plan.inputs[0])), *argv[4:]])
     assert ok.exit_code == 0 and json.loads(ok.stdout)["ok"] is True
     assert SKILL == "sed-triage-batch"
+
+
+def test_non_finite_numbers_are_rejected(running):
+    paths, plan = running
+    out = fake_output(plan, plan.inputs[0])
+    text = out.read_text(encoding="utf-8")
+    first = json.loads(text)["items"][0]["confidence"]
+    out.write_bytes(text.replace(f'"confidence": {first}', '"confidence": NaN', 1).encode("utf-8"))
+    with pytest.raises(ValidationFailed) as exc:
+        ingest_file(paths, plan.run_id, out)
+    assert "NaN" in exc.value.details[0]["msg"]
+    assert _labels(paths, plan.run_id) == 0
