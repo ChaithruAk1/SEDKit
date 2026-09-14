@@ -140,3 +140,63 @@ def test_priority_and_updated_sorts(client):
     assert priorities == sorted(priorities, key=lambda p: (p is None, p))
     updated = page(client, sort="updated_desc", page_size=5)
     assert len(updated["items"]) == 5
+
+
+def _add_label(conn: Any, run_id: str, status: str, ticket_id: str, stage: str, input_hash: str, category: str) -> None:
+    conn.execute(
+        "INSERT OR IGNORE INTO ai_run (run_id, skill, skill_hash, schema_version, invoked_via, profile, status, "
+        "started_at) VALUES (?, 'sed-triage-batch', 'test-hash', 1, 'manual', 'synthetic', ?, '2026-09-01T00:00:00Z')",
+        (run_id, status),
+    )
+    conn.execute(
+        "INSERT INTO ai_ticket_label (ticket_id, stage, run_id, input_hash, am_category, confidence, created_at) "
+        "VALUES (?, ?, ?, ?, ?, 0.9, '2026-09-01T00:00:00Z')",
+        (ticket_id, stage, run_id, input_hash, category),
+    )
+
+
+def test_ai_labels_follow_run_status_and_content_hash(ops_profile_rw):
+    """Only approved labels on the current content hash are shown; include_drafts adds completed (unreviewed) runs."""
+    from urllib.parse import quote
+
+    from sed import db
+    from tests.fixtures.api import api_client
+
+    paths = ops_profile_rw.paths
+    conn = db.connect(paths.db)
+    try:
+        ticket_id, open_hash = conn.execute(
+            "SELECT ticket_id, open_hash FROM ticket WHERE kind = 'incident' AND is_open = 1 AND open_hash IS NOT NULL "
+            "ORDER BY ticket_id LIMIT 1"
+        ).fetchone()
+        stale_ticket = conn.execute(
+            "SELECT ticket_id FROM ticket WHERE kind = 'incident' AND open_hash IS NOT NULL "
+            "AND ticket_id != ? ORDER BY ticket_id LIMIT 1",
+            (ticket_id,),
+        ).fetchone()[0]
+        with db.write_tx(conn):
+            _add_label(conn, "20260901T000000-triage-test1", "completed", ticket_id, "open", open_hash, "Integration")
+            _add_label(conn, "20260901T000000-triage-test2", "approved", stale_ticket, "open", "not-the-hash", "Access")
+    finally:
+        conn.close()
+
+    client = api_client(paths)
+    assert page(client, am_category="Integration")["total"] == 0
+    drafts = page(client, am_category="Integration", include_drafts="true")
+    assert drafts["total"] == 1 and drafts["items"][0]["ticket_id"] == ticket_id
+    assert drafts["items"][0]["label_run_id"] == "20260901T000000-triage-test1"
+    assert page(client, am_category="Access", include_drafts="true")["total"] == 0, "label on an outdated hash"
+
+    detail = client.get(f"/api/ops/tickets/{quote(ticket_id, safe='')}").json()
+    assert detail["am_category"] is None
+    assert [(x["run_status"], x["am_category"]) for x in detail["labels"]] == [("completed", "Integration")]
+
+    conn = db.connect(paths.db)
+    try:
+        with db.write_tx(conn):
+            conn.execute("UPDATE ai_run SET status = 'approved' WHERE run_id = '20260901T000000-triage-test1'")
+    finally:
+        conn.close()
+    approved = page(client, am_category="Integration")
+    assert approved["total"] == 1 and approved["items"][0]["am_category"] == "Integration"
+    assert client.get(f"/api/ops/tickets/{quote(ticket_id, safe='')}").json()["am_category"] == "Integration"
