@@ -289,7 +289,10 @@ function SearchTab() {
   const [, setTicket] = useTicketParam();
   const [text, setText] = useState(q);
 
-  useEffect(() => setText(q), [q]);
+  // Follow the URL (back/forward, links) without clobbering what is being typed (e.g. a trailing space).
+  useEffect(() => {
+    setText((current) => (current.trim() === q ? current : q));
+  }, [q]);
   const pushText = useDebouncedCallback((value: string) => patch({ q: value.trim().slice(0, 200) || null, page: null }), 350);
 
   const priorities = priorityParam
@@ -321,7 +324,7 @@ function SearchTab() {
       <Group gap="xs" align="flex-end" wrap="wrap">
         <TextInput
           label="Search"
-          description="Full-text over scrubbed short description and description; word* for prefixes"
+          description="Scrubbed ticket text; word* matches prefixes"
           placeholder="e.g. interface timeout"
           leftSection={<IconSearch size={14} />}
           value={text}

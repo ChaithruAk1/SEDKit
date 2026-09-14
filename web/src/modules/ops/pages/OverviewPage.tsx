@@ -76,45 +76,47 @@ export default function OverviewPage() {
             : null}
       </SimpleGrid>
 
-      <Grid gap="md">
-        <Grid.Col span={{ base: 12, lg: 8 }}>
-          <SectionCard title="Top risks" description="Highest-severity published findings" count={data?.top_risks.length ?? null}>
-            <FindingList
-              findings={data?.top_risks}
-              emptyText={overview.loading ? 'Loading…' : 'No published risks'}
-              subjectHref={(f) => findingSubjectHref(f, search)}
-            />
-          </SectionCard>
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 4 }}>
-          <Stack gap="md">
-            <SimpleGrid cols={{ base: 1, xs: 3, lg: 1 }} spacing="sm">
-              <CountCard
-                title="Needs attention"
-                value={data?.attention_count}
-                icon={<IconAlertTriangle size={28} color="var(--mantine-color-orange-6)" />}
-                href={`/ops/attention${search}`}
-                note="As of the last export"
+      {overview.error && !data ? null : (
+        <Grid gap="md">
+          <Grid.Col span={{ base: 12, lg: 8 }}>
+            <SectionCard title="Top risks" description="Highest-severity published findings" count={data?.top_risks.length ?? null}>
+              <FindingList
+                findings={data?.top_risks}
+                emptyText={overview.loading ? 'Loading…' : 'No published risks'}
+                subjectHref={(f) => findingSubjectHref(f, search)}
               />
-              <CountCard
-                title="Stale open"
-                value={data?.stale_open}
-                icon={<IconArchive size={28} color="var(--mantine-color-gray-6)" />}
-                note="Open in the store, missing from the latest active export"
-              />
-              <CountCard
-                title="Review queue"
-                value={data?.review_queue_count}
-                icon={<IconChecklist size={28} color="var(--mantine-color-violet-6)" />}
-                note="AI drafts and runs waiting for review (sed review)"
-              />
-            </SimpleGrid>
-            <SectionCard title="Freshness" description="Newest data per source">
-              <FreshnessList rows={data?.freshness} asOf={data?.as_of} />
             </SectionCard>
-          </Stack>
-        </Grid.Col>
-      </Grid>
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, lg: 4 }}>
+            <Stack gap="md">
+              <SimpleGrid cols={{ base: 1, xs: 3, lg: 1 }} spacing="sm">
+                <CountCard
+                  title="Needs attention"
+                  value={data?.attention_count}
+                  icon={<IconAlertTriangle size={28} color="var(--mantine-color-orange-6)" />}
+                  href={`/ops/attention${search}`}
+                  note="As of the last export"
+                />
+                <CountCard
+                  title="Stale open"
+                  value={data?.stale_open}
+                  icon={<IconArchive size={28} color="var(--mantine-color-gray-6)" />}
+                  note="Open in the store, missing from the latest active export"
+                />
+                <CountCard
+                  title="Review queue"
+                  value={data?.review_queue_count}
+                  icon={<IconChecklist size={28} color="var(--mantine-color-violet-6)" />}
+                  note="AI drafts and runs waiting for review (sed review)"
+                />
+              </SimpleGrid>
+              <SectionCard title="Freshness" description="Newest data per source">
+                <FreshnessList rows={data?.freshness} asOf={data?.as_of} />
+              </SectionCard>
+            </Stack>
+          </Grid.Col>
+        </Grid>
+      )}
 
       <SectionCard
         title="Findings"

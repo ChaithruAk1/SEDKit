@@ -145,6 +145,10 @@ function scopedTickets(q: Common | undefined): TicketDetail[] {
   return TICKETS.filter((t) => t.app_id !== null && ids.has(t.app_id) && (!q?.group || t.assignment_group === q.group));
 }
 
+function severityRank(severity: string | null): number {
+  return { critical: 0, high: 1, medium: 2, low: 3 }[severity ?? ''] ?? 4;
+}
+
 function asOf(q: Common | undefined): string {
   return q?.as_of ?? AS_OF;
 }
@@ -242,6 +246,7 @@ export function overview(q: Common | undefined): Schema<'OpsOverview'> {
     stale_open: tickets.filter((t) => t.stale_open).length,
     top_risks: allFindings()
       .filter((f) => (f.origin === 'rule' ? f.status === 'active' : f.status === 'approved') && f.kind !== 'report_section')
+      .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
       .slice(0, 5),
     review_queue_count: 3,
     freshness: freshness(),

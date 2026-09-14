@@ -1,6 +1,15 @@
 import { Alert, Button, Center, Code, Loader, Stack, Text } from '@mantine/core';
 import { IconBug } from '@tabler/icons-react';
-import { Component, type ComponentType, type ErrorInfo, type LazyExoticComponent, type ReactNode, Suspense, lazy } from 'react';
+import {
+  Component,
+  type ComponentType,
+  type ErrorInfo,
+  type LazyExoticComponent,
+  type ReactNode,
+  Suspense,
+  lazy,
+  useEffect,
+} from 'react';
 import { isRouteErrorResponse, useLocation, useRouteError } from 'react-router';
 
 import type { FilterKey } from '../hooks/useFilters';
@@ -60,6 +69,9 @@ class PageErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
 export function PageFrame({ route }: { route: PageRoute }) {
   const location = useLocation();
   const Page = lazyPage(route);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   return (
     <>
       <FilterBar keys={route.filters} />

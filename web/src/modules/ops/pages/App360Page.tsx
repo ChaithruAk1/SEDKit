@@ -120,7 +120,7 @@ export default function App360Page() {
             <Group gap={6}>
               {app.criticality ? <Badge variant="light" color={app.criticality === 'high' ? 'red' : 'gray'}>{app.criticality} criticality</Badge> : null}
               {app.lifecycle ? <Badge variant="dot">{app.lifecycle}</Badge> : null}
-              {app.open_risks ? <Badge color="red" variant="light">{app.open_risks} open risks</Badge> : null}
+              {app.open_risks ? <Badge color="red" variant="light">{app.open_risks} open risk{app.open_risks === 1 ? '' : 's'}</Badge> : null}
             </Group>
           ) : null
         }

@@ -47,7 +47,7 @@ export function KpiTile({ kpi, definition, footer }: KpiTileProps) {
       </Text>
       <Group gap={6} mt={2} wrap="nowrap">
         {delta !== null ? (
-          <Badge size="sm" variant="light" color={good === null ? 'gray' : good ? 'teal' : 'red'}>
+          <Badge size="sm" variant="light" tt="none" color={good === null ? 'gray' : good ? 'teal' : 'red'}>
             {formatDelta(delta, kpi.unit)}
           </Badge>
         ) : null}

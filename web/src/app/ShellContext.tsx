@@ -84,7 +84,9 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const [moduleOptions, setModuleOptions] = useState<FilterOptionSets>({});
   const [filterOptionsError, setFilterOptionsError] = useState<ApiError | Error | null>(null);
 
-  useEffect(() => setBaseCurrency(meta.data?.base_currency), [meta.data?.base_currency]);
+  useEffect(() => {
+    setBaseCurrency(meta.data?.base_currency);
+  }, [meta.data?.base_currency]);
 
   const enabledKeys = meta.data ? meta.data.modules.map((m) => m.key).join(',') : null;
   useEffect(() => {
