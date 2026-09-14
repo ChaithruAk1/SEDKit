@@ -1,5 +1,5 @@
 -- owner: ops
--- ops_api_indexes.sql (pending; the integrator numbers it at merge): read indexes for the /api/ops dashboard routes.
+-- 004_ops_api_indexes.sql: read indexes for the /api/ops dashboard routes.
 -- Measured query plans and timings on the scale-1.0 synthetic profile are in docs/m2/perf.md.
 
 -- Incidents resolved in a window (SLA, MTTR, vendor SLA trend, apps grid, overview) and the backlog candidates

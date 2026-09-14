@@ -37,15 +37,9 @@ def test_unsafe_methods_need_the_token(ops_profile):
     )
     assert wrong.status_code == 403
     with_token = api_client(ops_profile.paths).post("/api/aliases", json=body)
-    assert with_token.status_code == 501
-    assert with_token.json() == {
-        "ok": False,
-        "error": {
-            "kind": "not_implemented",
-            "message": "Not implemented yet (owned by workstream ws4-api-platform)",
-            "details": {"workstream": "ws4-api-platform"},
-        },
-    }
+    # With the token the request reaches the route: an unknown target is a validation error, raised before any write.
+    assert with_token.status_code == 422
+    assert with_token.json()["ok"] is False and with_token.json()["error"]["kind"] == "validation"
 
 
 def test_validation_and_not_found_use_the_envelope(ops_profile):
@@ -90,7 +84,7 @@ def test_disabled_module_is_not_mounted(ops_profile):
     with modules.use_modules([modules.get("ops")], enabled_keys=set()):
         client = api_client(ops_profile.paths)
         assert client.get("/api/ops/filters").status_code == 404
-    assert api_client(ops_profile.paths).get("/api/ops/filters").status_code == 501
+    assert api_client(ops_profile.paths).get("/api/ops/filters").status_code == 200
 
 
 def test_index_injects_token_without_caching(ops_profile, tmp_path):
