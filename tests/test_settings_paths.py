@@ -5,14 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from amkit import paths as p
-from amkit.errors import PreconditionFailed, ValidationFailed
-from amkit.settings import deep_merge, load_agent_config, load_layered, load_settings, read_yaml
+from sed import paths as p
+from sed.errors import PreconditionFailed, ValidationFailed
+from sed.settings import deep_merge, load_agent_config, load_layered, load_settings, read_yaml
 
 
 def test_profile_resolution_order(monkeypatch: pytest.MonkeyPatch):
     assert p.resolve_profile() == "synthetic"
-    monkeypatch.setenv("AMKIT_PROFILE", "eval-1337")
+    monkeypatch.setenv("SED_PROFILE", "eval-1337")
     assert p.resolve_profile() == "eval-1337"
     assert p.resolve_profile("real") == "real"
     with pytest.raises(PreconditionFailed):
@@ -28,14 +28,14 @@ def test_data_class():
 def test_get_paths_uses_data_root(data_root: Path):
     paths = p.get_paths("synthetic")
     assert paths.data_dir == data_root / "synthetic"
-    assert paths.db == data_root / "synthetic" / "amkit.db"
+    assert paths.db == data_root / "synthetic" / "sed.db"
 
 
 def test_location_checks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    assert p.is_unc(Path(r"\\server\share\amkit"))
+    assert p.is_unc(Path(r"\\server\share\sed"))
     assert not p.is_unc(tmp_path)
     monkeypatch.setenv("OneDrive", str(tmp_path / "OneDrive - Contoso"))
-    assert p.is_under_onedrive(tmp_path / "OneDrive - Contoso" / "amkit")
+    assert p.is_under_onedrive(tmp_path / "OneDrive - Contoso" / "sed")
     (tmp_path / "repo" / ".git").mkdir(parents=True)
     assert p.enclosing_git_tree(tmp_path / "repo" / "data") == (tmp_path / "repo").resolve()
 
@@ -67,7 +67,7 @@ def test_repo_defaults_load(data_root: Path):
     assert settings.base_currency == "EUR"
     assert settings.fiscal_year_start == 1
     agent = load_agent_config()
-    assert agent.command_prefix == "uv run amkit"
+    assert agent.command_prefix == "uv run sed"
     assert "\\" not in agent.fallback_prefix
 
 
@@ -105,9 +105,9 @@ def test_read_yaml_encodings(tmp_path: Path):
 
 def test_agent_config_is_machine_level_and_bash_safe(data_root: Path):
     data_root.mkdir(parents=True, exist_ok=True)
-    (data_root / "agent.yaml").write_text("command_prefix: .venv/Scripts/python -m amkit\n", "utf-8")
-    assert load_agent_config().command_prefix == ".venv/Scripts/python -m amkit"
-    (data_root / "agent.yaml").write_text("command_prefix: .venv\\Scripts\\python -m amkit\n", "utf-8")
+    (data_root / "agent.yaml").write_text("command_prefix: .venv/Scripts/python -m sed\n", "utf-8")
+    assert load_agent_config().command_prefix == ".venv/Scripts/python -m sed"
+    (data_root / "agent.yaml").write_text("command_prefix: .venv\\Scripts\\python -m sed\n", "utf-8")
     with pytest.raises(ValidationFailed):
         load_agent_config()
 
@@ -115,7 +115,7 @@ def test_agent_config_is_machine_level_and_bash_safe(data_root: Path):
 def test_mapping_extends_chain(data_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     repo = tmp_path / "fake_repo"
     (repo / "config" / "mappings").mkdir(parents=True)
-    monkeypatch.setenv("AMKIT_REPO_ROOT", str(repo))
+    monkeypatch.setenv("SED_REPO_ROOT", str(repo))
     (repo / "config" / "mappings" / "base.yaml").write_text(
         "name: base\nfields:\n  number: {from: [number, Number]}\n", "utf-8"
     )
@@ -138,7 +138,7 @@ def test_mapping_extends_chain(data_root: Path, tmp_path: Path, monkeypatch: pyt
 def test_circular_extends(data_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     repo = tmp_path / "fake_repo"
     (repo / "config" / "mappings").mkdir(parents=True)
-    monkeypatch.setenv("AMKIT_REPO_ROOT", str(repo))
+    monkeypatch.setenv("SED_REPO_ROOT", str(repo))
     (repo / "config" / "mappings" / "a.yaml").write_text("extends: b\n", "utf-8")
     (repo / "config" / "mappings" / "b.yaml").write_text("extends: a\n", "utf-8")
     with pytest.raises(ValidationFailed):

@@ -1,0 +1,20 @@
+# Finance workbook with one column per month under merged fiscal-year headers ("FY25" over "Jan".."Dec").
+name: costs_wide_xlsx
+target: cost_line
+load_mode: delta
+description: IT cost actuals, wide month columns, EU decimals
+match:
+  glob: ["it_cost_actuals*.xlsx"]
+constants: {line_type: actual}
+unpivot:
+  columns_regex: '^FY(?P<fy>\d{2}) \| (?P<mon>[A-Za-z]{3})$'
+  var_template: "20{fy}-{mon}"
+  var_format: "%Y-%b"
+fields:
+  application:     {from: [Application], pii: none}
+  vendor:          {from: [Vendor], pii: none}
+  cost_category:   {from: [Cost Category], pii: none}
+  cost_center:     {from: [Cost Center], pii: none}
+  contract_number: {from: [Contract No], pii: none}
+  period:          {from: [period], pii: none, required: true}
+  amount:          {from: [amount], transform: eu_decimal, pii: none, required: true}

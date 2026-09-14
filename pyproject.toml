@@ -1,7 +1,7 @@
 [project]
-name = "amkit"
+name = "sed"
 version = "0.1.0"
-description = "App Owner Toolkit: ticket, cost/license/vendor and report automation over local exports"
+description = "SED: ticket, cost/license/vendor and report automation over local exports"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
@@ -27,7 +27,7 @@ dependencies = [
 connectors = ["httpx>=0.27", "truststore>=0.9", "msal>=1.28"]
 
 [project.scripts]
-amkit = "amkit.cli:main"
+sed = "sed.cli:main"
 
 [dependency-groups]
 dev = [
@@ -43,7 +43,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/amkit"]
+packages = ["src/sed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

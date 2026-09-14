@@ -1,0 +1,10 @@
+name: cmdb_rel_ci
+target: ci_rel
+load_mode: full_snapshot
+description: CI relationships (business application -> application instances / servers)
+match:
+  glob: ["cmdb_rel_ci*"]
+fields:
+  parent: {from: [parent, Parent], pii: none, required: true}
+  child:  {from: [child, Child], pii: none, required: true}
+  type:   {from: [type, Type], pii: none}

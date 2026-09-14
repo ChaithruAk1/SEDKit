@@ -1,0 +1,20 @@
+name: contracts_xlsx
+target: contract
+load_mode: full_snapshot
+description: Contracts register workbook
+match:
+  glob: ["contracts_register*.xlsx", "contracts*.xlsx", "contracts*.csv"]
+fields:
+  contract_number:    {from: [Contract No, Contract Number], pii: none, required: true}
+  vendor:             {from: [Vendor, Supplier], pii: none}
+  application:        {from: [Application, App], pii: none}
+  product:            {from: [Product/Service, Product, Service], pii: none}
+  start_date:         {from: [Start Date], transform: date, pii: none}
+  end_date:           {from: [End Date], transform: date, pii: none, required: true}
+  notice_period_days: {from: [Notice Period (days), Notice Period], transform: int, pii: none}
+  auto_renew:         {from: [Auto Renew, Auto-renew], transform: bool, pii: none}
+  renewal_status:     {from: [Status, Renewal Status], pii: none}
+  annual_value:       {from: [Annual Value], transform: money, pii: none}
+  currency:           {from: [Currency], pii: none}
+  owner:              {from: [Contract Owner, Owner], pii: person}
+  comments:           {from: [Comments, Notes], pii: free_text}

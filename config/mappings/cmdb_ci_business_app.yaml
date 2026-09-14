@@ -1,0 +1,15 @@
+name: cmdb_ci_business_app
+target: application
+load_mode: full_snapshot
+description: Application portfolio (business applications)
+match:
+  glob: ["cmdb_ci_business_app*"]
+fields:
+  app_id:               {from: [number, Number], pii: none, required: true}
+  name:                 {from: [name, Name], pii: none, required: true}
+  app_family:           {from: [u_application_family, Application family], pii: none}
+  business_criticality: {from: [business_criticality, Business criticality], pii: none}
+  life_cycle_stage:     {from: [life_cycle_stage, Life cycle stage], pii: none}
+  it_owner:             {from: [it_application_owner, IT application owner], pii: person}
+  cost_center:          {from: [cost_center, Cost center], pii: none}
+  vendor:               {from: [vendor, Vendor, u_vendor], pii: none}

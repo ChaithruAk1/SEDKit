@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from amkit import db
-from amkit.errors import PreconditionFailed
+from sed import db
+from sed.errors import PreconditionFailed
 
 EXPECTED_TABLES = {
     "meta", "import_batch", "row_reject", "alias", "unmapped_value", "person_key", "person_display", "vendor",
@@ -20,7 +20,7 @@ EXPECTED_VIEWS = {"v_label_current", "v_ticket", "v_findings_published"}
 
 @pytest.fixture
 def conn(tmp_path: Path):
-    path = tmp_path / "amkit.db"
+    path = tmp_path / "sed.db"
     c = db.connect(path)
     db.enable_wal(c)
     db.migrate(c, path, tmp_path / "backups")
@@ -44,7 +44,7 @@ def test_fresh_migrate_creates_schema(conn: sqlite3.Connection):
 
 
 def test_migrate_is_idempotent(conn: sqlite3.Connection, tmp_path: Path):
-    result = db.migrate(conn, tmp_path / "amkit.db", tmp_path / "backups")
+    result = db.migrate(conn, tmp_path / "sed.db", tmp_path / "backups")
     assert result["applied"] == []
     assert result["backup"] is None
 
@@ -59,7 +59,7 @@ def test_ai_run_seq_autoincrements(conn: sqlite3.Connection):
         for i in range(2):
             conn.execute(
                 "INSERT INTO ai_run (run_id, skill, skill_hash, schema_version, invoked_via, profile, started_at) "
-                "VALUES (?, 'am-triage-batch', 'h', 1, 'workflow', 'test', ?)",
+                "VALUES (?, 'sed-triage-batch', 'h', 1, 'workflow', 'test', ?)",
                 (f"run-{i}", db.utc_now()),
             )
     seqs = [r[0] for r in conn.execute("SELECT run_seq FROM ai_run ORDER BY run_seq")]
@@ -112,7 +112,7 @@ def test_backup_and_prune(conn: sqlite3.Connection, tmp_path: Path):
     backups = tmp_path / "bk"
     for i in range(4):
         db.backup(conn, backups, reason=f"r{i}", keep=3)
-    files = list(backups.glob("amkit-*.db"))
+    files = list(backups.glob("sed-*.db"))
     assert len(files) == 3
     check = sqlite3.connect(str(sorted(files)[-1]))
     assert check.execute("PRAGMA user_version").fetchone()[0] == db.latest_version()
@@ -120,7 +120,7 @@ def test_backup_and_prune(conn: sqlite3.Connection, tmp_path: Path):
 
 
 def test_migrate_backs_up_existing_db_before_new_migration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    path = tmp_path / "amkit.db"
+    path = tmp_path / "sed.db"
     c = db.connect(path)
     db.migrate(c, path, tmp_path / "backups")
     real = db.migrations()
@@ -134,7 +134,7 @@ def test_migrate_backs_up_existing_db_before_new_migration(tmp_path: Path, monke
 
 
 def test_failed_migration_rolls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    path = tmp_path / "amkit.db"
+    path = tmp_path / "sed.db"
     c = db.connect(path)
     db.migrate(c, path, tmp_path / "backups")
     real = db.migrations()
@@ -193,7 +193,7 @@ def _add_ticket(conn: sqlite3.Connection, number: str, **cols) -> None:
 
 
 def test_restore_oldest_of_full_backup_dir_keeps_data(tmp_path: Path):
-    live = tmp_path / "amkit.db"
+    live = tmp_path / "sed.db"
     conn = db.connect(live)
     db.enable_wal(conn)
     db.migrate(conn, live, None)
@@ -238,7 +238,7 @@ def test_restore_refuses_different_salt(conn: sqlite3.Connection, tmp_path: Path
 
 
 def test_backup_keep_must_be_positive(conn: sqlite3.Connection, tmp_path: Path):
-    from amkit.errors import ValidationFailed
+    from sed.errors import ValidationFailed
 
     with pytest.raises(ValidationFailed):
         db.backup(conn, tmp_path / "bk", keep=0)
@@ -256,7 +256,7 @@ def _seed_import_batch_with_reject(c: sqlite3.Connection) -> None:
 
 def test_rebuild_migration_preserves_cascade_children(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """SQLite's documented table-rebuild procedure must not cascade-delete children (row_reject ON DELETE CASCADE)."""
-    path = tmp_path / "amkit.db"
+    path = tmp_path / "sed.db"
     c = db.connect(path)
     db.migrate(c, path, tmp_path / "backups")
     _seed_import_batch_with_reject(c)
@@ -274,7 +274,7 @@ def test_rebuild_migration_preserves_cascade_children(tmp_path: Path, monkeypatc
 
 
 def test_migration_with_fk_violation_rolls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    path = tmp_path / "amkit.db"
+    path = tmp_path / "sed.db"
     c = db.connect(path)
     db.migrate(c, path, tmp_path / "backups")
     real = db.migrations()
@@ -289,7 +289,7 @@ def test_migration_with_fk_violation_rolls_back(tmp_path: Path, monkeypatch: pyt
 
 
 def test_migrate_refuses_newer_schema(tmp_path: Path):
-    path = tmp_path / "amkit.db"
+    path = tmp_path / "sed.db"
     c = db.connect(path)
     db.migrate(c, path, None)
     c.execute(f"PRAGMA user_version={db.latest_version() + 5}")
@@ -299,7 +299,7 @@ def test_migrate_refuses_newer_schema(tmp_path: Path):
 
 
 def test_migrate_skips_version_applied_by_another_process(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    path = tmp_path / "amkit.db"
+    path = tmp_path / "sed.db"
     a = db.connect(path)
     db.migrate(a, path, None)
     real = db.migrations()
@@ -330,7 +330,7 @@ def test_v_ticket_takes_whole_label_row(conn: sqlite3.Connection):
             conn.execute(
                 "INSERT INTO ai_run (run_id, skill, skill_hash, schema_version, invoked_via, profile, status,"
                 " started_at)"
-                " VALUES (?, 'am-triage-batch', 'h', 1, 'workflow', 't', 'approved', ?)",
+                " VALUES (?, 'sed-triage-batch', 'h', 1, 'workflow', 't', 'approved', ?)",
                 (run_id, db.utc_now()),
             )
         conn.execute(

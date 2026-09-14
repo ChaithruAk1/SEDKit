@@ -1,0 +1,24 @@
+name: servicenow_problem
+target: ticket
+load_mode: delta
+description: Problem records
+match:
+  glob: ["problem_*.csv", "problem.csv", "problem_*.xlsx"]
+source_tz: Europe/Paris
+constants: {kind: problem}
+fields:
+  number:            {from: [number, Number], pii: none, required: true}
+  opened_at:         {from: [opened_at, Opened], transform: datetime, pii: none}
+  sys_updated_on:    {from: [sys_updated_on, Updated], transform: datetime, pii: none}
+  resolved_at:       {from: [resolved_at, Resolved], transform: datetime, pii: none}
+  closed_at:         {from: [closed_at, Closed], transform: datetime, pii: none}
+  state:             {from: [state, State], pii: none}
+  priority:          {from: [priority, Priority], transform: leading_int, pii: none}
+  category:          {from: [category, Category], pii: none}
+  short_description: {from: [short_description, Short description], pii: free_text}
+  description:       {from: [description, Description], pii: free_text}
+  close_notes:       {from: [cause_notes, Cause notes, fix_notes, Fix notes], pii: free_text}
+  assignment_group:  {from: [assignment_group, Assignment group], pii: none}
+  assigned_to:       {from: [assigned_to, Assigned to], pii: person}
+  business_service:  {from: [business_service, Service], pii: none}
+  cmdb_ci:           {from: [cmdb_ci, Configuration item], pii: none}

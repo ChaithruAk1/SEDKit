@@ -1,0 +1,11 @@
+name: servicenow_group
+target: assignment_group
+load_mode: full_snapshot
+description: Assignment groups with owning vendor (custom u_vendor column)
+match:
+  glob: ["sys_user_group*"]
+fields:
+  name:        {from: [name, Name], pii: none, required: true}
+  vendor:      {from: [u_vendor, Vendor], pii: none}
+  application: {from: [u_application, Application], pii: none}
+  manager:     {from: [manager, Manager], pii: person}

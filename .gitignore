@@ -13,7 +13,7 @@ build/
 web/node_modules/
 web/dist/
 
-# Data never lives in the repo (DATA_DIR is %LOCALAPPDATA%\amkit\<profile>)
+# Data never lives in the repo (DATA_DIR is %LOCALAPPDATA%\sed\<profile>)
 *.db
 *.db-wal
 *.db-shm

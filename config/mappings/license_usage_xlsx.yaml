@@ -1,0 +1,13 @@
+name: license_usage_xlsx
+target: license_usage
+load_mode: append_snapshot
+description: Monthly license usage extract (file name carries the month)
+match:
+  glob: ["license_usage_*.xlsx", "license_usage_*.csv"]
+as_of:
+  from_filename: '(\d{4}-\d{2})'
+  format: "%Y-%m"
+fields:
+  license_id:     {from: [License ID], pii: none, required: true}
+  assigned_qty:   {from: [Assigned], transform: float, pii: none}
+  active_qty_90d: {from: ["Active (90d)", Active 90d], transform: float, pii: none}

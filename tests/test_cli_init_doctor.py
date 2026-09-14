@@ -7,14 +7,14 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from amkit import claude_setup, db
-from amkit.cli import app
-from amkit.paths import get_paths
-from amkit.salt import fingerprint, read_salt
+from sed import claude_setup, db
+from sed.cli import app
+from sed.paths import get_paths
+from sed.salt import fingerprint, read_salt
 
 runner = CliRunner()
 
-# Checks that depend on the machine/clone rather than on amkit behaviour.
+# Checks that depend on the machine/clone rather than on sed behaviour.
 ENVIRONMENT_CHECKS = {"git_hooks_installed", "git_local_user_email", "guard_denylist_present", "data_dir_not_onedrive"}
 
 
@@ -125,8 +125,8 @@ def test_settings_local_preserves_user_entries(data_root: Path, tmp_path: Path):
     target = tmp_path / "settings.local.json"
     user_rules = {
         "permissions": {
-            "allow": ["Bash(git status)", "Read(//c/tools/amkit/docs/**)"],
-            "deny": ["Bash(uv run amkit db restore:*)"],
+            "allow": ["Bash(git status)", "Read(//c/tools/sed/docs/**)"],
+            "deny": ["Bash(uv run sed db restore:*)"],
         },
         "model": "x",
     }
@@ -136,7 +136,7 @@ def test_settings_local_preserves_user_entries(data_root: Path, tmp_path: Path):
     data = json.loads(target.read_text(encoding="utf-8"))
     assert data["model"] == "x"
     assert data["permissions"]["allow"][:2] == user_rules["permissions"]["allow"]
-    assert "Bash(uv run amkit db restore:*)" in data["permissions"]["deny"]
+    assert "Bash(uv run sed db restore:*)" in data["permissions"]["deny"]
     assert len([a for a in data["permissions"]["allow"] if "/runs/**" in a and a.startswith("Read(")]) == 1
 
 
@@ -162,13 +162,13 @@ def test_custom_data_dir_is_wired(data_root: Path, tmp_path: Path):
 
 def test_machine_prefix_override_survives_other_profiles(data_root: Path, tmp_path: Path):
     data_root.mkdir(parents=True, exist_ok=True)
-    (data_root / "agent.yaml").write_text("command_prefix: .venv/Scripts/python -m amkit\n", encoding="utf-8")
+    (data_root / "agent.yaml").write_text("command_prefix: .venv/Scripts/python -m sed\n", encoding="utf-8")
     assert run("init", "--profile", "real", "--new-salt")[0] == 0
     assert run("init", "--profile", "eval-7", "--new-salt")[0] == 0
     data = json.loads((tmp_path / "settings.local.json").read_text(encoding="utf-8"))
-    assert "Bash(.venv/Scripts/python -m amkit:*)" in data["permissions"]["allow"]
-    assert "PowerShell(.venv/Scripts/python -m amkit:*)" in data["permissions"]["allow"]
-    assert "`.venv/Scripts/python -m amkit`" in Path(os.environ["AMKIT_CLAUDE_MD"]).read_text(encoding="utf-8")
+    assert "Bash(.venv/Scripts/python -m sed:*)" in data["permissions"]["allow"]
+    assert "PowerShell(.venv/Scripts/python -m sed:*)" in data["permissions"]["allow"]
+    assert "`.venv/Scripts/python -m sed`" in Path(os.environ["SED_CLAUDE_MD"]).read_text(encoding="utf-8")
 
 
 def test_doctor_passes_on_fresh_profile(data_root: Path, monkeypatch: pytest.MonkeyPatch):
@@ -240,7 +240,7 @@ def test_db_backup_keep_zero_is_rejected(data_root: Path):
 
 
 def test_unexpected_errors_keep_json_contract(data_root: Path, monkeypatch: pytest.MonkeyPatch):
-    import amkit.bootstrap as bootstrap
+    import sed.bootstrap as bootstrap
 
     def boom(*_a, **_k):
         raise RuntimeError("kaboom")
@@ -252,6 +252,6 @@ def test_unexpected_errors_keep_json_contract(data_root: Path, monkeypatch: pyte
 
 
 def test_posix_rule_path():
-    assert claude_setup.posix_rule_path(Path(r"C:\Users\me\AppData\Local\amkit\real\runs")) == (
-        "//c/Users/me/AppData/Local/amkit/real/runs"
+    assert claude_setup.posix_rule_path(Path(r"C:\Users\me\AppData\Local\sed\real\runs")) == (
+        "//c/Users/me/AppData/Local/sed/real/runs"
     )

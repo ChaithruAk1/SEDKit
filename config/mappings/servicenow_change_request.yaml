@@ -1,0 +1,27 @@
+name: servicenow_change_request
+target: ticket
+load_mode: delta
+description: Change requests
+match:
+  glob: ["change_request_*.csv", "change_request_*.xlsx"]
+source_tz: Europe/Paris
+constants: {kind: change_request}
+fields:
+  number:            {from: [number, Number], pii: none, required: true}
+  opened_at:         {from: [opened_at, Opened], transform: datetime, pii: none}
+  sys_updated_on:    {from: [sys_updated_on, Updated], transform: datetime, pii: none}
+  closed_at:         {from: [closed_at, Closed], transform: datetime, pii: none}
+  state:             {from: [state, State], pii: none}
+  priority:          {from: [priority, Priority], transform: leading_int, pii: none}
+  change_type:       {from: [type, Type], pii: none}
+  risk:              {from: [risk, Risk], pii: none}
+  start_date:        {from: [start_date, Planned start date], transform: datetime, pii: none}
+  end_date:          {from: [end_date, Planned end date], transform: datetime, pii: none}
+  close_code:        {from: [close_code, Close code], pii: none}
+  close_notes:       {from: [close_notes, Close notes], pii: free_text}
+  short_description: {from: [short_description, Short description], pii: free_text}
+  description:       {from: [description, Description], pii: free_text}
+  assignment_group:  {from: [assignment_group, Assignment group], pii: none}
+  assigned_to:       {from: [assigned_to, Assigned to], pii: person}
+  business_service:  {from: [business_service, Service], pii: none}
+  cmdb_ci:           {from: [cmdb_ci, Configuration item], pii: none}

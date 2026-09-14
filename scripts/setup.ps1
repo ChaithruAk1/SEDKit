@@ -1,7 +1,7 @@
 # One-time developer setup (thin wrapper; all logic lives in the Python CLI).
-# Usage:  powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 [-AmkitProfile synthetic]
+# Usage:  powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 [-SedProfile synthetic]
 param(
-    [string]$AmkitProfile = "synthetic"
+    [string]$SedProfile = "synthetic"
 )
 $ErrorActionPreference = "Stop"
 Set-Location -Path (Split-Path -Parent $PSScriptRoot)
@@ -19,12 +19,12 @@ Invoke-Step "uv sync" { uv sync }
 $env:UV_NO_SYNC = "1"
 $env:PYTHONUTF8 = "1"
 
-$dataDir = Join-Path $env:LOCALAPPDATA "amkit\$AmkitProfile"
+$dataDir = Join-Path $env:LOCALAPPDATA "sed\$SedProfile"
 $saltFile = Join-Path $dataDir "secret\pii_salt.txt"
 if (Test-Path $saltFile) {
-    Invoke-Step "amkit init" { uv run amkit init --profile $AmkitProfile }
+    Invoke-Step "sed init" { uv run sed init --profile $SedProfile }
 } else {
-    Invoke-Step "amkit init --new-salt" { uv run amkit init --profile $AmkitProfile --new-salt }
+    Invoke-Step "sed init --new-salt" { uv run sed init --profile $SedProfile --new-salt }
     Write-Host "Back up $saltFile now." -ForegroundColor Yellow
 }
 
@@ -36,5 +36,5 @@ if (Test-Path ".git") {
     }
 }
 
-uv run amkit doctor --profile $AmkitProfile
+uv run sed doctor --profile $SedProfile
 exit $LASTEXITCODE

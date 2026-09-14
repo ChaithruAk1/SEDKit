@@ -1,0 +1,10 @@
+# ServiceNow sys_user list export (people directory). Nothing is stored except salted name hashes, so every
+# known person's name is scrubbed from ticket text even before they appear in a caller/assignee field.
+name: servicenow_user
+target: person_directory
+load_mode: delta
+description: People directory for name scrubbing (no personal data persisted)
+match:
+  glob: ["sys_user_*.csv", "sys_user.csv", "sys_user_*.xlsx"]
+fields:
+  name: {from: [name, Name, Display name], pii: person, required: true}

@@ -1,0 +1,37 @@
+# ServiceNow incident list export: CSV with field names or XLSX with display labels (both aliases listed).
+name: servicenow_incident
+target: ticket
+load_mode: delta
+description: Incidents (monthly or weekly delta exports filtered on sys_updated_on)
+match:
+  glob: ["incident_*.csv", "incident_*.xlsx"]
+source_tz: Europe/Paris
+constants: {kind: incident}
+fields:
+  number:             {from: [number, Number], pii: none, required: true}
+  sys_id:             {from: [sys_id, Sys ID], pii: none}
+  opened_at:          {from: [opened_at, Opened], transform: datetime, pii: none}
+  sys_updated_on:     {from: [sys_updated_on, Updated], transform: datetime, pii: none}
+  resolved_at:        {from: [resolved_at, Resolved], transform: datetime, pii: none}
+  closed_at:          {from: [closed_at, Closed], transform: datetime, pii: none}
+  state:              {from: [state, State], pii: none}
+  priority:           {from: [priority, Priority], transform: leading_int, pii: none}
+  impact:             {from: [impact, Impact], transform: leading_int, pii: none}
+  urgency:            {from: [urgency, Urgency], transform: leading_int, pii: none}
+  category:           {from: [category, Category], pii: none}
+  subcategory:        {from: [subcategory, Subcategory], pii: none}
+  short_description:  {from: [short_description, Short description], pii: free_text}
+  description:        {from: [description, Description], pii: free_text}
+  close_code:         {from: [close_code, Resolution code, Close code], pii: none}
+  close_notes:        {from: [close_notes, Resolution notes, Close notes], pii: free_text}
+  caller:             {from: [caller_id, Caller], pii: person}
+  assigned_to:        {from: [assigned_to, Assigned to], pii: person}
+  assignment_group:   {from: [assignment_group, Assignment group], pii: none}
+  business_service:   {from: [business_service, Service, Business service], pii: none}
+  cmdb_ci:            {from: [cmdb_ci, Configuration item], pii: none}
+  made_sla:           {from: [made_sla, Made SLA], transform: bool, pii: none}
+  reassignment_count: {from: [reassignment_count, Reassignment count], transform: int, pii: none}
+  reopen_count:       {from: [reopen_count, Reopen count], transform: int, pii: none}
+  problem_id:         {from: [problem_id, Problem], pii: none}
+  caused_by:          {from: [caused_by, Caused by Change], pii: none}
+  parent_incident:    {from: [parent_incident, Parent Incident], pii: none}

@@ -1,0 +1,10 @@
+# Weekly "all open incidents" list export. Open incidents missing from it are flagged stale_open.
+extends: servicenow_incident
+name: servicenow_incident_active
+load_mode: active_snapshot
+description: Snapshot of all currently open incidents (file name carries the snapshot date)
+match:
+  glob: ["incident_active_*.csv", "incident_active_*.xlsx"]
+as_of:
+  from_filename: '(\d{4}-\d{2}-\d{2})'
+  format: "%Y-%m-%d"

@@ -8,7 +8,7 @@ Modes:
 
 Checks: data-file extensions outside synthetic fixture paths, files over 1 MB, corporate-domain email addresses
 and hostnames, real ITSM/Atlassian/SharePoint tenant hostnames, and terms from an external denylist of real
-app/vendor/instance names kept outside the repo (%LOCALAPPDATA%\\amkit\\guard\\denylist.txt or AMKIT_GUARD_DENYLIST).
+app/vendor/instance names kept outside the repo (%LOCALAPPDATA%\\sed\\guard\\denylist.txt or SED_GUARD_DENYLIST).
 Content checks decode UTF-8, UTF-16 and UTF-32 (with or without BOM), so Windows "Unicode" exports are scanned.
 """
 
@@ -68,11 +68,11 @@ class Violation:
 
 
 def denylist_path() -> Path:
-    env = os.environ.get("AMKIT_GUARD_DENYLIST")
+    env = os.environ.get("SED_GUARD_DENYLIST")
     if env:
         return Path(env)
-    root = os.environ.get("AMKIT_DATA_ROOT") or (
-        str(Path(os.environ["LOCALAPPDATA"]) / "amkit") if os.environ.get("LOCALAPPDATA") else ""
+    root = os.environ.get("SED_DATA_ROOT") or (
+        str(Path(os.environ["LOCALAPPDATA"]) / "sed") if os.environ.get("LOCALAPPDATA") else ""
     )
     return Path(root) / "guard" / "denylist.txt" if root else Path("__no_denylist__")
 
@@ -109,7 +109,7 @@ def load_denylist(path: Path | None = None) -> list[re.Pattern[str]]:
     text = decode_text(p.read_bytes()) or ""
     terms = []
     for line in text.splitlines():
-        term = line.strip().lstrip("﻿")
+        term = line.strip().lstrip("\ufeff")
         if term and not term.startswith("#"):
             # Letter-only boundaries: OTHERVENDOR_L2, u_othervendor_ci and othervendor2026.csv all match.
             terms.append(re.compile(r"(?<![A-Za-z])" + re.escape(term) + r"(?![A-Za-z])", re.IGNORECASE))
@@ -269,9 +269,9 @@ def main(argv: list[str] | None = None) -> int:
         print("Confidential-material guard FAILED:", file=sys.stderr)
         for v in violations:
             print(f"  {v}", file=sys.stderr)
-        print("Real data belongs in DATA_DIR (%LOCALAPPDATA%\\amkit\\<profile>), never in git.", file=sys.stderr)
+        print("Real data belongs in DATA_DIR (%LOCALAPPDATA%\\sed\\<profile>), never in git.", file=sys.stderr)
         return 1
-    if not denylist and os.environ.get("AMKIT_GUARD_REQUIRE_DENYLIST") == "1":
+    if not denylist and os.environ.get("SED_GUARD_REQUIRE_DENYLIST") == "1":
         print("Denylist required but not found at " + str(denylist_path()), file=sys.stderr)
         return 1
     return 0

@@ -1,0 +1,17 @@
+# Confluence space HTML export (directory with index.html, or a .zip of it).
+name: confluence_pages
+target: doc_page
+load_mode: delta
+format: confluence_html
+description: Confluence pages (KB articles, runbooks, release notes) as application context
+match:
+  glob: ["confluence_*"]
+  min_score: 0.5
+fields:
+  page_id:      {from: [page_id], pii: none, required: true}
+  space_key:    {from: [space_key], pii: none, required: true}
+  title:        {from: [title], pii: none, required: true}
+  author:       {from: [author], pii: person}
+  last_updated: {from: [last_updated], transform: date, formats: ["%b %d, %Y"], pii: none}
+  labels:       {from: [labels], transform: split_list, pii: none}
+  body:         {from: [body], pii: free_text}

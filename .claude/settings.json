@@ -5,8 +5,8 @@
   },
   "permissions": {
     "allow": [
-      "Bash(uv run amkit:*)",
-      "PowerShell(uv run amkit:*)",
+      "Bash(uv run sed:*)",
+      "PowerShell(uv run sed:*)",
       "Read(./.claude/skills/**)"
     ],
     "deny": [

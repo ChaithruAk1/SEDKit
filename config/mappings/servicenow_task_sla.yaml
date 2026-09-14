@@ -1,0 +1,16 @@
+name: servicenow_task_sla
+target: task_sla
+load_mode: delta
+description: Task SLA records (preferred SLA source when exportable)
+match:
+  glob: ["task_sla_*.csv", "task_sla_*.xlsx"]
+source_tz: Europe/Paris
+fields:
+  task:              {from: [task, Task], pii: none, required: true}
+  sla_name:          {from: [sla, SLA definition, SLA], pii: none, required: true}
+  stage:             {from: [stage, Stage], pii: none}
+  has_breached:      {from: [has_breached, Has breached, Breached], transform: bool, pii: none}
+  start_time:        {from: [start_time, Start time], transform: datetime, pii: none}
+  end_time:          {from: [end_time, Stop time, End time], transform: datetime, pii: none}
+  business_duration: {from: [business_duration, Business elapsed time], transform: duration, pii: none}
+  sys_id:            {from: [sys_id], pii: none}

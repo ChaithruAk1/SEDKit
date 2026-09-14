@@ -1,0 +1,16 @@
+name: licenses_xlsx
+target: license
+load_mode: full_snapshot
+description: License inventory workbook
+match:
+  glob: ["license_inventory*.xlsx", "license_inventory*.csv"]
+fields:
+  license_id:      {from: [License ID], pii: none, required: true}
+  application:     {from: [Application], pii: none}
+  vendor:          {from: [Vendor], pii: none}
+  contract_number: {from: [Contract No], pii: none}
+  product:         {from: [Product], pii: none}
+  license_metric:  {from: [Metric, License Metric], pii: none}
+  entitled_qty:    {from: [Entitled Qty, Entitled], transform: float, pii: none}
+  unit_cost:       {from: ["Unit Cost (EUR)", Unit Cost], transform: money, pii: none}
+  currency:        {from: [Currency], pii: none}

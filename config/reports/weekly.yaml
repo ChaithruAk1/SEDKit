@@ -1,0 +1,44 @@
+# Weekly application operations review. Facts/tables come from the frozen snapshot (sed.reports.snapshot.weekly).
+report: weekly
+title: Weekly Application Operations Review
+audience: Support leads and ops review
+kpis:
+  - {fact: inc.opened, compare: inc.opened.avg4w, delta: inc.opened.delta_vs_avg4w_pct}
+  - {fact: inc.resolved, compare: inc.resolved.avg4w}
+  - {fact: inc.backlog, delta: inc.backlog.delta}
+  - {fact: inc.backlog.stale_excluded}
+  - {fact: inc.sla.pct, compare: inc.sla.pct.avg4w, delta: inc.sla.delta_pp_vs_4w}
+  - {fact: inc.mttr.median_h, compare: inc.mttr.median_h.avg4w, delta: inc.mttr.delta_vs_avg4w_pct}
+  - {fact: inc.p1p2.opened}
+  - {fact: attention.count}
+  - {fact: inc.stale_open}
+  - {fact: chg.success.pct}
+  - {fact: renewals.90d.count}
+  - {fact: notice.30d.count}
+  - {fact: license.idle_cost}
+  - {fact: findings.system_detected.count}
+sheets:
+  - table: volume_trend_12w
+    sheet: Volume trend
+    chart: {type: column, categories: period, series: [opened, resolved], title: Incidents opened vs resolved}
+  - table: sla_by_priority
+    sheet: SLA
+    conditional: [{column: pct, rule: "<", value: 90, style: bad}]
+  - {table: attention, sheet: Needs attention}
+  - {table: backlog_aging_by_group, sheet: Backlog aging}
+  - {table: top_apps, sheet: Top apps}
+  - {table: p1p2, sheet: P1-P2}
+  - {table: changes_failed, sheet: Changes}
+  - {table: category_breakdown, sheet: Categories}
+  - table: renewals_90d
+    sheet: Renewals
+    conditional: [{column: days_to_notice, rule: "<=", value: 30, style: bad}]
+  - table: license_outliers
+    sheet: Licenses
+    conditional: [{column: utilization, rule: "<", value: 0.7, style: warn}]
+  - table: cost_variance
+    sheet: Cost vs budget
+    conditional: [{column: variance_pct, rule: ">=", value: 25, style: bad}]
+  - {table: findings, sheet: Risks}
+markdown:
+  max_words: 250

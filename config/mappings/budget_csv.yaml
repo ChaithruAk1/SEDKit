@@ -1,0 +1,18 @@
+# Budget version per fiscal year (cp1252 + semicolon + EU decimals is typical of finance extracts).
+name: budget_csv
+target: cost_line
+load_mode: append_snapshot
+description: IT budget by application and month
+match:
+  glob: ["budget_*.csv", "budget_*.xlsx"]
+constants: {line_type: budget}
+as_of:
+  from_filename: 'FY(\d{2})'
+  format: "%y"
+fields:
+  application:   {from: [Application], pii: none}
+  vendor:        {from: [Vendor], pii: none}
+  cost_category: {from: [Cost Category, Catégorie de coût], pii: none}
+  cost_center:   {from: [Cost Center, Centre de coût], pii: none}
+  period:        {from: [Period, Période], pii: none, required: true}
+  amount:        {from: ["Budget (EUR)", Montant], transform: eu_decimal, pii: none, required: true}

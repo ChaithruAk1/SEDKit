@@ -1,0 +1,29 @@
+# Jira CSV export ("all fields"): repeated Labels/Sprint/Component columns are folded into lists.
+name: jira_issues
+target: work_item
+load_mode: delta
+description: Jira issues
+match:
+  glob: ["jira_*.csv"]
+reader:
+  fold_duplicate_headers: true
+source_tz: Europe/Paris
+fields:
+  issue_key:       {from: [Issue key], pii: none, required: true}
+  project_key:     {from: [Project key], pii: none}
+  project_name:    {from: [Project name], pii: none}
+  summary:         {from: [Summary], pii: free_text}
+  issue_type:      {from: [Issue Type], pii: none}
+  status:          {from: [Status], pii: none}
+  status_category: {from: [Status Category], pii: none}
+  priority:        {from: [Priority], pii: none}
+  created:         {from: [Created], transform: datetime, pii: none}
+  updated:         {from: [Updated], transform: datetime, pii: none}
+  resolved:        {from: [Resolved], transform: datetime, pii: none}
+  sprint:          {from: [Sprint], transform: split_list, pii: none}
+  labels:          {from: [Labels], transform: split_list, pii: none}
+  components:      {from: [Component/s, Components], transform: split_list, pii: none}
+  fix_versions:    {from: [Fix Version/s, Fix versions], transform: split_list, pii: none}
+  parent_key:      {from: [Parent, Parent id], pii: none}
+  story_points:    {from: ["Custom field (Story Points)", Story Points], transform: float, pii: none}
+  assignee:        {from: [Assignee], pii: person}

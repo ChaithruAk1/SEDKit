@@ -11,79 +11,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "amkit"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "faker" },
-    { name = "fastapi" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "openpyxl" },
-    { name = "pandas" },
-    { name = "pydantic" },
-    { name = "python-calamine" },
-    { name = "python-pptx" },
-    { name = "pyyaml" },
-    { name = "rapidfuzz" },
-    { name = "rich" },
-    { name = "scikit-learn" },
-    { name = "typer" },
-    { name = "tzdata" },
-    { name = "uvicorn" },
-    { name = "xlsxwriter" },
-]
-
-[package.optional-dependencies]
-connectors = [
-    { name = "httpx" },
-    { name = "msal" },
-    { name = "truststore" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "detect-secrets" },
-    { name = "httpx" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "faker", specifier = ">=25.0" },
-    { name = "fastapi", specifier = ">=0.115" },
-    { name = "httpx", marker = "extra == 'connectors'", specifier = ">=0.27" },
-    { name = "msal", marker = "extra == 'connectors'", specifier = ">=1.28" },
-    { name = "numpy", specifier = ">=1.26" },
-    { name = "openpyxl", specifier = ">=3.1" },
-    { name = "pandas", specifier = ">=2.2" },
-    { name = "pydantic", specifier = ">=2.7" },
-    { name = "python-calamine", specifier = ">=0.2" },
-    { name = "python-pptx", specifier = ">=1.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rapidfuzz", specifier = ">=3.9" },
-    { name = "rich", specifier = ">=13.7" },
-    { name = "scikit-learn", specifier = ">=1.5" },
-    { name = "truststore", marker = "extra == 'connectors'", specifier = ">=0.9" },
-    { name = "typer", specifier = ">=0.12" },
-    { name = "tzdata", specifier = ">=2024.1" },
-    { name = "uvicorn", specifier = ">=0.30" },
-    { name = "xlsxwriter", specifier = ">=3.2" },
-]
-provides-extras = ["connectors"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "detect-secrets", specifier = ">=1.5" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "pre-commit", specifier = ">=3.7" },
-    { name = "pytest", specifier = ">=8.2" },
-    { name = "ruff", specifier = ">=0.6" },
-]
-
-[[package]]
 name = "annotated-doc"
 version = "0.0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1138,6 +1065,79 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/91/4c/075e4f66471bac101141ac739e9e135549be1bae584571bd03a530c056e1/scipy-1.18.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:d2924a03db38dc2e848bca2fe9f077dafb891480b91a00a0963a8cf86dfc31c1", size = 37480330, upload-time = "2026-08-21T23:24:19.608Z" },
     { url = "https://files.pythonhosted.org/packages/39/e7/979fd14e75008623df31ba70d6bb144700f68feadcea042021c06a05bf82/scipy-1.18.1-cp312-cp312-win_amd64.whl", hash = "sha256:5e4d44984abc0020154ea81b247adeddcc3ac5527b975ff798bd1ba0adc513c2", size = 36658278, upload-time = "2026-08-21T23:24:25.463Z" },
     { url = "https://files.pythonhosted.org/packages/c7/0b/e1525354ff9d7d5feb6d1b31af6d14072e5c91e9607b421fa1ec889660b3/scipy-1.18.1-cp312-cp312-win_arm64.whl", hash = "sha256:d65d448389b8436493abcf629cc94ad0cf32aecaf06e1acca1de53cc795f2f12", size = 24400588, upload-time = "2026-08-21T23:24:30.579Z" },
+]
+
+[[package]]
+name = "sed"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "faker" },
+    { name = "fastapi" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "pydantic" },
+    { name = "python-calamine" },
+    { name = "python-pptx" },
+    { name = "pyyaml" },
+    { name = "rapidfuzz" },
+    { name = "rich" },
+    { name = "scikit-learn" },
+    { name = "typer" },
+    { name = "tzdata" },
+    { name = "uvicorn" },
+    { name = "xlsxwriter" },
+]
+
+[package.optional-dependencies]
+connectors = [
+    { name = "httpx" },
+    { name = "msal" },
+    { name = "truststore" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "detect-secrets" },
+    { name = "httpx" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "faker", specifier = ">=25.0" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", marker = "extra == 'connectors'", specifier = ">=0.27" },
+    { name = "msal", marker = "extra == 'connectors'", specifier = ">=1.28" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "openpyxl", specifier = ">=3.1" },
+    { name = "pandas", specifier = ">=2.2" },
+    { name = "pydantic", specifier = ">=2.7" },
+    { name = "python-calamine", specifier = ">=0.2" },
+    { name = "python-pptx", specifier = ">=1.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "rapidfuzz", specifier = ">=3.9" },
+    { name = "rich", specifier = ">=13.7" },
+    { name = "scikit-learn", specifier = ">=1.5" },
+    { name = "truststore", marker = "extra == 'connectors'", specifier = ">=0.9" },
+    { name = "typer", specifier = ">=0.12" },
+    { name = "tzdata", specifier = ">=2024.1" },
+    { name = "uvicorn", specifier = ">=0.30" },
+    { name = "xlsxwriter", specifier = ">=3.2" },
+]
+provides-extras = ["connectors"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "detect-secrets", specifier = ">=1.5" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "pre-commit", specifier = ">=3.7" },
+    { name = "pytest", specifier = ">=8.2" },
+    { name = "ruff", specifier = ">=0.6" },
 ]
 
 [[package]]

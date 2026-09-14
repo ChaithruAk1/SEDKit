@@ -1,21 +1,21 @@
 {
   "permissions": {
     "additionalDirectories": [
-      "C:\\Users\\<you>\\AppData\\Local\\amkit\\synthetic\\runs"
+      "C:\\Users\\<you>\\AppData\\Local\\sed\\synthetic\\runs"
     ],
     "allow": [
-      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/runs/**)",
-      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/runs/**)"
+      "Read(//c/Users/<you>/AppData/Local/sed/synthetic/runs/**)",
+      "Edit(//c/Users/<you>/AppData/Local/sed/synthetic/runs/**)"
     ],
     "deny": [
-      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/ground_truth/**)",
-      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/ground_truth/**)",
-      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/secret/**)",
-      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/secret/**)",
-      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/inbox/**)",
-      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/inbox/**)",
-      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/config/**)",
-      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/config/**)"
+      "Read(//c/Users/<you>/AppData/Local/sed/synthetic/ground_truth/**)",
+      "Edit(//c/Users/<you>/AppData/Local/sed/synthetic/ground_truth/**)",
+      "Read(//c/Users/<you>/AppData/Local/sed/synthetic/secret/**)",
+      "Edit(//c/Users/<you>/AppData/Local/sed/synthetic/secret/**)",
+      "Read(//c/Users/<you>/AppData/Local/sed/synthetic/inbox/**)",
+      "Edit(//c/Users/<you>/AppData/Local/sed/synthetic/inbox/**)",
+      "Read(//c/Users/<you>/AppData/Local/sed/synthetic/config/**)",
+      "Edit(//c/Users/<you>/AppData/Local/sed/synthetic/config/**)"
     ]
   }
 }

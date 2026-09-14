@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from amkit import claude_setup
-from amkit.doctor import skill_name_problems
-from amkit.settings import load_agent_config
+from sed import claude_setup
+from sed.doctor import skill_name_problems
+from sed.settings import load_agent_config
 from tests.conftest import REPO, load_script
 
 guard = load_script("guard_confidential")
@@ -32,14 +32,14 @@ def test_repo_passes_guard():
         ("exports/incident_2026-08.xlsx", True),
         ("exports/INCIDENT_2026-08.XLSX", True),
         ("exports\\costs.xlsb", True),
-        ("amkit.db", True),
+        ("sed.db", True),
         ("notes/tickets.csv", True),
         ("templates/corporate.potx", True),
         ("bundle.7z", True),
         ("costs.ods", True),
         ("tests/fixtures/synthetic/incident_small.csv", False),
-        (".claude/skills/am-triage-batch/examples.synthetic.jsonl", False),
-        ("src/amkit/db.py", False),
+        (".claude/skills/sed-triage-batch/examples.synthetic.jsonl", False),
+        ("src/sed/db.py", False),
     ],
 )
 def test_guard_extension_rules(rel: str, blocked: bool):
@@ -145,7 +145,7 @@ def test_precommit_config_runs_guard_on_all_file_types():
 
 
 def test_claude_md_prefix_block_matches_repo_agent_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    monkeypatch.setenv("AMKIT_DATA_ROOT", str(tmp_path / "no-machine-override"))
+    monkeypatch.setenv("SED_DATA_ROOT", str(tmp_path / "no-machine-override"))
     assert claude_setup.prefix_block_in_sync(load_agent_config(), REPO / "CLAUDE.md")
 
 
@@ -154,7 +154,7 @@ def test_committed_settings_allow_both_shell_tools():
 
     data = json.loads((REPO / ".claude" / "settings.json").read_text(encoding="utf-8"))
     allow = data["permissions"]["allow"]
-    assert "Bash(uv run amkit:*)" in allow and "PowerShell(uv run amkit:*)" in allow
+    assert "Bash(uv run sed:*)" in allow and "PowerShell(uv run sed:*)" in allow
     assert data["env"] == {"UV_NO_SYNC": "1", "PYTHONUTF8": "1"}
 
 
@@ -167,18 +167,45 @@ def test_project_skills_prefixed_and_named():
 
 
 def test_skill_name_problems_detects_bad_frontmatter(tmp_path: Path):
-    (tmp_path / ".claude" / "skills" / "am-good").mkdir(parents=True)
-    (tmp_path / ".claude" / "skills" / "am-good" / "SKILL.md").write_text("---\nname: am-good\n---\n", "utf-8")
-    (tmp_path / ".claude" / "skills" / "am-bad").mkdir(parents=True)
-    (tmp_path / ".claude" / "skills" / "am-bad" / "SKILL.md").write_text("---\nname: other\n---\n", "utf-8")
+    (tmp_path / ".claude" / "skills" / "sed-good").mkdir(parents=True)
+    (tmp_path / ".claude" / "skills" / "sed-good" / "SKILL.md").write_text("---\nname: sed-good\n---\n", "utf-8")
+    (tmp_path / ".claude" / "skills" / "sed-bad").mkdir(parents=True)
+    (tmp_path / ".claude" / "skills" / "sed-bad" / "SKILL.md").write_text("---\nname: other\n---\n", "utf-8")
     (tmp_path / ".claude" / "skills" / "review").mkdir(parents=True)
     _, bad = skill_name_problems(tmp_path)
-    assert any(b.startswith("am-bad") for b in bad)
+    assert any(b.startswith("sed-bad") for b in bad)
     assert any(b.startswith("review") for b in bad)
-    assert not any(b.startswith("am-good") for b in bad)
+    assert not any(b.startswith("sed-good") for b in bad)
 
 
 def test_gitignore_covers_data_and_local_settings():
     ignore = (REPO / ".gitignore").read_text(encoding="utf-8")
     for entry in ("*.db", ".claude/settings.local.json", ".env", "web/node_modules/"):
         assert entry in ignore
+
+
+# Zero-width, bidi-control, word-joiner, soft-hyphen and mid-file BOM characters: invisible in review, so they can hide
+# changes (or break YAML keys / regexes). Built with chr() so this file stays clean itself.
+_INVISIBLE = {chr(c) for c in (0x00AD, *range(0x200B, 0x2010), *range(0x202A, 0x202F), *range(0x2060, 0x2065), 0xFEFF)}
+_TEXT_SUFFIXES = {".py", ".yaml", ".yml", ".md", ".json", ".toml", ".ps1", ".sql", ".js", ".mjs", ".ts", ".tsx", ".txt"}
+
+
+def test_no_invisible_characters_in_source():
+    offenders = []
+    for top in ("src", "tests", "config", "scripts", ".claude", "docs", "templates", "evals"):
+        base = REPO / top
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if path.suffix.lower() not in _TEXT_SUFFIXES or not path.is_file() or "__pycache__" in path.parts:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for lineno, line in enumerate(text.splitlines(), 1):
+                bad = sorted({f"U+{ord(ch):04X}" for ch in line if ch in _INVISIBLE})
+                if bad:
+                    offenders.append(f"{path.relative_to(REPO)}:{lineno} {bad}")
+    for name in ("CLAUDE.md", "README.md", "pyproject.toml"):
+        text = (REPO / name).read_text(encoding="utf-8")
+        if any(ch in _INVISIBLE for ch in text):
+            offenders.append(name)
+    assert not offenders, "\n".join(offenders[:20])

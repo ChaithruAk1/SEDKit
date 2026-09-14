@@ -1,0 +1,12 @@
+name: vendors_xlsx
+target: vendor
+load_mode: full_snapshot
+description: Vendor master workbook
+match:
+  glob: ["vendor_master*.xlsx", "vendor_master*.csv", "vendors*.xlsx"]
+fields:
+  vendor_id:      {from: [Vendor ID, Supplier ID], pii: none, required: true}
+  name:           {from: [Vendor Name, Supplier Name], pii: none, required: true}
+  vendor_type:    {from: [Type, Vendor Type], pii: none}
+  tier:           {from: [Tier], pii: none}
+  sla_target_pct: {from: ["SLA Target %", SLA Target], transform: percent, pii: none}
