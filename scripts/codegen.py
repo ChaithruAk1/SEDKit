@@ -92,7 +92,6 @@ def openapi_contract() -> dict[str, Any] | None:
     os.environ.pop("SED_EXTRA_MODULES", None)
     from sed.api.app import create_app
     from sed.modules import installed
-
     from sed.paths import Paths
 
     with tempfile.TemporaryDirectory(prefix="sed-codegen-") as tmp:

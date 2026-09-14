@@ -625,6 +625,24 @@ def analytics_refresh(
     )
 
 
+@app.command()
+@handle_errors
+def serve(
+    port: Annotated[int | None, typer.Option(help="Port on 127.0.0.1 (default: settings api.port)")] = None,
+    no_browser: Annotated[bool, typer.Option("--no-browser", help="Do not open the dashboard in a browser")] = False,
+    dev: Annotated[bool, typer.Option("--dev", help="Use SED_DEV_TOKEN for the Vite dev proxy")] = False,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Serve the local API and dashboard on 127.0.0.1 (per-launch token for write requests)."""
+    from sed.api.serve import run
+    from sed.settings import load_settings
+
+    paths = _paths(profile, data_dir)
+    run(paths, port=port or load_settings(paths).api.port, open_browser=not no_browser, dev=dev)
+
+
 def _mount_core_subapps() -> None:
     from sed import modules
     from sed.ai.cli import ai_app, review_app

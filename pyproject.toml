@@ -65,5 +65,9 @@ explicit-preview-rules = true   # only PLW1514 (open() without encoding) comes f
 select = ["E", "F", "W", "I", "B", "UP", "PLW1514", "SIM", "RUF"]
 ignore = ["RUF001", "RUF002", "RUF003"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI declares parameters through default-argument calls; these are immutable markers, not shared state.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B011"]
