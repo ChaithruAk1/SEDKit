@@ -1,13 +1,23 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import shutil
 import sys
 from pathlib import Path
 
 import pytest
 
+import sed
+
 REPO = Path(__file__).resolve().parents[1]
+
+pytest_plugins = ("tests.fixtures.ops_profile",)
+
+# Worktrees share main's editable install: make sure this checkout's code is the one under test.
+if Path(sed.__file__).resolve().parent.parent != (REPO / "src").resolve():
+    raise pytest.UsageError(f"tests are importing sed from {sed.__file__}, not {REPO / 'src'}")
+os.environ["PYTHONPATH"] = os.pathsep.join(p for p in (str(REPO / "src"), os.environ.get("PYTHONPATH", "")) if p)
 
 
 @pytest.fixture(autouse=True)

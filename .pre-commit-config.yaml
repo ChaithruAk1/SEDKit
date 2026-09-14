@@ -13,7 +13,7 @@ repos:
         entry: uv run --no-sync detect-secrets-hook --baseline .secrets.baseline
         language: system
         types: [text]
-        exclude: ^(uv\.lock|web/package-lock\.json|\.secrets\.baseline)$
+        exclude: ^(uv\.lock|web/package-lock\.json|\.secrets\.baseline|tests/fixtures/synthetic/[^/]+_baseline\.json)$
       - id: ruff-check
         name: ruff check
         entry: uv run --no-sync ruff check --force-exclude

@@ -6,6 +6,7 @@ Offline, no Claude calls. Steps that do not apply yet (no workflows, no web app)
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -13,6 +14,8 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+# Strict-schema digest baselines (validated by tests/platform/test_baseline_files.py) are excluded from detect-secrets.
+BASELINE_FILE = re.compile(r"^tests/fixtures/synthetic/[^/]+_baseline\.json$")
 PY = sys.executable
 SCRIPTS_DIR = Path(PY).parent
 
@@ -34,7 +37,7 @@ def tracked_text_files() -> list[str]:
     except (subprocess.CalledProcessError, FileNotFoundError):
         files = []
     exclude = {"uv.lock", "web/package-lock.json", ".secrets.baseline"}
-    return [f for f in files if f not in exclude and (REPO / f).is_file()]
+    return [f for f in files if f not in exclude and not BASELINE_FILE.match(f) and (REPO / f).is_file()]
 
 
 def steps() -> list[tuple[str, list[str] | None, str]]:

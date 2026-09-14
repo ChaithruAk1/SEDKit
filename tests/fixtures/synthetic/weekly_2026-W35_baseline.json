@@ -1,0 +1,1327 @@
+{
+ "facts": {
+  "attention.count": {
+   "definition": "attention.count",
+   "label": "Tickets needing attention",
+   "unit": "count",
+   "value": 23
+  },
+  "chg.count": {
+   "definition": "chg.count",
+   "label": "Changes closed",
+   "unit": "count",
+   "value": 1
+  },
+  "chg.failed": {
+   "definition": null,
+   "label": "Changes not fully successful",
+   "unit": "count",
+   "value": 0
+  },
+  "chg.success.pct": {
+   "definition": "chg.success.pct",
+   "label": "Change success rate",
+   "unit": "pct",
+   "value": 100.0
+  },
+  "findings.system_detected.count": {
+   "definition": null,
+   "label": "System-detected risks",
+   "unit": "count",
+   "value": 18
+  },
+  "inc.backlog": {
+   "definition": "inc.backlog",
+   "label": "Open backlog at week end",
+   "unit": "count",
+   "value": 31
+  },
+  "inc.backlog.delta": {
+   "definition": null,
+   "label": "Backlog change (arrivals - resolutions)",
+   "unit": "count",
+   "value": 4
+  },
+  "inc.backlog.stale_excluded": {
+   "definition": "inc.stale_open",
+   "label": "Stale open excluded from backlog",
+   "unit": "count",
+   "value": 4
+  },
+  "inc.mttr.delta_vs_avg4w_pct": {
+   "definition": null,
+   "label": "MTTR vs 4-week avg",
+   "unit": "pct",
+   "value": -4.3
+  },
+  "inc.mttr.median_h": {
+   "definition": "inc.mttr.median_h",
+   "label": "MTTR median (hours)",
+   "unit": "hours",
+   "value": 26.24
+  },
+  "inc.mttr.median_h.avg4w": {
+   "definition": "inc.mttr.median_h",
+   "label": "MTTR median, 4-week average",
+   "unit": "hours",
+   "value": 27.41
+  },
+  "inc.opened": {
+   "definition": "inc.opened",
+   "label": "Incidents opened",
+   "unit": "count",
+   "value": 47
+  },
+  "inc.opened.avg4w": {
+   "definition": "inc.opened",
+   "label": "Opened, 4-week average",
+   "unit": "number",
+   "value": 115.25
+  },
+  "inc.opened.delta_vs_avg4w_pct": {
+   "definition": null,
+   "label": "Opened vs 4-week avg",
+   "unit": "pct",
+   "value": -59.2
+  },
+  "inc.p1p2.opened": {
+   "definition": "inc.p1p2.opened",
+   "label": "P1/P2 opened",
+   "unit": "count",
+   "value": 2
+  },
+  "inc.reassign.avg": {
+   "definition": "inc.reassign.avg",
+   "label": "Avg reassignments",
+   "unit": "number",
+   "value": 0.65
+  },
+  "inc.reopen.pct": {
+   "definition": "inc.reopen.pct",
+   "label": "Reopen rate",
+   "unit": "pct",
+   "value": 0.0
+  },
+  "inc.resolved": {
+   "definition": "inc.resolved",
+   "label": "Incidents resolved",
+   "unit": "count",
+   "value": 43
+  },
+  "inc.resolved.avg4w": {
+   "definition": "inc.resolved",
+   "label": "Resolved, 4-week average",
+   "unit": "number",
+   "value": 114.75
+  },
+  "inc.sla.delta_pp_vs_4w": {
+   "definition": null,
+   "label": "SLA vs 4-week avg",
+   "unit": "pp",
+   "value": -7.13
+  },
+  "inc.sla.pct": {
+   "definition": "inc.sla.pct",
+   "label": "SLA met (resolved this week)",
+   "unit": "pct",
+   "value": 79.07
+  },
+  "inc.sla.pct.avg4w": {
+   "definition": "inc.sla.pct",
+   "label": "SLA met, 4-week average",
+   "unit": "pct",
+   "value": 86.2
+  },
+  "inc.sla.source": {
+   "definition": null,
+   "label": "SLA source",
+   "unit": "text",
+   "value": "task_sla"
+  },
+  "inc.stale_open": {
+   "definition": "inc.stale_open",
+   "label": "Stale open (not in active export)",
+   "unit": "count",
+   "value": 4
+  },
+  "license.idle_cost": {
+   "definition": "license.idle_cost",
+   "label": "Idle license cost (under-used lines)",
+   "unit": "eur",
+   "value": 187000.0
+  },
+  "notice.30d.count": {
+   "definition": "notice.count",
+   "label": "Notice deadlines within 30 days",
+   "unit": "count",
+   "value": 5
+  },
+  "period.end": {
+   "definition": null,
+   "label": "Period end",
+   "unit": "date",
+   "value": "2026-08-30"
+  },
+  "period.label": {
+   "definition": null,
+   "label": "Period",
+   "unit": "text",
+   "value": "2026-W35"
+  },
+  "period.start": {
+   "definition": null,
+   "label": "Period start",
+   "unit": "date",
+   "value": "2026-08-24"
+  },
+  "renewals.90d.count": {
+   "definition": "renewals.count",
+   "label": "Contracts ending within 90 days",
+   "unit": "count",
+   "value": 3
+  }
+ },
+ "tables": {
+  "attention": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "number",
+     "label": "Number"
+    },
+    {
+     "format": "count",
+     "key": "priority",
+     "label": "P"
+    },
+    {
+     "format": "text",
+     "key": "app",
+     "label": "Application"
+    },
+    {
+     "format": "text",
+     "key": "state",
+     "label": "State"
+    },
+    {
+     "format": "text",
+     "key": "assignment_group",
+     "label": "Group"
+    },
+    {
+     "format": "number",
+     "key": "age_days",
+     "label": "Age (days)"
+    },
+    {
+     "format": "text",
+     "key": "reasons",
+     "label": "Why"
+    },
+    {
+     "format": "text",
+     "key": "short_description",
+     "label": "Short description"
+    }
+   ],
+   "rows": [
+    {
+     "age_days": 40.7,
+     "app": "Summit Recruiting",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC23932701",
+     "priority": 3,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Summit Recruiting keeps redirecting to the SSO page",
+     "state": "On Hold"
+    },
+    {
+     "age_days": 40.6,
+     "app": "Echo Surveys",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC23932700",
+     "priority": 3,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Low disk space alert echo-surveys-prd-db01",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 31.6,
+     "app": "Summit Recruiting",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24022701",
+     "priority": 3,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Unable to sign in to Summit Recruiting",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 26.6,
+     "app": "Summit Recruiting",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24072700",
+     "priority": 3,
+     "reasons": "past SLA target",
+     "short_description": "Access denied to Reports module in Summit Recruiting",
+     "state": "On Hold"
+    },
+    {
+     "age_days": 8.6,
+     "app": "Echo Surveys",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24250000",
+     "priority": 3,
+     "reasons": "past SLA target",
+     "short_description": "Scheduled report Pipeline Weekly not generated",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 65.6,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC23682400",
+     "priority": 4,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Request access to Atlas HR Core for new colleague",
+     "state": "On Hold"
+    },
+    {
+     "age_days": 62.3,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC23712402",
+     "priority": 4,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Request access to Atlas HR Core for new colleague",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 58.8,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC23752400",
+     "priority": 4,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Need access to Atlas HR Core",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 54.6,
+     "app": "Pathway Learning",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC23792700",
+     "priority": 4,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Performance issue in Pathway Learning Courses",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 49.6,
+     "app": "Pathway Learning",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC23843524",
+     "priority": 4,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Pathway Learning did not send the daily report",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 31.5,
+     "app": "Compass Benefits",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24022700",
+     "priority": 4,
+     "reasons": "past SLA target, aged > 30d",
+     "short_description": "Network drops hwen using Compass Benefits",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 20.5,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24132402",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Please reset my password for Atlas HR Core",
+     "state": "On Hold"
+    },
+    {
+     "age_days": 18.5,
+     "app": "Compass Benefits",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24153527",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Compass Benefits shows incorrect totals on DOC-166188",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 12.5,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24212402",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Need access to Atlas HR Core",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 10.6,
+     "app": "Orion ERP",
+     "assignment_group": "NWD-ERP-L2",
+     "number": "INC24233004",
+     "priority": 4,
+     "reasons": "past SLA target, reopened",
+     "short_description": "Orion ERP feature broken after release",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 10.4,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24232400",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Request access to Atlas HR Core for new colleague",
+     "state": "On Hold"
+    },
+    {
+     "age_days": 9.6,
+     "app": "Orion ERP",
+     "assignment_group": "NWD-ERP-L2",
+     "number": "INC24240001",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Orion ERP screens take miuntes to load",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 9.5,
+     "app": "Mosaic Talent",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24242702",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Comment exporter depuis Mosaic Talent",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 9.5,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24242400",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Please reset my password for Atlas HR Core",
+     "state": "On Hold"
+    },
+    {
+     "age_days": 7.5,
+     "app": "Atlas HR Core",
+     "assignment_group": "IT-HR-L2",
+     "number": "INC24262400",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Need access to Atlas HR Core",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 6.6,
+     "app": "Ledgerline Finance",
+     "assignment_group": "NWD-FIN-L2",
+     "number": "INC24273000",
+     "priority": 4,
+     "reasons": "past SLA target",
+     "short_description": "Ledgerline Finance très lent",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 6.6,
+     "app": "Waypoint Intranet",
+     "assignment_group": "IT-COL-L2",
+     "number": "INC24272400",
+     "priority": 4,
+     "reasons": "past SLA target, reopened",
+     "short_description": "Please reset my password for Waypoint Intranet",
+     "state": "In Progress"
+    },
+    {
+     "age_days": 3.4,
+     "app": "Orion ERP",
+     "assignment_group": "NWD-ERP-L2",
+     "number": "INC24303000",
+     "priority": 4,
+     "reasons": "reopened",
+     "short_description": "Orion ERP shows incorrect totals on DOC-900579",
+     "state": "In Progress"
+    }
+   ],
+   "title": "Needs attention (open incidents)"
+  },
+  "backlog_aging_by_group": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "group",
+     "label": "Group"
+    },
+    {
+     "format": "count",
+     "key": "total",
+     "label": "Open"
+    },
+    {
+     "format": "count",
+     "key": "0-7d",
+     "label": "0-7d"
+    },
+    {
+     "format": "count",
+     "key": "8-30d",
+     "label": "8-30d"
+    },
+    {
+     "format": "count",
+     "key": "31-90d",
+     "label": "31-90d"
+    },
+    {
+     "format": "count",
+     "key": ">90d",
+     "label": ">90d"
+    }
+   ],
+   "rows": [
+    {
+     "0-7d": 1,
+     "31-90d": 9,
+     "8-30d": 9,
+     ">90d": 0,
+     "group": "IT-HR-L2",
+     "total": 19
+    },
+    {
+     "0-7d": 1,
+     "31-90d": 0,
+     "8-30d": 2,
+     ">90d": 0,
+     "group": "NWD-ERP-L2",
+     "total": 3
+    },
+    {
+     "0-7d": 2,
+     "31-90d": 0,
+     "8-30d": 0,
+     ">90d": 0,
+     "group": "IT-COL-L2",
+     "total": 2
+    },
+    {
+     "0-7d": 2,
+     "31-90d": 0,
+     "8-30d": 0,
+     ">90d": 0,
+     "group": "IT-CRM-L2",
+     "total": 2
+    },
+    {
+     "0-7d": 1,
+     "31-90d": 0,
+     "8-30d": 0,
+     ">90d": 0,
+     "group": "NWD-FIN-L2",
+     "total": 1
+    },
+    {
+     "0-7d": 1,
+     "31-90d": 0,
+     "8-30d": 0,
+     ">90d": 0,
+     "group": "IT-COL-L3",
+     "total": 1
+    },
+    {
+     "0-7d": 1,
+     "31-90d": 0,
+     "8-30d": 0,
+     ">90d": 0,
+     "group": "NWD-SCM-L2",
+     "total": 1
+    },
+    {
+     "0-7d": 1,
+     "31-90d": 0,
+     "8-30d": 0,
+     ">90d": 0,
+     "group": "IT-SERVICE-DESK-L1",
+     "total": 1
+    },
+    {
+     "0-7d": 1,
+     "31-90d": 0,
+     "8-30d": 0,
+     ">90d": 0,
+     "group": "IT-SCM-L2",
+     "total": 1
+    }
+   ],
+   "title": "Backlog aging by assignment group (week end)"
+  },
+  "category_breakdown": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "sn_category",
+     "label": "ServiceNow category"
+    },
+    {
+     "format": "text",
+     "key": "am_category",
+     "label": "AI category"
+    },
+    {
+     "format": "count",
+     "key": "n",
+     "label": "Incidents"
+    }
+   ],
+   "rows": [
+    {
+     "am_category": "(not labelled)",
+     "n": 36,
+     "sn_category": "Software"
+    },
+    {
+     "am_category": "(not labelled)",
+     "n": 8,
+     "sn_category": "Inquiry / Help"
+    },
+    {
+     "am_category": "(not labelled)",
+     "n": 3,
+     "sn_category": "Hardware"
+    }
+   ],
+   "title": "ServiceNow category vs AI app-owner category (incidents opened)"
+  },
+  "changes_failed": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "number",
+     "label": "Number"
+    },
+    {
+     "format": "text",
+     "key": "app",
+     "label": "Application"
+    },
+    {
+     "format": "text",
+     "key": "change_type",
+     "label": "Type"
+    },
+    {
+     "format": "text",
+     "key": "close_code",
+     "label": "Close code"
+    },
+    {
+     "format": "datetime",
+     "key": "closed_at",
+     "label": "Closed (UTC)"
+    },
+    {
+     "format": "text",
+     "key": "short_description",
+     "label": "Short description"
+    }
+   ],
+   "rows": [],
+   "title": "Changes closed with issues or unsuccessful"
+  },
+  "cost_variance": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "key",
+     "label": "Application / category"
+    },
+    {
+     "format": "eur",
+     "key": "actual",
+     "label": "Actual"
+    },
+    {
+     "format": "eur",
+     "key": "budget",
+     "label": "Budget"
+    },
+    {
+     "format": "pct",
+     "key": "variance_pct",
+     "label": "Variance %"
+    }
+   ],
+   "rows": [
+    {
+     "actual": 33634.26,
+     "budget": 28503.6,
+     "key": "Nimbus WMS / Hosting",
+     "variance_pct": 18.0
+    },
+    {
+     "actual": 12695.27,
+     "budget": 9724.76,
+     "key": "Atlas PLM / Hosting",
+     "variance_pct": 30.55
+    }
+   ],
+   "title": "Commercial watchlist: cost vs budget (2026-06 & 2026-07, |variance| >= 10%)"
+  },
+  "findings": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "severity",
+     "label": "Severity"
+    },
+    {
+     "format": "text",
+     "key": "kind",
+     "label": "Kind"
+    },
+    {
+     "format": "text",
+     "key": "title",
+     "label": "Finding"
+    },
+    {
+     "format": "text",
+     "key": "subject_id",
+     "label": "Subject"
+    }
+   ],
+   "rows": [
+    {
+     "kind": "renewal_risk",
+     "severity": "critical",
+     "subject_id": "CTR-2022-0134",
+     "title": "Notice deadline in 15 days: Solstice Software – Enterprise Suite (auto-renews)"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "critical",
+     "subject_id": "CTR-2023-0135",
+     "title": "Notice deadline in 15 days: Tessellate Software – Enterprise Suite (auto-renews)"
+    },
+    {
+     "kind": "license_risk",
+     "severity": "high",
+     "subject_id": "LIC-00219",
+     "title": "License over-assigned: Northstar CRM Enterprise at 108% utilization (assigned 112%)"
+    },
+    {
+     "kind": "license_risk",
+     "severity": "high",
+     "subject_id": "LIC-00218",
+     "title": "License under-used: Archive DMS Enterprise at 44% utilization (idle €56,000/yr)"
+    },
+    {
+     "kind": "license_risk",
+     "severity": "high",
+     "subject_id": "LIC-00217",
+     "title": "License under-used: Canvas CPQ Enterprise at 38% utilization (idle €62,000/yr)"
+    },
+    {
+     "kind": "license_risk",
+     "severity": "high",
+     "subject_id": "LIC-00216",
+     "title": "License under-used: Forge MES Enterprise at 31% utilization (idle €69,000/yr)"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "high",
+     "subject_id": "CTR-2022-0134",
+     "title": "Contract ends in 45 days: Solstice Software – Enterprise Suite"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "high",
+     "subject_id": "CTR-2024-0136",
+     "title": "Contract ends in 71 days: Harborline Hosting – Private Cloud Hosting"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "high",
+     "subject_id": "CTR-2020-0138",
+     "title": "Contract ends in 89 days: Pinecone Analytics – Enterprise Suite"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "high",
+     "subject_id": "CTR-2024-0136",
+     "title": "Notice deadline in 11 days: Harborline Hosting – Private Cloud Hosting"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "high",
+     "subject_id": "CTR-2021-0139",
+     "title": "Notice deadline in 27 days: Corvid Security – Enterprise Suite"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "high",
+     "subject_id": "CTR-2020-0138",
+     "title": "Notice deadline in 29 days: Pinecone Analytics – Enterprise Suite"
+    },
+    {
+     "kind": "vendor_risk",
+     "severity": "high",
+     "subject_id": "V001",
+     "title": "SLA decline for Nordwind Managed Services: -12.6 pp (last 3 vs prior 3 months)"
+    },
+    {
+     "kind": "cost_risk",
+     "severity": "medium",
+     "subject_id": "Atlas PLM / Hosting",
+     "title": "Cost overrun +31% vs budget: Atlas PLM / Hosting (2026-06 & 2026-07)"
+    },
+    {
+     "kind": "rationalization",
+     "severity": "medium",
+     "subject_id": "APM1001406",
+     "title": "No tickets for 5 months but €180,000/yr license cost: Quarry Data Catalog"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "medium",
+     "subject_id": "CTR-2023-0135",
+     "title": "Contract ends in 105 days: Tessellate Software – Enterprise Suite"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "medium",
+     "subject_id": "CTR-2025-0137",
+     "title": "Contract ends in 111 days: Quanta Cloud – Cloud Subscription"
+    },
+    {
+     "kind": "renewal_risk",
+     "severity": "medium",
+     "subject_id": "CTR-2021-0139",
+     "title": "Contract ends in 117 days: Corvid Security – Enterprise Suite"
+    }
+   ],
+   "title": "System-detected risks (rule findings)"
+  },
+  "license_outliers": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "license_id",
+     "label": "License"
+    },
+    {
+     "format": "text",
+     "key": "app",
+     "label": "Application"
+    },
+    {
+     "format": "text",
+     "key": "product",
+     "label": "Product"
+    },
+    {
+     "format": "number",
+     "key": "entitled_qty",
+     "label": "Entitled"
+    },
+    {
+     "format": "number",
+     "key": "active_qty_90d",
+     "label": "Active 90d"
+    },
+    {
+     "format": "ratio",
+     "key": "utilization",
+     "label": "Utilization"
+    },
+    {
+     "format": "ratio",
+     "key": "assigned_ratio",
+     "label": "Assigned"
+    },
+    {
+     "format": "eur",
+     "key": "idle_cost_base",
+     "label": "Idle cost / yr"
+    }
+   ],
+   "rows": [
+    {
+     "active_qty_90d": 62.0,
+     "app": "Forge MES",
+     "assigned_ratio": 0.36,
+     "entitled_qty": 200.0,
+     "idle_cost_base": 69000.0,
+     "license_id": "LIC-00216",
+     "product": "Forge MES Enterprise",
+     "utilization": 0.31
+    },
+    {
+     "active_qty_90d": 76.0,
+     "app": "Canvas CPQ",
+     "assigned_ratio": 0.43,
+     "entitled_qty": 200.0,
+     "idle_cost_base": 62000.0,
+     "license_id": "LIC-00217",
+     "product": "Canvas CPQ Enterprise",
+     "utilization": 0.38
+    },
+    {
+     "active_qty_90d": 88.0,
+     "app": "Archive DMS",
+     "assigned_ratio": 0.49,
+     "entitled_qty": 200.0,
+     "idle_cost_base": 56000.0,
+     "license_id": "LIC-00218",
+     "product": "Archive DMS Enterprise",
+     "utilization": 0.44
+    },
+    {
+     "active_qty_90d": 324.0,
+     "app": "Northstar CRM",
+     "assigned_ratio": 1.12,
+     "entitled_qty": 300.0,
+     "idle_cost_base": 0.0,
+     "license_id": "LIC-00219",
+     "product": "Northstar CRM Enterprise",
+     "utilization": 1.08
+    }
+   ],
+   "title": "Commercial watchlist: license utilization outliers"
+  },
+  "p1p2": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "number",
+     "label": "Number"
+    },
+    {
+     "format": "count",
+     "key": "priority",
+     "label": "P"
+    },
+    {
+     "format": "text",
+     "key": "app",
+     "label": "Application"
+    },
+    {
+     "format": "text",
+     "key": "state",
+     "label": "State"
+    },
+    {
+     "format": "text",
+     "key": "assignment_group",
+     "label": "Group"
+    },
+    {
+     "format": "datetime",
+     "key": "opened_at",
+     "label": "Opened (UTC)"
+    },
+    {
+     "format": "text",
+     "key": "short_description",
+     "label": "Short description"
+    }
+   ],
+   "rows": [
+    {
+     "app": "Orion ERP",
+     "assignment_group": "NWD-ERP-L2",
+     "number": "INC24280000",
+     "opened_at": "2026-08-25T08:23:18Z",
+     "priority": 2,
+     "short_description": "Cannot log in to Orion ERP",
+     "state": "Closed"
+    },
+    {
+     "app": "Ledgerline Finance",
+     "assignment_group": "NWD-FIN-L2",
+     "number": "INC24293000",
+     "opened_at": "2026-08-26T17:30:10Z",
+     "priority": 2,
+     "short_description": "Ledgerline Finance API returns HTTP 500",
+     "state": "Closed"
+    }
+   ],
+   "title": "P1/P2 incidents opened this week"
+  },
+  "renewals_90d": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "contract_number",
+     "label": "Contract"
+    },
+    {
+     "format": "text",
+     "key": "vendor",
+     "label": "Vendor"
+    },
+    {
+     "format": "text",
+     "key": "app",
+     "label": "Application"
+    },
+    {
+     "format": "text",
+     "key": "product",
+     "label": "Product"
+    },
+    {
+     "format": "date",
+     "key": "end_date",
+     "label": "End date"
+    },
+    {
+     "format": "count",
+     "key": "days_to_end",
+     "label": "Days to end"
+    },
+    {
+     "format": "date",
+     "key": "notice_deadline",
+     "label": "Notice deadline"
+    },
+    {
+     "format": "count",
+     "key": "days_to_notice",
+     "label": "Days to notice"
+    },
+    {
+     "format": "count",
+     "key": "auto_renew",
+     "label": "Auto-renew"
+    },
+    {
+     "format": "eur",
+     "key": "annual_value_base",
+     "label": "Annual value"
+    }
+   ],
+   "rows": [
+    {
+     "annual_value_base": 220000.0,
+     "app": "Nimbus WMS",
+     "auto_renew": 0,
+     "contract_number": "CTR-2024-0136",
+     "days_to_end": 71,
+     "days_to_notice": 11,
+     "end_date": "2026-11-10",
+     "notice_deadline": "2026-09-11",
+     "product": "Private Cloud Hosting",
+     "vendor": "Harborline Hosting"
+    },
+    {
+     "annual_value_base": 180000.0,
+     "app": "Northstar CRM",
+     "auto_renew": 1,
+     "contract_number": "CTR-2022-0134",
+     "days_to_end": 45,
+     "days_to_notice": 15,
+     "end_date": "2026-10-15",
+     "notice_deadline": "2026-09-15",
+     "product": "Enterprise Suite",
+     "vendor": "Solstice Software"
+    },
+    {
+     "annual_value_base": 200000.0,
+     "app": "Atlas PLM",
+     "auto_renew": 1,
+     "contract_number": "CTR-2023-0135",
+     "days_to_end": 105,
+     "days_to_notice": 15,
+     "end_date": "2026-12-14",
+     "notice_deadline": "2026-09-15",
+     "product": "Enterprise Suite",
+     "vendor": "Tessellate Software"
+    },
+    {
+     "annual_value_base": 280000.0,
+     "app": "Keyring Identity",
+     "auto_renew": 0,
+     "contract_number": "CTR-2021-0139",
+     "days_to_end": 117,
+     "days_to_notice": 27,
+     "end_date": "2026-12-26",
+     "notice_deadline": "2026-09-27",
+     "product": "Enterprise Suite",
+     "vendor": "Corvid Security"
+    },
+    {
+     "annual_value_base": 260000.0,
+     "app": "Sextant Reporting",
+     "auto_renew": 0,
+     "contract_number": "CTR-2020-0138",
+     "days_to_end": 89,
+     "days_to_notice": 29,
+     "end_date": "2026-11-28",
+     "notice_deadline": "2026-09-29",
+     "product": "Enterprise Suite",
+     "vendor": "Pinecone Analytics"
+    },
+    {
+     "annual_value_base": 240000.0,
+     "app": "Lumen BI",
+     "auto_renew": 0,
+     "contract_number": "CTR-2025-0137",
+     "days_to_end": 111,
+     "days_to_notice": 81,
+     "end_date": "2026-12-20",
+     "notice_deadline": "2026-11-20",
+     "product": "Cloud Subscription",
+     "vendor": "Quanta Cloud"
+    }
+   ],
+   "title": "Commercial watchlist: renewals and notice deadlines (next 90 days)"
+  },
+  "sla_by_priority": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "priority",
+     "label": "Priority"
+    },
+    {
+     "format": "count",
+     "key": "total",
+     "label": "Resolved"
+    },
+    {
+     "format": "count",
+     "key": "met",
+     "label": "Met"
+    },
+    {
+     "format": "pct",
+     "key": "pct",
+     "label": "SLA %"
+    }
+   ],
+   "rows": [
+    {
+     "met": 2,
+     "pct": 100.0,
+     "priority": "P2",
+     "total": 2
+    },
+    {
+     "met": 15,
+     "pct": 71.43,
+     "priority": "P3",
+     "total": 21
+    },
+    {
+     "met": 17,
+     "pct": 85.0,
+     "priority": "P4",
+     "total": 20
+    }
+   ],
+   "title": "SLA by priority (resolved this week)"
+  },
+  "top_apps": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "app",
+     "label": "Application"
+    },
+    {
+     "format": "text",
+     "key": "family",
+     "label": "Family"
+    },
+    {
+     "format": "count",
+     "key": "opened",
+     "label": "Opened"
+    },
+    {
+     "format": "count",
+     "key": "p1p2",
+     "label": "P1/P2"
+    }
+   ],
+   "rows": [
+    {
+     "app": "Waypoint Intranet",
+     "family": "Collaboration",
+     "opened": 9,
+     "p1p2": 0
+    },
+    {
+     "app": "Atlas HR Core",
+     "family": "HR",
+     "opened": 4,
+     "p1p2": 0
+    },
+    {
+     "app": "Nimbus WMS",
+     "family": "Supply Chain",
+     "opened": 4,
+     "p1p2": 0
+    },
+    {
+     "app": "Clockwise Time",
+     "family": "HR",
+     "opened": 3,
+     "p1p2": 0
+    },
+    {
+     "app": "Ledgerline Finance",
+     "family": "Finance",
+     "opened": 3,
+     "p1p2": 1
+    },
+    {
+     "app": "Circuit Library",
+     "family": "Engineering",
+     "opened": 2,
+     "p1p2": 0
+    },
+    {
+     "app": "Atlas PLM",
+     "family": "Engineering",
+     "opened": 2,
+     "p1p2": 0
+    },
+    {
+     "app": "Summit Recruiting",
+     "family": "HR",
+     "opened": 2,
+     "p1p2": 0
+    },
+    {
+     "app": "Cobalt Billing",
+     "family": "Finance",
+     "opened": 2,
+     "p1p2": 0
+    },
+    {
+     "app": "Tessera Treasury",
+     "family": "Finance",
+     "opened": 2,
+     "p1p2": 0
+    }
+   ],
+   "title": "Top applications by incidents opened"
+  },
+  "volume_trend_12w": {
+   "columns": [
+    {
+     "format": "text",
+     "key": "period",
+     "label": "Week"
+    },
+    {
+     "format": "count",
+     "key": "opened",
+     "label": "Opened"
+    },
+    {
+     "format": "count",
+     "key": "resolved",
+     "label": "Resolved"
+    },
+    {
+     "format": "count",
+     "key": "net",
+     "label": "Net"
+    }
+   ],
+   "rows": [
+    {
+     "net": 8,
+     "opened": 104,
+     "period": "2026-W24",
+     "resolved": 96
+    },
+    {
+     "net": -5,
+     "opened": 53,
+     "period": "2026-W25",
+     "resolved": 58
+    },
+    {
+     "net": -4,
+     "opened": 40,
+     "period": "2026-W26",
+     "resolved": 44
+    },
+    {
+     "net": 51,
+     "opened": 166,
+     "period": "2026-W27",
+     "resolved": 115
+    },
+    {
+     "net": 36,
+     "opened": 222,
+     "period": "2026-W28",
+     "resolved": 186
+    },
+    {
+     "net": -62,
+     "opened": 88,
+     "period": "2026-W29",
+     "resolved": 150
+    },
+    {
+     "net": -5,
+     "opened": 94,
+     "period": "2026-W30",
+     "resolved": 99
+    },
+    {
+     "net": -10,
+     "opened": 41,
+     "period": "2026-W31",
+     "resolved": 51
+    },
+    {
+     "net": 0,
+     "opened": 243,
+     "period": "2026-W32",
+     "resolved": 243
+    },
+    {
+     "net": 10,
+     "opened": 109,
+     "period": "2026-W33",
+     "resolved": 99
+    },
+    {
+     "net": 2,
+     "opened": 68,
+     "period": "2026-W34",
+     "resolved": 66
+    },
+    {
+     "net": 4,
+     "opened": 47,
+     "period": "2026-W35",
+     "resolved": 43
+    }
+   ],
+   "title": "Incident volume, last 12 weeks"
+  }
+ },
+ "version": 1
+}

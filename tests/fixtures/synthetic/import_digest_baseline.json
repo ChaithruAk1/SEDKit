@@ -1,0 +1,436 @@
+{
+ "tables": {
+  "ai_batch": {
+   "columns": [
+    "run_id",
+    "seq",
+    "packet_path",
+    "packet_sha",
+    "item_count",
+    "output_sha",
+    "status",
+    "attempts",
+    "last_errors_json"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "ai_claim": {
+   "columns": [
+    "ticket_id",
+    "stage",
+    "run_id"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "ai_cluster_member": {
+   "columns": [
+    "finding_id",
+    "ticket_id"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "ai_run": {
+   "columns": [
+    "run_id",
+    "skill",
+    "skill_hash",
+    "schema_version",
+    "git_commit",
+    "model_arg",
+    "model_reported",
+    "claude_version",
+    "invoked_via",
+    "profile",
+    "params_json",
+    "input_manifest_sha",
+    "input_run_ids_json",
+    "status",
+    "counts_json",
+    "sample_accuracy",
+    "sample_ci_low",
+    "sample_ci_high",
+    "lowest_conf_error_rate",
+    "reviewed_by",
+    "review_note"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "ai_ticket_label": {
+   "columns": [
+    "ticket_id",
+    "stage",
+    "run_id",
+    "input_hash",
+    "am_category",
+    "am_subcategory",
+    "symptom_key",
+    "misfiled_as",
+    "confidence",
+    "rationale"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "alias": {
+   "columns": [
+    "kind",
+    "alias_norm",
+    "target_id",
+    "origin"
+   ],
+   "digest": "a6768b502a7a14268ebea792dae71f97919777688fc6b152b29597d6acc397f0",
+   "rows": 341
+  },
+  "application": {
+   "columns": [
+    "app_id",
+    "name",
+    "app_family",
+    "business_criticality",
+    "life_cycle_stage",
+    "it_owner_pid",
+    "cost_center",
+    "primary_vendor_id",
+    "is_deleted",
+    "vendor_raw"
+   ],
+   "digest": "a8ab88d0a8d86eabd8a087a71c9a814052a6ebdfa6a852cb3eed3b0ad3abc031",
+   "rows": 60
+  },
+  "assignment_group": {
+   "columns": [
+    "name",
+    "vendor_id",
+    "app_id",
+    "vendor_raw",
+    "app_raw",
+    "is_deleted"
+   ],
+   "digest": "7d1d33e2d778460046bb6a210f499092e90632c96c95395643dbf3846c2e7deb",
+   "rows": 45
+  },
+  "ci_rel": {
+   "columns": [
+    "parent_ci",
+    "child_ci",
+    "type",
+    "is_deleted"
+   ],
+   "digest": "4f8edb146b65e0305100469918d84d65e15a6b53ca318f5b8b66787515076640",
+   "rows": 152
+  },
+  "contract": {
+   "columns": [
+    "contract_id",
+    "contract_number",
+    "vendor_id",
+    "app_id",
+    "product",
+    "start_date",
+    "end_date",
+    "notice_period_days",
+    "notice_deadline",
+    "auto_renew",
+    "renewal_status",
+    "annual_value",
+    "currency",
+    "annual_value_base",
+    "owner_pid",
+    "comments_scrubbed",
+    "is_deleted",
+    "vendor_raw",
+    "app_raw"
+   ],
+   "digest": "4d282e322acd092ff9b2586e45bf76efbd408b6f036f244c47bf3c85d7b1208e",
+   "rows": 141
+  },
+  "cost_line": {
+   "columns": [
+    "cost_line_id",
+    "app_id",
+    "vendor_id",
+    "contract_id",
+    "period",
+    "line_type",
+    "cost_category",
+    "amount",
+    "currency",
+    "amount_base",
+    "cost_center",
+    "as_of",
+    "vendor_raw",
+    "app_raw",
+    "contract_raw"
+   ],
+   "digest": "5d00f0e4ea8a2c1f77b6ef3a1471f467f6b7c4e7fd8f498dea01041af8f0fd36",
+   "rows": 7200
+  },
+  "doc_page": {
+   "columns": [
+    "page_id",
+    "space_key",
+    "app_id",
+    "title",
+    "labels_json",
+    "page_type",
+    "last_updated",
+    "body_text_scrubbed",
+    "app_raw",
+    "is_deleted"
+   ],
+   "digest": "b5877946cbf9970456d51e66d20830c7e1761956263803b3aab81bc5c6a908e2",
+   "rows": 7
+  },
+  "finding": {
+   "columns": [
+    "run_id",
+    "origin",
+    "stable_key",
+    "kind",
+    "subject_type",
+    "subject_id",
+    "period",
+    "title",
+    "body_md",
+    "pending_body_md",
+    "severity",
+    "confidence",
+    "payload_json",
+    "status",
+    "suppress_until",
+    "carried_forward_from",
+    "edited",
+    "reviewed_by",
+    "review_note"
+   ],
+   "digest": "65f06ef8a77b8f05c424080eab572f9c5080a7d4832c0aca3e4b0fad6c4b73c4",
+   "rows": 18
+  },
+  "job": {
+   "columns": [
+    "job_id",
+    "kind",
+    "params_json",
+    "status",
+    "pid",
+    "result_json",
+    "error"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "license": {
+   "columns": [
+    "license_id",
+    "app_id",
+    "vendor_id",
+    "contract_id",
+    "product",
+    "license_metric",
+    "entitled_qty",
+    "unit_cost_base",
+    "is_deleted",
+    "vendor_raw",
+    "app_raw",
+    "contract_raw"
+   ],
+   "digest": "3ebc1f32d581df7ed554f689d28d796504ca24cb1691937ad72995d547a21d07",
+   "rows": 221
+  },
+  "license_usage": {
+   "columns": [
+    "license_id",
+    "as_of_date",
+    "assigned_qty",
+    "active_qty_90d"
+   ],
+   "digest": "6bc274cda2e05835aae4af28229215c869caa8c1775f08d4223c0831f4afd61c",
+   "rows": 663
+  },
+  "person_display": {
+   "columns": [
+    "pid",
+    "display_name"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "person_key": {
+   "columns": [
+    "name_hash",
+    "pid"
+   ],
+   "digest": "34b6fcba11468fcf460eca21d1c556d3474b0f8ea556f6c0a38b5ad0e38b556d",
+   "rows": 1546
+  },
+  "report_artifact": {
+   "columns": [
+    "artifact_id",
+    "snapshot_id",
+    "format",
+    "path",
+    "sha256",
+    "template_map_sha",
+    "ai_mode",
+    "ai_run_ids_json",
+    "unapproved_omitted_json"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "report_snapshot": {
+   "columns": [
+    "snapshot_id",
+    "report_key",
+    "period",
+    "vendor_id",
+    "as_of",
+    "git_commit",
+    "facts_json",
+    "tables_json",
+    "sla_source",
+    "reporting_tz",
+    "freshness_json",
+    "input_batches_json",
+    "data_class",
+    "sha256"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "review_decision": {
+   "columns": [
+    "target_type",
+    "target_id",
+    "decision",
+    "payload_json",
+    "reviewer"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "symptom_key_alias": {
+   "columns": [
+    "app_id",
+    "from_key",
+    "to_key",
+    "run_id",
+    "status"
+   ],
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "rows": 0
+  },
+  "task_sla": {
+   "columns": [
+    "ticket_id",
+    "sla_name",
+    "sla_type",
+    "stage",
+    "has_breached",
+    "start_time",
+    "end_time",
+    "business_duration_s",
+    "sla_sys_id"
+   ],
+   "digest": "a9872fc1e137dca3f6a517fb55a21b85b18f78e6f55124e2196d998323e580eb",
+   "rows": 9948
+  },
+  "ticket": {
+   "columns": [
+    "ticket_id",
+    "kind",
+    "number",
+    "sys_id",
+    "app_id",
+    "cmdb_ci_raw",
+    "business_service_raw",
+    "short_description",
+    "description",
+    "close_notes",
+    "category",
+    "subcategory",
+    "priority",
+    "impact",
+    "urgency",
+    "state",
+    "is_open",
+    "assignment_group",
+    "assigned_to_pid",
+    "caller_pid",
+    "vendor_id",
+    "sys_updated_on",
+    "made_sla",
+    "reassignment_count",
+    "reopen_count",
+    "close_code",
+    "problem_id",
+    "caused_by",
+    "parent_incident",
+    "change_type",
+    "risk",
+    "start_date",
+    "end_date",
+    "open_hash",
+    "resolved_hash",
+    "stale_open",
+    "raw_keep_json"
+   ],
+   "digest": "d1d0d8614945a19f013aa778c60bdadaf6e8510e5f0cf1eb1f7c17e34ace10a0",
+   "rows": 5718
+  },
+  "unmapped_value": {
+   "columns": [
+    "kind",
+    "raw_value",
+    "occurrences",
+    "suggestion",
+    "score",
+    "resolved"
+   ],
+   "digest": "9f2f1b34eee3a5b87d4766e7b9b7b72b8463d3197b6ccec6369cee8f038f8b7e",
+   "rows": 6
+  },
+  "vendor": {
+   "columns": [
+    "vendor_id",
+    "name",
+    "vendor_type",
+    "tier",
+    "sla_target_pct",
+    "is_deleted"
+   ],
+   "digest": "74b9c1134d71e25cc9a280dd589588ca7b958c9c3ed0c1aa43449516b277e95a",
+   "rows": 35
+  },
+  "work_item": {
+   "columns": [
+    "issue_key",
+    "project_key",
+    "app_id",
+    "summary",
+    "issue_type",
+    "status",
+    "status_category",
+    "priority",
+    "created",
+    "updated",
+    "resolved",
+    "sprint_json",
+    "labels_json",
+    "components_json",
+    "fix_versions_json",
+    "parent_key",
+    "story_points",
+    "assignee_pid",
+    "app_raw"
+   ],
+   "digest": "286f7a636443fd9fa50f8beb475f4868ea52982b2d63a2ff7b26459d1cbaf11e",
+   "rows": 3000
+  }
+ },
+ "version": 1
+}

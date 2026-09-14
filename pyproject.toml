@@ -47,6 +47,7 @@ packages = ["src/sed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-q"
 markers = [
     "slow: long-running tests (perf, soak); run per milestone",
