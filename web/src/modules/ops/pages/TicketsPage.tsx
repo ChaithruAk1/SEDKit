@@ -32,12 +32,16 @@ import type { GetQuery, Schema } from '../../../api/types';
 import { useApi } from '../../../api/useApi';
 import { CHART_COLORS, ChartCard } from '../../../components/ChartCard';
 import { type Column, DataTable } from '../../../components/DataTable';
+import { ErrorState } from '../../../components/ErrorState';
+import { FindingList } from '../../../components/FindingList';
 import { formatHours, formatInt, formatPct } from '../../../components/format';
 import { PageHeader } from '../../../components/PageHeader';
 import { SectionCard } from '../../../components/SectionCard';
 import { useFilters, usePatchSearchParams, useSearchParam } from '../../../hooks/useFilters';
 import { TicketDrawer, useTicketParam } from '../components/TicketDrawer';
 import { ticketColumns } from '../components/ticketColumns';
+import { useFindings } from '../components/useFindings';
+import { findingSubjectHref } from '../links';
 
 type Granularity = 'week' | 'month';
 type TicketQuery = NonNullable<GetQuery<'/api/ops/tickets'>>;
@@ -410,18 +414,42 @@ function SearchTab() {
   );
 }
 
-const TABS = ['trends', 'backlog', 'search'] as const;
+function RecurringTab() {
+  const { filters, search } = useFilters();
+  const clusters = useFindings({ kind: 'issue_cluster', as_of: filters.as_of, limit: 200 }, filters.include_drafts);
+  return (
+    <SectionCard
+      title="Recurring issues"
+      description={
+        filters.include_drafts
+          ? 'Issue clusters: approved and draft AI findings'
+          : 'Approved issue clusters (AI findings reviewed by a person); turn on "Include AI drafts" to see unreviewed ones'
+      }
+      count={clusters.items?.length ?? null}
+    >
+      {clusters.error ? <ErrorState error={clusters.error} onRetry={clusters.reload} compact /> : null}
+      <FindingList
+        findings={clusters.items}
+        emptyText={clusters.loading ? 'Loading…' : 'No recurring issues published'}
+        subjectHref={(f) => findingSubjectHref(f, search)}
+      />
+    </SectionCard>
+  );
+}
+
+const TABS = ['trends', 'backlog', 'recurring', 'search'] as const;
 
 export default function TicketsPage() {
   const [tabParam, setTab] = useSearchParam('tab', 'trends');
   const tab = (TABS as readonly string[]).includes(tabParam) ? tabParam : 'trends';
   return (
     <Stack gap="md">
-      <PageHeader title="Tickets" description="Trends, backlog and full-text search. Click a ticket for details." />
+      <PageHeader title="Tickets" description="Trends, backlog, recurring issues and full-text search. Click a ticket for details." />
       <Tabs value={tab} onChange={(value) => setTab(value)} keepMounted={false}>
         <Tabs.List mb="md">
           <Tabs.Tab value="trends">Trends</Tabs.Tab>
           <Tabs.Tab value="backlog">Backlog</Tabs.Tab>
+          <Tabs.Tab value="recurring">Recurring issues</Tabs.Tab>
           <Tabs.Tab value="search">Search</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="trends">
@@ -429,6 +457,9 @@ export default function TicketsPage() {
         </Tabs.Panel>
         <Tabs.Panel value="backlog">
           <BacklogTab />
+        </Tabs.Panel>
+        <Tabs.Panel value="recurring">
+          <RecurringTab />
         </Tabs.Panel>
         <Tabs.Panel value="search">
           <SearchTab />

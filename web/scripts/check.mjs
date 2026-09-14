@@ -5,7 +5,8 @@
  *
  * 1. dist: index.html and CSS reference no external hosts (scripts, stylesheets, fonts, images, preconnects), and
  *    JS chunks contain no absolute URL except diagnostic/namespace strings of bundled libraries (HOST_ALLOWLIST).
- *    dist/index.html keeps the sed-token meta placeholder and relative asset paths (base "./").
+ *    dist/index.html keeps the sed-token meta placeholder and relative asset paths (base "./"), and the fixtures-mode
+ *    data is not bundled (a production build must talk to the real API).
  * 2. src and index.html: no absolute http(s) URLs, protocol-relative URLs, CDN or web-font references.
  * 3. src/api/schema.d.ts is up to date (openapi-typescript --check, i.e. `npm run gen:api:check`).
  */
@@ -79,6 +80,9 @@ function checkDist() {
     if (ext === '.js' || ext === '.mjs') {
       if (/\bimport\s*\(\s*["'`](?:https?:)?\/\//.test(text) || /\bfrom\s*["'](?:https?:)?\/\//.test(text)) {
         problems.push(`${rel(file)}: imports a module from an external host`);
+      }
+      if (text.includes('No fixture for GET')) {
+        problems.push(`${rel(file)}: synthetic fixtures are bundled (build without VITE_SED_FIXTURES / --mode fixtures)`);
       }
       const hosts = new Set();
       for (const match of text.matchAll(ABSOLUTE_URL)) {

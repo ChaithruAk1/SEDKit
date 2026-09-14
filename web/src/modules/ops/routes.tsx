@@ -17,7 +17,7 @@ export const OPS_ROUTES = [
   {
     path: 'ops/tickets',
     title: 'Tickets',
-    filters: ['app', 'family', 'vendor', 'group', 'as_of'],
+    filters: ['app', 'family', 'vendor', 'group', 'as_of', 'include_drafts'],
     load: () => import('./pages/TicketsPage'),
   },
   {
