@@ -118,23 +118,23 @@ Fill in this table and keep it with the I1 notes.
 
 | Item | Value | How to measure |
 |---|---|---|
-| `claude --version` | | Step 5 |
-| Triage model (`triageModel` arg, or inherited) | | Workflow args or session model |
-| `model_reported` | | `sed ai runs` (step 7) |
-| Permission prompts during the workflow (target 0) | | Count while step 6 runs |
-| `/permissions` lists the runs rules and deny rules | | Step 3 |
-| Read truncation: lines read before the first truncation of a packet | | Batch agent transcript (Read result says it was truncated) |
-| Read truncation: characters read before truncation | | Same transcript; compare with `plan.max_chars_per_batch` |
-| Packet size: `max_chars_per_batch` / `longest_line_chars` | | Workflow plan log |
-| Did agents page with offset/limit when truncated (yes/no) | | Batch agent transcripts |
-| Batches ingested on the first attempt / after retries / failed | | Workflow result `batches[]` (`errors_count`) |
-| Claims claimed / released (target 100 / 100) | | Step 7 |
-| Wall-clock time per batch agent / whole workflow | | Workflow progress view |
-| Tokens used by the workflow | | Workflow summary |
-| Sample accuracy (95% CI), `sample_n` | | `approve-run` output (step 8) |
-| Lowest-confidence error rate | | `sed ai runs` (`lowest_conf_error_rate`) |
-| Tuned `ai.triage_batch_size` (before -> after) | 100 -> | Step 11 |
-| Tuned `ai.triage_packet_max_chars` (before -> after) | 40000 -> | Step 11 |
+| `claude --version` | 2.1.267 (Claude Code) | Step 5 |
+| Triage model (`triageModel` arg, or inherited) | inherited (`model_arg` empty) | Workflow args or session model |
+| `model_reported` | claude-opus-5 | `sed ai runs` (step 7) |
+| Permission prompts during the workflow (target 0) | 0 | Count while step 6 runs |
+| `/permissions` lists the runs rules and deny rules | not opened; zero prompts with the generated rules | Step 3 |
+| Read truncation: lines read before the first truncation of a packet | none: 50-line packets read whole | Batch agent transcript (Read result says it was truncated) |
+| Read truncation: characters read before truncation | none up to 16,386 characters | Same transcript; compare with `plan.max_chars_per_batch` |
+| Packet size: `max_chars_per_batch` / `longest_line_chars` | 16,386 / 421 (50 items per batch) | Workflow plan log |
+| Did agents page with offset/limit when truncated (yes/no) | not needed (no truncation) | Batch agent transcripts |
+| Batches ingested on the first attempt / after retries / failed | 2 / 0 / 0 | Workflow result `batches[]` (`errors_count`) |
+| Claims claimed / released (target 100 / 100) | 100 / 100 | Step 7 |
+| Wall-clock time per batch agent / whole workflow | 99 s and 105 s / 2 min 16 s | Workflow progress view |
+| Tokens used by the workflow | about 21k output tokens (batch agents 9.4k and 9.7k) | Workflow summary |
+| Sample accuracy (95% CI), `sample_n` | 100% (88.6-100%), 30 | `approve-run` output (step 8) |
+| Lowest-confidence error rate | n/a (no labels below 0.5; lowest-confidence items not reviewed) | `sed ai runs` (`lowest_conf_error_rate`) |
+| Tuned `ai.triage_batch_size` (before -> after) | 100 -> 100 (unchanged: no truncation measured) | Step 11 |
+| Tuned `ai.triage_packet_max_chars` (before -> after) | 40000 -> 40000 (unchanged) | Step 11 |
 
 ## 11. Tune the packet settings
 Set `ai.triage_batch_size` and `ai.triage_packet_max_chars` in `config/settings.yaml` so that one packet is read in a
