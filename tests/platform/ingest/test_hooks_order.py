@@ -46,7 +46,17 @@ RECORDED_ORDER = [
     *(f"jira_export_{key}.csv" for key in ("BI", "CRM", "LDG", "ORN", "PLM", "WMS")),
     *(f"confluence_space_{key}" for key in ("HRCORE", "LEDGER", "ORION")),
 ]
-RERESOLVE_KEYS = ["ticket", "contract", "license", "cost_line", "application", "unmapped_marked_resolved"]
+RERESOLVE_KEYS = [
+    "ticket",
+    "contract",
+    "license",
+    "cost_line",
+    "application",
+    "assignment_group",
+    "work_item",
+    "doc_page",
+    "unmapped_marked_resolved",
+]
 INC_HEADER = ["number", "opened_at", "sys_updated_on", "state", "short_description", "assignment_group"]
 CHG_HEADER = ["number", "opened_at", "sys_updated_on", "state", "short_description", "assignment_group"]
 
@@ -143,12 +153,80 @@ def test_vendor_group_overrides_apply_before_incident_files(fresh_profile, tmp_p
         ("servicenow_change_request", "change_request", "V002"),  # from the group file, no override yet
         ("servicenow_incident", "incident", "V001"),  # override applied before the incident file is mapped
     ]
+    assert _ticket_vendors(paths) == {"CHG0000001": "V002", "INC0000001": "V001"}
+    # reresolve applies the overrides to the same ticket kinds as the import does
+    assert reresolve(paths)["ticket"] == 0
+    assert _ticket_vendors(paths) == {"CHG0000001": "V002", "INC0000001": "V001"}
+
+
+def _ticket_vendors(paths) -> dict[str, str | None]:
     conn = db.connect(paths.db, readonly=True)
     try:
-        vendors = dict(conn.execute("SELECT number, vendor_id FROM ticket").fetchall())
+        return dict(conn.execute("SELECT number, vendor_id FROM ticket").fetchall())
     finally:
         conn.close()
-    assert vendors == {"CHG0000001": "V002", "INC0000001": "V001"}
+
+
+def _vendor_master(tmp_path, write_csv):
+    return write_csv(
+        tmp_path / "Vendor_Master.csv",
+        ["Vendor ID", "Vendor Name"],
+        [["V001", "Nordwind Managed Services"], ["V002", "Keel Support Services"]],
+    )
+
+
+def _groups(n: int) -> list[list[object]]:
+    return [[f"IT-G{i}", "Nordwind Managed Services"] for i in range(1, n + 1)]
+
+
+def _incident(path, write_csv, group: str):
+    row = ["INC0000001", "2026-08-20 09:00:00", "2026-08-20 10:00:00", "New", "Printer", group]
+    return write_csv(path, INC_HEADER, [row])
+
+
+def _run(paths, files, **kwargs):
+    return run_import(paths, ImportOptions(files=files, allow_unmanifested=True, move_files=False, **kwargs))
+
+
+def test_historic_tickets_keep_the_vendor_of_a_soft_deleted_group(fresh_profile, tmp_path, write_csv):
+    paths = fresh_profile
+    first = [
+        _vendor_master(tmp_path, write_csv),
+        write_csv(tmp_path / "sys_user_group.csv", ["name", "u_vendor"], _groups(5)),
+        _incident(tmp_path / "incident_2026-08.csv", write_csv, "IT-G1"),
+    ]
+    assert _run(paths, first)["summary"]["errors"] == 0
+    later = write_csv(tmp_path / "later" / "sys_user_group.csv", ["name", "u_vendor"], _groups(5)[1:])
+    result = _run(paths, [later])
+    assert result["summary"]["errors"] == 0 and result["files"][0]["dq"]["soft_deleted"] == 1
+    assert reresolve(paths)["ticket"] == 0
+    assert _ticket_vendors(paths) == {"INC0000001": "V001"}
+
+
+def test_a_refused_group_file_does_not_leak_into_later_files(fresh_profile, tmp_path, write_csv):
+    paths = fresh_profile
+    first = [
+        _vendor_master(tmp_path, write_csv),
+        write_csv(tmp_path / "sys_user_group.csv", ["name", "u_vendor"], _groups(5)),
+    ]
+    assert _run(paths, first)["summary"]["errors"] == 0
+    partial = write_csv(
+        tmp_path / "partial" / "sys_user_group.csv",
+        ["name", "u_vendor"],
+        [["IT-G1", "Keel Support Services"], ["IT-G2", "Foo Unknown Ltd"]],
+    )
+    incident = _incident(tmp_path / "partial" / "incident_2026-08.csv", write_csv, "IT-G1")
+    result = _run(paths, [partial, incident])
+    statuses = {f["file"]: f["status"] for f in result["files"]}
+    assert statuses == {"sys_user_group.csv": "error", "incident_2026-08.csv": "completed"}
+    incident_dq = next(f for f in result["files"] if f["file"] == "incident_2026-08.csv")["dq"]
+    assert "vendor" not in incident_dq["unmapped"]
+    assert _ticket_vendors(paths) == {"INC0000001": "V001"}
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        assert conn.execute("SELECT raw_value FROM unmapped_value WHERE kind = 'vendor'").fetchall() == []
+    finally:
+        conn.close()
 
 
 def test_reresolve_result_keys_unchanged(ops_profile_rw):

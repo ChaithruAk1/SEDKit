@@ -102,11 +102,6 @@ def test_assigning_an_app_alias_relinks_tickets(ops_profile_rw):
     assert relinked == [{"app_id": app_id}]
 
 
-@pytest.mark.xfail(
-    reason="reresolve (ws7 loader.py, M1 behaviour) derives ticket vendors from assignment_group.vendor_id and never "
-    "re-resolves assignment_group.vendor_raw; see docs/m2/contract-requests/ws4-api-platform.md item 2",
-    strict=False,
-)
 def test_vendor_alias_relinks_tickets_of_groups_with_that_vendor_spelling(ops_profile_rw):
     paths = ops_profile_rw.paths
     groups = _rows(
@@ -171,3 +166,94 @@ def test_busy_database_gives_409_with_retry_after(ops_profile_rw, monkeypatch):
     retried = client.post("/api/aliases", json=body)
     assert retried.status_code == 200, retried.text
     assert retried.json()["target_id"] == ops_profile_rw.ids["vendor_p2"]
+
+
+def _execute(paths, sql, params=()):
+    conn = db.connect(paths.db)
+    try:
+        with db.write_tx(conn):
+            conn.execute(sql, params)
+    finally:
+        conn.close()
+
+
+def test_a_manual_alias_can_be_reassigned_and_replaces_a_seed_alias(ops_profile_rw):
+    paths = ops_profile_rw.paths
+    client = api_client(paths)
+    first, second = (r["vendor_id"] for r in _rows(paths, "SELECT vendor_id FROM vendor ORDER BY vendor_id LIMIT 2"))
+    contracts = [r["contract_id"] for r in _rows(paths, "SELECT contract_id FROM contract ORDER BY 1 LIMIT 2")]
+    for contract_id in contracts:
+        _execute(
+            paths,
+            "UPDATE contract SET vendor_raw = 'Mars Orbital Services', vendor_id = NULL WHERE contract_id = ?",
+            (contract_id,),
+        )
+    for target in (first, second, first):
+        body = {"kind": "vendor", "raw_value": "Mars Orbital Services", "target": target}
+        response = client.post("/api/aliases", json=body)
+        assert response.status_code == 200, response.text
+        assert response.json()["target_id"] == target
+        stored = _rows(paths, "SELECT target_id, origin FROM alias WHERE alias_norm = 'mars orbital services'")
+        assert stored == [{"target_id": target, "origin": "manual"}]
+        linked = _rows(paths, "SELECT DISTINCT vendor_id FROM contract WHERE vendor_raw = 'Mars Orbital Services'")
+        assert linked == [{"vendor_id": target}]
+
+    _execute(
+        paths,
+        "INSERT INTO alias (kind, alias_norm, target_id, origin, created_at) VALUES ('vendor', 'seedy orbital', ?, "
+        "'seed', '2026-09-01T00:00:00Z')",
+        (first,),
+    )
+    response = client.post("/api/aliases", json={"kind": "vendor", "raw_value": "Seedy Orbital", "target": second})
+    assert response.status_code == 200, response.text
+    stored = _rows(paths, "SELECT target_id, origin FROM alias WHERE alias_norm = 'seedy orbital'")
+    assert stored == [{"target_id": second, "origin": "manual"}]
+
+
+@pytest.mark.parametrize("raw", ["-", "!!!", "Ltd."])
+def test_alias_values_with_nothing_left_after_normalisation_are_rejected(ops_profile_rw, raw):
+    paths = ops_profile_rw.paths
+    body = {"kind": "vendor", "raw_value": raw, "target": ops_profile_rw.ids["vendor_p2"]}
+    assert_envelope(api_client(paths).post("/api/aliases", json=body), 422, "validation")
+    assert _rows(paths, "SELECT COUNT(*) AS n FROM review_decision")[0]["n"] == 0
+
+
+def test_alias_decision_and_relink_commit_together(ops_profile_rw, monkeypatch):
+    from sed.errors import Busy
+    from sed.ingest import loader
+
+    def busy(*args, **kwargs):
+        raise Busy("database is busy")
+
+    paths = ops_profile_rw.paths
+    monkeypatch.setattr(loader, "apply_relink", busy)
+    body = {"kind": "vendor", "raw_value": "Atomic Orbital Services", "target": ops_profile_rw.ids["vendor_p2"]}
+    assert_envelope(api_client(paths).post("/api/aliases", json=body), 409, "busy")
+    assert _rows(paths, "SELECT COUNT(*) AS n FROM alias WHERE alias_norm = 'atomic orbital services'")[0]["n"] == 0
+    assert _rows(paths, "SELECT COUNT(*) AS n FROM review_decision")[0]["n"] == 0
+
+
+def test_jira_project_and_confluence_space_aliases_relink_work_items_and_pages(ops_profile_rw):
+    paths = ops_profile_rw.paths
+    client = api_client(paths)
+    app_id = _rows(paths, "SELECT app_id FROM application WHERE is_deleted = 0 ORDER BY app_id LIMIT 1")[0]["app_id"]
+    issue = _rows(paths, "SELECT issue_key FROM work_item ORDER BY 1 LIMIT 1")[0]["issue_key"]
+    page = _rows(paths, "SELECT page_id FROM doc_page ORDER BY 1 LIMIT 1")[0]["page_id"]
+    _execute(
+        paths,
+        "UPDATE work_item SET project_key = 'ZZQ', components_json = NULL, app_id = NULL WHERE issue_key = ?",
+        (issue,),
+    )
+    _execute(
+        paths, "UPDATE doc_page SET space_key = 'ZZSPACE', labels_json = NULL, app_id = NULL WHERE page_id = ?", (page,)
+    )
+
+    response = client.post("/api/aliases", json={"kind": "jira_project", "raw_value": "ZZQ", "target": app_id})
+    assert response.status_code == 200, response.text
+    assert response.json()["reresolved"]["work_item"] >= 1
+    assert _rows(paths, "SELECT app_id FROM work_item WHERE issue_key = ?", (issue,)) == [{"app_id": app_id}]
+
+    response = client.post("/api/aliases", json={"kind": "confluence_space", "raw_value": "ZZSPACE", "target": app_id})
+    assert response.status_code == 200, response.text
+    assert response.json()["reresolved"]["doc_page"] >= 1
+    assert _rows(paths, "SELECT app_id FROM doc_page WHERE page_id = ?", (page,)) == [{"app_id": app_id}]

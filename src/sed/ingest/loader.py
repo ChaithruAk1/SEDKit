@@ -13,6 +13,7 @@ The engine is module-agnostic: targets, their order, batch column and snapshot s
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import shutil
@@ -460,13 +461,21 @@ def _import_entry(
     assert spec is not None and table is not None
     target = targets[spec.target]
     as_of = resolve_as_of(spec, entry.path, opts.as_of)
-    for hook in hooks:
-        hook.before_target(session, target, spec)
-    ctx = Ctx(conn, resolver, pii, salt, None, as_of, base_currency, fx, dict(spec.constants), state=session.state)
-    mapped = map_table(spec, table, target, ctx, pii, display_names, opts.sample_rows)
-    rows = mapped.rows
     if spec.load_mode == "append_snapshot" and not as_of:
         raise ValidationFailed(f"{entry.path.name}: append_snapshot mapping '{spec.name}' needs an as-of date")
+    # A file refused before anything is written must not leave its unmapped counts or session state (for example the
+    # group directory of a partial group export) to the files after it.
+    checkpoint = _checkpoint(session)
+    try:
+        for hook in hooks:
+            hook.before_target(session, target, spec)
+        ctx = Ctx(conn, resolver, pii, salt, None, as_of, base_currency, fx, dict(spec.constants), state=session.state)
+        mapped = map_table(spec, table, target, ctx, pii, display_names, opts.sample_rows)
+        soft_delete_keys = _soft_delete_keys(conn, entry, spec, target, mapped.rows, opts.force)
+    except SedError:
+        _restore(session, checkpoint)
+        raise
+    rows = mapped.rows
 
     dq: dict[str, Any] = {
         "reader": {
@@ -494,20 +503,6 @@ def _import_entry(
         "rows_valid": len(rows),
         "rows_rejected": len(mapped.rejects),
     }
-
-    soft_delete_keys: list[tuple[Any, ...]] = []
-    if spec.load_mode == "full_snapshot" and target.soft_delete:
-        active = {
-            tuple(r)
-            for r in conn.execute(f"SELECT {', '.join(target.key)} FROM {target.table} WHERE is_deleted = 0").fetchall()
-        }
-        file_keys = {tuple(r[k] for k in target.key) for r in rows}
-        soft_delete_keys = sorted(active - file_keys, key=str)
-        if active and len(soft_delete_keys) / len(active) > SOFT_DELETE_GUARD and not opts.force:
-            raise PreconditionFailed(
-                f"{entry.path.name}: {len(soft_delete_keys)} of {len(active)} existing {target.table} rows would "
-                f"disappear (> {int(SOFT_DELETE_GUARD * 100)}%). Is this a partial export? Re-run with --force if not.",
-            )
 
     if opts.dry_run:
         unmapped = {k: dict(v.most_common(20)) for k, v in resolver.unmapped.items()}
@@ -609,6 +604,46 @@ def _import_entry(
     return result
 
 
+def _soft_delete_keys(
+    conn, entry: Entry, spec: MappingSpec, target: Target, rows: list[dict[str, Any]], force: bool
+) -> list[tuple[Any, ...]]:
+    """Keys a full_snapshot file would soft-delete; refuses (exit 4) above SOFT_DELETE_GUARD unless forced."""
+    if spec.load_mode != "full_snapshot" or not target.soft_delete:
+        return []
+    active = {
+        tuple(r)
+        for r in conn.execute(f"SELECT {', '.join(target.key)} FROM {target.table} WHERE is_deleted = 0").fetchall()
+    }
+    file_keys = {tuple(r[k] for k in target.key) for r in rows}
+    keys = sorted(active - file_keys, key=str)
+    if active and len(keys) / len(active) > SOFT_DELETE_GUARD and not force:
+        raise PreconditionFailed(
+            f"{entry.path.name}: {len(keys)} of {len(active)} existing {target.table} rows would "
+            f"disappear (> {int(SOFT_DELETE_GUARD * 100)}%). Is this a partial export? Re-run with --force if not.",
+        )
+    return keys
+
+
+def _checkpoint(session: ImportSession) -> tuple[dict[str, Counter[str]], dict[str, Any]]:
+    """Unmapped counters and module session state before a file is mapped."""
+    unmapped = {kind: Counter(counter) for kind, counter in session.resolver.unmapped.items()}
+    state: dict[str, Any] = {}
+    for key, value in session.state.items():
+        try:
+            state[key] = copy.deepcopy(value)
+        except Exception:  # not copyable (for example a handle): keep the live object
+            state[key] = value
+    return unmapped, state
+
+
+def _restore(session: ImportSession, checkpoint: tuple[dict[str, Counter[str]], dict[str, Any]]) -> None:
+    unmapped, state = checkpoint
+    session.resolver.unmapped.clear()
+    session.resolver.unmapped.update(unmapped)
+    session.state.clear()
+    session.state.update(state)
+
+
 def _apply_active_snapshot(conn, target: Target, rows: list[dict[str, Any]], as_of: str | None) -> int:
     column, value = target.active_scope  # type: ignore[misc]
     conn.execute("CREATE TEMP TABLE IF NOT EXISTS _active_keys (k TEXT PRIMARY KEY)")
@@ -638,18 +673,28 @@ def reresolve(paths: Paths) -> dict[str, int]:
     conn = db.connect(paths.db)
     try:
         hooks = registry.ingest_hooks(paths)
-        session = ImportSession(conn, paths, Resolver(conn))
-        updates: list[RelinkUpdate] = []
-        for hook in hooks:
-            updates += hook.relink(session)
-        session.resolver.unmapped.clear()
+        updates = plan_relink(ImportSession(conn, paths, Resolver(conn)), hooks)
         with db.write_tx(conn):
-            counts: dict[str, int] = {}
-            for update in updates:
-                conn.executemany(update.sql, update.rows)
-                counts[update.table] = counts.get(update.table, 0) + len(update.rows)
-            counts["unmapped_marked_resolved"] = mark_resolved(conn, hooks)
-            refresh_suggestions(conn, hooks)
-        return counts
+            return apply_relink(conn, hooks, updates)
     finally:
         conn.close()
+
+
+def plan_relink(session: ImportSession, hooks: list[Any]) -> list[RelinkUpdate]:
+    """Every hook's RelinkUpdates for the session's resolver (reads only)."""
+    updates: list[RelinkUpdate] = []
+    for hook in hooks:
+        updates += hook.relink(session)
+    session.resolver.unmapped.clear()
+    return updates
+
+
+def apply_relink(conn, hooks: list[Any], updates: list[RelinkUpdate]) -> dict[str, int]:
+    """Apply planned re-links and the unmapped-value bookkeeping (call inside write_tx); returns the counts."""
+    counts: dict[str, int] = {}
+    for update in updates:
+        conn.executemany(update.sql, update.rows)
+        counts[update.table] = counts.get(update.table, 0) + len(update.rows)
+    counts["unmapped_marked_resolved"] = mark_resolved(conn, hooks)
+    refresh_suggestions(conn, hooks)
+    return counts

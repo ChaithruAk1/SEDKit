@@ -78,8 +78,9 @@ def contract_id_for(ctx: Ctx, raw: Any) -> str | None:
 class GroupDirectory:
     """Assignment group -> (vendor_id, app_id) for one import session.
 
-    Loaded from the active assignment_group rows when the session starts, then updated by group files and by the
-    vendor-group overrides (config/ops/vendor_groups.yaml).
+    Loaded from the assignment_group rows when the session starts, then updated by group files and by the
+    vendor-group overrides (config/ops/vendor_groups.yaml). Soft-deleted groups are kept, so historic tickets of a
+    decommissioned group keep their vendor; an active group wins when two names normalise to the same key.
     """
 
     def __init__(self) -> None:
@@ -89,9 +90,15 @@ class GroupDirectory:
     @classmethod
     def load(cls, conn: sqlite3.Connection) -> GroupDirectory:
         directory = cls()
-        for row in conn.execute("SELECT name, vendor_id, app_id FROM assignment_group WHERE is_deleted = 0"):
+        for row in conn.execute("SELECT name, vendor_id, app_id FROM assignment_group ORDER BY is_deleted DESC, name"):
             directory.set_group(row["name"], row["vendor_id"], row["app_id"])
         return directory
+
+    def copy(self) -> GroupDirectory:
+        clone = GroupDirectory()
+        clone.group_vendor = dict(self.group_vendor)
+        clone.group_app = dict(self.group_app)
+        return clone
 
     def set_group(self, name: str, vendor_id: str | None, app_id: str | None) -> None:
         key = normalize_alias(name)
@@ -119,10 +126,10 @@ def resolve_app(resolver: Resolver, business_service: Any, ci: Any) -> str | Non
             hit = resolver.resolve(kind, raw, record_unmapped=False)
             if hit:
                 return hit
-    if business_service not in (None, ""):
-        resolver.unmapped["app"][str(business_service).strip()] += 1
+    if business_service not in (None, "") and normalize_alias(business_service, "app"):
+        resolver.record_unmapped("app", business_service)
     elif ci not in (None, ""):
-        resolver.unmapped["ci"][str(ci).strip()] += 1
+        resolver.record_unmapped("ci", ci)
     return None
 
 
@@ -445,25 +452,41 @@ def build_task_sla(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[s
     }
 
 
+def work_item_app(resolver: Resolver, components: list[Any], project: Any, project_name: Any = None) -> str | None:
+    """App of a Jira issue: a component (jira_component or app alias), then the project key, then the project name.
+
+    Shared by import and `sed import reresolve`; records nothing as unmapped.
+    """
+    for comp in components:
+        app_id = resolver.resolve("jira_component", comp, record_unmapped=False) or resolver.resolve(
+            "app", comp, record_unmapped=False
+        )
+        if app_id:
+            return app_id
+    return resolver.resolve("jira_project", project, record_unmapped=False) or resolver.resolve(
+        "app", project_name, record_unmapped=False
+    )
+
+
+def doc_page_app(resolver: Resolver, space: Any, labels: list[Any]) -> str | None:
+    """App of a Confluence page: the space alias, then the first label that is an app alias (records nothing)."""
+    app_id = resolver.resolve("confluence_space", space, record_unmapped=False)
+    for lbl in labels:
+        if app_id:
+            break
+        app_id = resolver.resolve("app", lbl, record_unmapped=False)
+    return app_id
+
+
 def build_work_item(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     key = str(_req(rec, "issue_key")).strip()
     project = rec.get("project_key") or key.split("-")[0]
     components = rec.get("components") or []
     if isinstance(components, str):
         components = [components]
-    app_id = None
-    for comp in components:
-        app_id = ctx.resolver.resolve("jira_component", comp, record_unmapped=False) or ctx.resolver.resolve(
-            "app", comp, record_unmapped=False
-        )
-        if app_id:
-            break
+    app_id = work_item_app(ctx.resolver, components, project, rec.get("project_name"))
     if not app_id:
-        app_id = ctx.resolver.resolve("jira_project", project, record_unmapped=False) or ctx.resolver.resolve(
-            "app", rec.get("project_name"), record_unmapped=False
-        )
-    if not app_id:
-        ctx.resolver.unmapped["jira_project"][str(project)] += 1
+        ctx.resolver.record_unmapped("jira_project", project)
     status_category = rec.get("status_category")
     if not status_category and rec.get("status"):
         status_category = "Done" if rec.get("resolved") else "In Progress"
@@ -506,14 +529,9 @@ def build_doc_page(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[s
     haystack = " ".join([title.lower(), *[lbl.lower() for lbl in labels]])
     page_type = next((ptype for ptype, words in _PAGE_TYPES if any(w in haystack for w in words)), "other")
     space = str(_req(rec, "space_key"))
-    app_id = ctx.resolver.resolve("confluence_space", space, record_unmapped=False)
+    app_id = doc_page_app(ctx.resolver, space, labels)
     if not app_id:
-        for lbl in labels:
-            app_id = ctx.resolver.resolve("app", lbl, record_unmapped=False)
-            if app_id:
-                break
-    if not app_id:
-        ctx.resolver.unmapped["confluence_space"][space] += 1
+        ctx.resolver.record_unmapped("confluence_space", space)
     return {
         "page_id": str(_req(rec, "page_id")),
         "space_key": space,

@@ -175,6 +175,9 @@ def test_demo_csv_imports_through_the_same_loader(demo_profile, tmp_path, write_
         "license",
         "cost_line",
         "application",
+        "assignment_group",
+        "work_item",
+        "doc_page",
         "demo_widget",
         "unmapped_marked_resolved",
     ]

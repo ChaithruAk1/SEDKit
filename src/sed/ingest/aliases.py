@@ -43,27 +43,44 @@ def alias_targets(conn: sqlite3.Connection, kind: str, q: str | None = None, lim
 def assign_alias(
     paths: Paths, kind: str, raw: str, target: str, *, reviewer: str, reresolve: bool = True
 ) -> dict[str, Any]:
-    """Record a manual alias (never overwritten by imports), log the decision and optionally re-link rows."""
-    from sed.ingest.loader import reresolve as reresolve_rows
-    from sed.ingest.resolve import ALIAS_KINDS, Resolver
+    """Record a manual alias, log the decision and optionally re-link rows, all in one write transaction.
+
+    A manual alias replaces any existing alias for the same normalised value (manual, seed or import-derived) and is
+    never overwritten by imports.
+    """
+    from sed import modules as registry
+    from sed.ingest.hooks import ImportSession
+    from sed.ingest.loader import apply_relink, plan_relink
+    from sed.ingest.resolve import ALIAS_KINDS, Resolver, normalize_alias
 
     if kind not in ALIAS_KINDS:
         raise ValidationFailed(f"kind must be one of {', '.join(ALIAS_KINDS)}")
+    key = normalize_alias(raw, kind)
+    if not key:
+        raise ValidationFailed(f"'{raw}' has no letters or digits left after normalisation, so it cannot be an alias")
     conn = db.connect(paths.db)
     try:
         target_id = resolve_target_id(conn, kind, target)
         resolver = Resolver(conn)
         resolver.add_alias(kind, raw, target_id, "manual")
+        hooks = registry.ingest_hooks(paths) if reresolve else []
+        updates = plan_relink(ImportSession(conn, paths, resolver), hooks) if reresolve else []
         with db.write_tx(conn):
             resolver.flush(None)
+            stored = conn.execute(
+                "SELECT target_id FROM alias WHERE kind = ? AND alias_norm = ?", (kind, key)
+            ).fetchone()
+            if stored is None or stored[0] != target_id:
+                raise RuntimeError(f"alias {kind}:{key} was not stored with target {target_id}")
             conn.execute(
                 "INSERT INTO review_decision (target_type, target_id, decision, payload_json, reviewer, decided_at) "
                 "VALUES ('alias', ?, 'approve', ?, ?, ?)",
                 (f"{kind}:{raw}", json.dumps({"target": target_id}), reviewer, db.utc_now()),
             )
+            counts = apply_relink(conn, hooks, updates) if reresolve else None
     finally:
         conn.close()
     result: dict[str, Any] = {"kind": kind, "raw": raw, "target_id": target_id}
-    if reresolve:
-        result["reresolved"] = reresolve_rows(paths)
+    if counts is not None:
+        result["reresolved"] = counts
     return result

@@ -136,7 +136,7 @@ class Resolver:
             return None
         target = self.valid_target(kind, self.aliases.get((kind, key)))
         if target is None and record_unmapped:
-            self.unmapped[kind][str(raw).strip()] += 1
+            self.record_unmapped(kind, raw)
         return target
 
     def resolve_first(self, kind: str, *raws: Any) -> str | None:
@@ -146,8 +146,13 @@ class Resolver:
             if hit:
                 return hit
         if candidates:
-            self.unmapped[kind][str(candidates[0]).strip()] += 1
+            self.record_unmapped(kind, candidates[0])
         return None
+
+    def record_unmapped(self, kind: str, raw: Any) -> None:
+        """Count a raw value as unmapped, unless it normalises to nothing (such a value can never get an alias)."""
+        if raw not in (None, "") and normalize_alias(raw, kind):
+            self.unmapped[kind][str(raw).strip()] += 1
 
     # -- writes ----------------------------------------------------------------------------------------------
 
@@ -168,13 +173,18 @@ class Resolver:
         self._pending_aliases[(kind, key)] = (target_id, origin)
 
     def flush(self, batch_id: int | None) -> dict[str, Any]:
-        """Persist pending aliases and unmapped counts (call inside write_tx)."""
+        """Persist pending aliases and unmapped counts (call inside write_tx).
+
+        Precedence matches add_alias: a manual alias replaces any alias, a seed alias replaces any non-manual one, and
+        the other origins never replace a manual or seed alias.
+        """
         now = db.utc_now()
         for (kind, key), (target, origin) in self._pending_aliases.items():
             self.conn.execute(
                 "INSERT INTO alias (kind, alias_norm, target_id, origin, created_at) VALUES (?, ?, ?, ?, ?) "
                 "ON CONFLICT (kind, alias_norm) DO UPDATE SET target_id = excluded.target_id, origin = excluded.origin "
-                "WHERE alias.origin NOT IN ('manual') AND NOT (alias.origin = 'seed' AND excluded.origin <> 'seed')",
+                "WHERE excluded.origin = 'manual' OR (alias.origin <> 'manual' "
+                "AND (excluded.origin = 'seed' OR alias.origin <> 'seed'))",
                 (kind, key, target, origin, now),
             )
         self._pending_aliases.clear()
