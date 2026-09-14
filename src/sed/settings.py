@@ -150,7 +150,7 @@ class StrictModel(BaseModel):
 
 
 class Thresholds(StrictModel):
-    """Attention-list thresholds. Risk-rule thresholds live in config/risk_rules.yaml."""
+    """Attention-list thresholds. Risk-rule thresholds live in config/ops/risk_rules.yaml."""
 
     aged_ticket_days: int = Field(30, ge=1)
     sla_warning_ratio: float = Field(0.8, gt=0, le=1)

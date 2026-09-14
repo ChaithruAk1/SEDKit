@@ -1,4 +1,4 @@
-# Weekly application operations review. Facts/tables come from the frozen snapshot (sed.reports.snapshot.weekly).
+# Weekly application operations review. Facts/tables come from the frozen snapshot (sed.reports.snapshot.weekly); module: ops.
 report: weekly
 title: Weekly Application Operations Review
 audience: Support leads and ops review

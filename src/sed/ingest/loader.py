@@ -314,7 +314,7 @@ def _seed_config_aliases(paths: Paths, resolver: Resolver) -> int:
             for raw, target_id in (mapping or {}).items():
                 resolver.add_alias(kind, raw, str(target_id), "seed")
                 seeded += 1
-    ci_file = paths.config / "ci_to_app.yaml"
+    ci_file = paths.config / "ops" / "ci_to_app.yaml"
     if ci_file.is_file():
         for ci, app in (read_yaml(ci_file) or {}).items():
             resolver.add_alias("ci", ci, str(app), "seed")
@@ -323,7 +323,7 @@ def _seed_config_aliases(paths: Paths, resolver: Resolver) -> int:
 
 
 def _apply_vendor_group_overrides(paths: Paths, resolver: Resolver) -> None:
-    groups = load_layered("vendor_groups.yaml", paths).get("groups") or {}
+    groups = load_layered("ops/vendor_groups.yaml", paths).get("groups") or {}
     for group, vendor in groups.items():
         vendor_id = resolver.resolve("vendor", vendor, record_unmapped=False)
         if vendor and not vendor_id:

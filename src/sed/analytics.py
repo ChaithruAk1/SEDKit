@@ -1,6 +1,6 @@
 """Rule-origin findings ("system-detected"): deterministic risks that never depend on the AI.
 
-`refresh_rule_findings` recomputes every enabled rule from config/risk_rules.yaml for an as-of date and upserts
+`refresh_rule_findings` recomputes every enabled rule from config/ops/risk_rules.yaml for an as-of date and upserts
 `finding` rows (origin='rule'):
 * same stable_key and still firing -> evidence/severity refreshed in place;
 * acknowledged or suppressed rows stay hidden unless their evidence changed materially (then they re-activate);
@@ -33,7 +33,7 @@ def _eu(amount: float | None) -> str:
 
 
 def compute_rule_findings(conn: sqlite3.Connection, paths: Paths | None, as_of: date) -> list[dict[str, Any]]:
-    rules = load_layered("risk_rules.yaml", paths).get("rules", {})
+    rules = load_layered("ops/risk_rules.yaml", paths).get("rules", {})
     settings = load_settings(paths)
     out: list[dict[str, Any]] = []
 

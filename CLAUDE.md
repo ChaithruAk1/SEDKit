@@ -41,6 +41,8 @@ stopped, because Windows locks `.venv\Scripts\sed.exe`). Exit codes: 0 ok, 1 int
 - `src/sed/` — package: `cli.py`, `paths.py` (profiles/DATA_DIR), `settings.py` (layered config), `db.py`
   (connections, `write_tx` = BEGIN IMMEDIATE, migrations, backups), `schema/NNN_*.sql`, `doctor.py`, `bootstrap.py`.
 - `config/` — synthetic defaults; any file can be overridden at the same relative path in `DATA_DIR\config`.
+  Platform files (`settings`, `agent`, `pii`, `fx`) sit at the top; module files live in `config/<module>/`
+  (ops: `config/ops/{taxonomy,sla,risk_rules,vendor_groups}.yaml`, `mappings/`, `reports/`).
 - `.claude/skills/sed-*` — project skills (always `sed-` prefixed; a personal `/review` skill exists on this machine).
 - `.claude/workflows/` — `sed-analyze.js`, `sed-report.js` (schema blocks generated from Pydantic; do not hand-edit).
 - `scripts/` — `ci.py`, `guard_confidential.py`, `setup.ps1`.

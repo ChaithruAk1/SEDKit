@@ -28,7 +28,7 @@ METRICS: dict[str, tuple[str, str]] = {
     "inc.sla.pct": (
         "pct",
         "Share of incidents resolved in the period that met their resolution SLA. Source order: "
-        "task_sla resolution has_breached, else made_sla, else sla.yaml calendar-hour targets.",
+        "task_sla resolution has_breached, else made_sla, else ops/sla.yaml calendar-hour targets.",
     ),
     "inc.mttr.median_h": (
         "hours",

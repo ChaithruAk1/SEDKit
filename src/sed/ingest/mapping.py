@@ -1,4 +1,4 @@
-"""Column-mapping specifications (config/mappings/*.yaml) and file-to-mapping matching.
+"""Column-mapping specifications (config/ops/mappings/*.yaml) and file-to-mapping matching.
 
 A mapping says which source columns feed which canonical fields of a target, how values are transformed, and
 which PII class each field has (mandatory). Local overrides in DATA_DIR\\config\\mappings use ``extends:`` and
@@ -111,15 +111,18 @@ class MappingSpec(_Strict):
         return [name for name, spec in self.fields.items() if spec.required]
 
 
+MAPPINGS_DIR = "ops/mappings"
+
+
 def mapping_names(paths: Paths | None) -> list[str]:
-    names = {p.stem for p in (repo_config_dir() / "mappings").glob("*.yaml")}
-    if paths and (paths.config / "mappings").is_dir():
-        names |= {p.stem for p in (paths.config / "mappings").glob("*.yaml")}
+    names = {p.stem for p in (repo_config_dir() / MAPPINGS_DIR).glob("*.yaml")}
+    if paths and (paths.config / MAPPINGS_DIR).is_dir():
+        names |= {p.stem for p in (paths.config / MAPPINGS_DIR).glob("*.yaml")}
     return sorted(names)
 
 
 def load_mapping(name: str, paths: Paths | None) -> MappingSpec:
-    data = load_layered(f"mappings/{name}.yaml", paths)
+    data = load_layered(f"{MAPPINGS_DIR}/{name}.yaml", paths)
     try:
         spec = MappingSpec.model_validate({**data, "sha256": config_sha256(data)})
     except ValidationError as exc:

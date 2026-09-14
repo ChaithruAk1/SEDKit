@@ -2,7 +2,8 @@
 
 Alias kinds: app, vendor, group, ci, jira_project, jira_component, confluence_space.
 Origins: auto_exact (seeded from master data names/ids), cmdb_rel (CI -> business app from cmdb_rel_ci),
-seed (DATA_DIR\\config\\aliases.yaml / ci_to_app.yaml), manual (`sed alias assign`; never overwritten).
+seed (DATA_DIR\\config\\aliases.yaml / DATA_DIR\\config\\ops\\ci_to_app.yaml),
+manual (`sed alias assign`; never overwritten).
 Unresolved values are counted in unmapped_value with a rapidfuzz suggestion.
 """
 
