@@ -1,0 +1,193 @@
+# M2 parallel build: which workstream may change which files (checked by scripts/check_ownership.py).
+# Rules: a changed path must match one of the workstream's `owns` globs and must not match `frozen`;
+# `generated` paths may only change when listed in `may_regenerate`. Frozen files change only through
+# integrator `contract:` commits on main (see docs/m2/contract-requests/<ws>.md).
+base: m2-foundation
+integration_branch: main
+
+frozen:
+  - src/sed/__init__.py
+  - src/sed/__main__.py
+  - src/sed/errors.py
+  - src/sed/output.py
+  - src/sed/paths.py
+  - src/sed/settings.py
+  - src/sed/db.py
+  - src/sed/salt.py
+  - src/sed/calendar.py
+  - src/sed/bootstrap.py
+  - src/sed/claude_setup.py
+  - src/sed/doctor.py
+  - src/sed/cli.py
+  - src/sed/cli_common.py
+  - src/sed/metrics.py
+  - src/sed/analytics.py
+  - src/sed/synth/**
+  - src/sed/schema/__init__.py
+  - src/sed/schema/0*.sql
+  - src/sed/ingest/__init__.py
+  - src/sed/ingest/readers.py
+  - src/sed/ingest/transforms.py
+  - src/sed/ingest/pii.py
+  - src/sed/ingest/confluence.py
+  - src/sed/ingest/aliases.py
+  - src/sed/ingest/freshness.py
+  - src/sed/modules/__init__.py
+  - src/sed/modules/contract.py
+  - src/sed/modules/cli.py
+  - src/sed/modules/ops/__init__.py
+  - src/sed/modules/ops/definitions.py
+  - src/sed/modules/ops/doctor.py
+  - src/sed/modules/ops/synth.py
+  - src/sed/modules/ops/api_models.py
+  - src/sed/modules/ops/CLAUDE.md
+  - src/sed/modules/ops/ai/__init__.py
+  - src/sed/modules/ops/reports/__init__.py
+  - src/sed/modules/ops/reports/weekly.py
+  - src/sed/ai/__init__.py
+  - src/sed/ai/contract.py
+  - src/sed/ai/CLAUDE.md
+  - src/sed/api/__init__.py
+  - src/sed/api/models.py
+  - src/sed/api/findings.py
+  - src/sed/api/CLAUDE.md
+  - src/sed/reports/__init__.py
+  - src/sed/reports/snapshot.py
+  - src/sed/reports/specs.py
+  - src/sed/reports/xlsx_builder.py
+  - src/sed/reports/md_builder.py
+  - config/*.yaml
+  - config/ops/taxonomy.yaml
+  - config/ops/sla.yaml
+  - config/ops/risk_rules.yaml
+  - config/ops/vendor_groups.yaml
+  - config/ops/mappings/**
+  - tests/conftest.py
+  - tests/test_*.py
+  - tests/fixtures/**
+  - tests/platform/*.py
+  - tests/platform/modules/**
+  - tests/**/__init__.py
+  - scripts/ci.py
+  - scripts/guard_confidential.py
+  - scripts/codegen.py
+  - scripts/check_ownership.py
+  - scripts/setup.ps1
+  - scripts/wt.sh
+  - pyproject.toml
+  - uv.lock
+  - .gitignore
+  - .gitattributes
+  - .pre-commit-config.yaml
+  - .secrets.baseline
+  - .claude/settings.json
+  - CLAUDE.md
+  - README.md
+  - docs/modules.md
+  - docs/m2/ownership.yaml
+
+generated:
+  - contracts/**
+  - web/src/api/schema.d.ts
+  - .claude/skills/*/output_schema.json
+
+workstreams:
+  ws1-ai:
+    owns:
+      - src/sed/ai/cli.py
+      - src/sed/ai/codegen.py
+      - src/sed/ai/runs.py
+      - src/sed/ai/packets.py
+      - src/sed/ai/ingest.py
+      - src/sed/ai/review.py
+      - src/sed/ai/stats.py
+      - src/sed/ai/hashing.py
+      - src/sed/ai/provenance.py
+      - src/sed/modules/ops/ai/triage.py
+      - src/sed/modules/ops/ai/definitions.py
+      - src/sed/modules/ops/ai/schemas.py
+      - src/sed/modules/ops/ai/vocab.py
+      - src/sed/modules/ops/ai/taxonomy.py
+      - src/sed/modules/ops/reports/ai_provenance.py
+      - .claude/skills/sed-triage-batch/**
+      - .claude/workflows/sed-analyze.js
+      - tests/fake_agent/*.py
+      - tests/workflow_harness.mjs
+      - tests/workflows/**
+      - tests/platform/ai/test_*.py
+      - tests/platform/ai/conftest.py
+      - tests/modules/ops/ai/test_*.py
+      - tests/modules/ops/ai/conftest.py
+      - docs/ai/**
+      - docs/m2/contract-requests/ws1-ai.md
+    may_regenerate:
+      - .claude/skills/sed-triage-batch/output_schema.json
+  ws2-pptx:
+    owns:
+      - src/sed/reports/pptx_builder.py
+      - src/sed/reports/template_map.py
+      - src/sed/reports/template_tools.py
+      - src/sed/reports/build.py
+      - src/sed/reports/cli.py
+      - templates/pptx/**
+      - config/ops/reports/weekly.yaml
+      - tests/platform/reports/test_*.py
+      - tests/platform/reports/conftest.py
+      - tests/modules/ops/reports/test_decks*.py
+      - docs/m2/contract-requests/ws2-pptx.md
+    may_regenerate: []
+  ws3-reports:
+    owns:
+      - src/sed/modules/ops/reports/monthly.py
+      - src/sed/modules/ops/reports/quarterly.py
+      - src/sed/modules/ops/reports/vendor.py
+      - src/sed/modules/ops/reports/queries.py
+      - src/sed/modules/ops/reports/definitions.py
+      - config/ops/reports/monthly.yaml
+      - config/ops/reports/quarterly.yaml
+      - config/ops/reports/vendor.yaml
+      - tests/modules/ops/reports/test_content_*.py
+      - docs/m2/contract-requests/ws3-reports.md
+    may_regenerate: []
+  ws4-api-platform:
+    owns:
+      - src/sed/api/app.py
+      - src/sed/api/deps.py
+      - src/sed/api/security.py
+      - src/sed/api/errors.py
+      - src/sed/api/routes_core.py
+      - src/sed/api/serve.py
+      - scripts/dev.ps1
+      - tests/platform/api/test_*.py
+      - tests/platform/api/conftest.py
+      - docs/m2/contract-requests/ws4-api-platform.md
+    may_regenerate: []
+  ws5-api-ops:
+    owns:
+      - src/sed/modules/ops/api.py
+      - src/sed/modules/ops/queries/**
+      - src/sed/schema/pending/ops_api_indexes.sql
+      - tests/modules/ops/api/test_*.py
+      - tests/modules/ops/api/conftest.py
+      - docs/m2/perf.md
+      - docs/m2/contract-requests/ws5-api-ops.md
+    may_regenerate: []
+  ws6-web:
+    owns:
+      - web/**
+      - docs/m2/contract-requests/ws6-web.md
+    may_regenerate:
+      - web/src/api/schema.d.ts
+  ws7-ingest:
+    owns:
+      - src/sed/ingest/loader.py
+      - src/sed/ingest/resolve.py
+      - src/sed/ingest/mapping.py
+      - src/sed/ingest/targets.py
+      - src/sed/ingest/target.py
+      - src/sed/ingest/hooks.py
+      - src/sed/modules/ops/ingest_hooks.py
+      - tests/platform/ingest/test_*.py
+      - tests/platform/ingest/conftest.py
+      - docs/m2/contract-requests/ws7-ingest.md
+    may_regenerate: []

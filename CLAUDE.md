@@ -37,15 +37,42 @@ stopped, because Windows locks `.venv\Scripts\sed.exe`). Exit codes: 0 ok, 1 int
 - Tests only: `uv run pytest`
 - Lint/format: `uv run ruff check . --fix` and `uv run ruff format .`
 
+## Modules
+SED is a platform of modules; ops is module #1. How to add one: `docs/modules.md`.
+- Core never imports `sed.modules.<key>` directly. It reaches modules only through `sed.modules` (the registry, with lazy
+  import references). `tests/platform/test_core_boundaries.py` enforces this.
+- Namespaces: CLI `sed <name>`, API `/api/<key>/...`, pages `#/<key>/...`, config `config/<key>/`, skills `sed-...`,
+  tests `tests/modules/<key>/`.
+- `uv run sed modules list|show|check --json` inspects the manifests. Generated contracts live in `contracts/`
+  (`uv run python scripts/codegen.py`; never hand-edit).
+- Report builders take a `SnapshotRequest` and return `SnapshotParts` (`sed/reports/snapshot.py`). Skills implement
+  `SkillHandler` (`sed/ai/contract.py`). API routes use the models, deps and envelope in `sed/api/`.
+
+## M2 parallel build (temporary; removed when M2 merges)
+- Workstream agents work only in `C:/Projects/sed-wt/<ws>` on branch `m2/<ws>`, created from tag `m2-foundation`.
+- Every command runs through the worktree wrapper, invoked with an absolute path:
+  `bash C:/Projects/sed-wt/<ws>/scripts/wt.sh python|git|npm|node ...`. Its first command must print
+  `sed.__file__` from the worktree. No bare `uv run`, no `sed.exe`, no git merge/rebase/push/checkout.
+- File tools (Read/Edit/Write) use absolute worktree paths. Never touch `C:\Projects\sed` or
+  `%LOCALAPPDATA%\sed` profiles.
+- Ownership: `docs/m2/ownership.yaml`. Frozen files (the contracts) change only through a request appended to
+  `docs/m2/contract-requests/<ws>.md`. The finish gate is `wt.sh python scripts/check_ownership.py <ws>` plus
+  `wt.sh python scripts/ci.py`.
+- No high-entropy literals (tokens, hashes) in code or tests. Use low-entropy test values such as `test-token`.
+
 ## Layout
-- `src/sed/` — package: `cli.py`, `paths.py` (profiles/DATA_DIR), `settings.py` (layered config), `db.py`
-  (connections, `write_tx` = BEGIN IMMEDIATE, migrations, backups), `schema/NNN_*.sql`, `doctor.py`, `bootstrap.py`.
+- `src/sed/` — core package:
+  - `cli.py` / `cli_common.py`, `paths.py` (profiles/DATA_DIR), `settings.py` (layered config), `db.py` (connections,
+    `write_tx` = BEGIN IMMEDIATE, migrations, backups), `schema/NNN_*.sql`, `doctor.py`, `bootstrap.py`.
+  - Engines: `ingest/`, `reports/`, `ai/`, `api/`.
+  - Registry: `modules/`.
+  - Ops module: `modules/ops/`; legacy ops code in `metrics.py`, `analytics.py`, `synth/`, `ingest/targets.py`.
 - `config/` — synthetic defaults; any file can be overridden at the same relative path in `DATA_DIR\config`.
   Platform files (`settings`, `agent`, `pii`, `fx`) sit at the top; module files live in `config/<module>/`
   (ops: `config/ops/{taxonomy,sla,risk_rules,vendor_groups}.yaml`, `mappings/`, `reports/`).
 - `.claude/skills/sed-*` — project skills (always `sed-` prefixed; a personal `/review` skill exists on this machine).
 - `.claude/workflows/` — `sed-analyze.js`, `sed-report.js` (schema blocks generated from Pydantic; do not hand-edit).
-- `scripts/` — `ci.py`, `guard_confidential.py`, `setup.ps1`.
+- `scripts/` — `ci.py`, `guard_confidential.py`, `codegen.py`, `check_ownership.py`, `wt.sh`, `setup.ps1`.
 - `tests/` — pytest; synthetic fixtures only.
 
 ## Conventions
