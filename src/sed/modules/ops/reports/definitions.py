@@ -20,7 +20,8 @@ REPORT_DEFINITIONS: dict[str, tuple[str, str]] = {
     # quarterly
     "cost.actual.qtd": (
         "eur",
-        "Actual cost lines (base currency) for the calendar months of the quarter that are complete by the as-of date.",
+        "Actual cost lines (base currency) for the calendar months of the quarter that are complete by the as-of date "
+        "and have imported actuals.",
     ),
     "cost.budget.qtd": (
         "eur",
@@ -29,8 +30,8 @@ REPORT_DEFINITIONS: dict[str, tuple[str, str]] = {
     "cost.variance.qtd_pct": ("pct", "(cost.actual.qtd - cost.budget.qtd) / cost.budget.qtd."),
     "cost.actual.ytd": (
         "eur",
-        "Actual cost lines (base currency) from the first month of the fiscal year to the last complete month of "
-        "the period.",
+        "Actual cost lines (base currency) from the first month of the fiscal year up to the as-of date, for the "
+        "complete months of that range that have imported actuals.",
     ),
     "cost.budget.ytd": ("eur", "Budget lines of the latest budget version for the same months as cost.actual.ytd."),
     "renewals.2q.count": (
@@ -60,12 +61,12 @@ REPORT_DEFINITIONS: dict[str, tuple[str, str]] = {
     "vendor.spend.period": (
         "eur",
         "Actual cost lines booked to the vendor for the calendar months of the period that are complete by the "
-        "as-of date.",
+        "as-of date and have imported actuals.",
     ),
     "vendor.spend.prev_period": (
         "eur",
-        "Actual cost lines booked to the vendor for the same number of months at the start of the previous period "
-        "(like-for-like comparison with vendor.spend.period).",
+        "Actual cost lines booked to the vendor for the months of the previous period that match the months of "
+        "vendor.spend.period (each shifted back by one period; like-for-like comparison).",
     ),
     "vendor.sla.pct": (
         "pct",

@@ -172,6 +172,26 @@ def test_vendor_tables(ops_profile_rw):
     assert all(subject in own for _, subject in risk_keys)
 
 
+def test_vendor_spend_without_imported_actuals_is_unknown_not_zero(ops_profile_rw):
+    vendor_id = ops_profile_rw.ids["vendor_p2"]
+    conn = sqlite3.connect(str(ops_profile_rw.paths.db))
+    try:
+        with conn:
+            conn.execute("DELETE FROM cost_line WHERE line_type = 'actual' AND period = '2026-08'")
+    finally:
+        conn.close()
+    snap = _snapshot(ops_profile_rw, "vendor", "2026-Q3", vendor_id)
+    assert snap.facts["vendor.spend.period"]["value"] == _spend(ops_profile_rw, vendor_id, ("2026-07",))
+    assert snap.facts["vendor.spend.prev_period"]["value"] == _spend(ops_profile_rw, vendor_id, ("2026-04",))
+    trend = {r["period"]: r for r in snap.tables["spend_trend"]["rows"]}
+    assert trend["2026-08"]["actual"] is None and trend["2026-08"]["budget"] is not None
+    assert trend["2026-07"]["actual"] == _spend(ops_profile_rw, vendor_id, ("2026-07",))
+
+    later = _snapshot(ops_profile_rw, "vendor", "2026-Q4", vendor_id)
+    assert later.facts["vendor.spend.period"]["value"] is None
+    assert [r["period"] for r in later.tables["spend_trend"]["rows"]][-1] == "2026-08"
+
+
 def test_vendor_month_period_compares_with_the_previous_month(ops_profile_rw):
     vendor_id = ops_profile_rw.ids["vendor_p2"]
     snap = _snapshot(ops_profile_rw, "vendor", "2026-08", vendor_id)

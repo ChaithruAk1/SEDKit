@@ -180,6 +180,85 @@ def test_quarterly_mid_quarter_data_date_limits_cost_months_and_windows(ops_prof
     assert _one(ops_profile_rw, "SELECT value FROM meta WHERE key = 'rule_findings_as_of'")[0] == "2026-09-01"
 
 
+def test_quarterly_cost_skips_months_without_imported_actuals(ops_profile_rw):
+    conn = sqlite3.connect(str(ops_profile_rw.paths.db))
+    try:
+        with conn:
+            conn.execute("DELETE FROM cost_line WHERE line_type = 'actual' AND period = '2026-08'")
+    finally:
+        conn.close()
+    snap = _snapshot(ops_profile_rw, "quarterly", "2026-Q3")
+    facts = {k: v["value"] for k, v in snap.facts.items()}
+    # August has a budget but no actuals yet: it is left out of both sides instead of counting as zero spend.
+    assert (facts["cost.actual.qtd"], facts["cost.budget.qtd"]) == _cost(ops_profile_rw, ["2026-07"])
+    assert (facts["cost.actual.ytd"], facts["cost.budget.ytd"]) == _cost(
+        ops_profile_rw, [f"2026-{m:02d}" for m in range(1, 8)]
+    )
+    april = dict(  # the like-for-like month of the previous quarter
+        _rows(
+            ops_profile_rw,
+            "SELECT cost_category, SUM(amount_base) FROM cost_line WHERE line_type = 'actual' AND period = '2026-04' "
+            "GROUP BY cost_category",
+        )
+    )
+    assert {r["key"]: r["prev_actual"] for r in snap.tables["spend_by_category"]["rows"]} == {
+        k: round(v, 2) for k, v in april.items()
+    }
+    assert "2026-07 to 2026-07" in snap.tables["spend_by_app"]["title"]
+
+
+def test_quarterly_qoq_compares_the_same_months_of_the_previous_quarter(ops_profile_rw):
+    # Actuals start in 2025-03, so 2025-Q2 (April-June) can only be compared with March, June's counterpart.
+    snap = _snapshot(ops_profile_rw, "quarterly", "2025-Q2")
+    march = dict(
+        _rows(
+            ops_profile_rw,
+            "SELECT cost_category, SUM(amount_base) FROM cost_line WHERE line_type = 'actual' AND period = '2025-03' "
+            "GROUP BY cost_category",
+        )
+    )
+    assert march and {r["key"]: r["prev_actual"] for r in snap.tables["spend_by_category"]["rows"]} == {
+        k: round(v, 2) for k, v in march.items()
+    }
+    facts = {k: v["value"] for k, v in snap.facts.items()}
+    assert facts["cost.actual.qtd"] == _cost(ops_profile_rw, ["2025-04", "2025-05", "2025-06"])[0]
+    assert facts["cost.budget.qtd"] is None and facts["cost.variance.qtd_pct"] is None  # no 2025 budget in the fixture
+    assert snap.as_of == "2025-07-01" and not snap.facts["cost.actual.qtd"]["label"].endswith("(to date)")
+
+
+def test_calendar_helpers():
+    from sed.calendar import parse_period
+    from sed.modules.ops.reports import queries
+
+    assert queries.complete_months(date(2026, 7, 1), date(2026, 9, 1)) == ["2026-07", "2026-08"]
+    assert queries.complete_months(date(2026, 7, 15), date(2026, 9, 1)) == ["2026-08"]
+    assert queries.complete_months(date(2026, 7, 1), date(2026, 8, 31)) == ["2026-07"]
+    assert queries.complete_months(date(2026, 10, 1), date(2026, 9, 1)) == []
+    assert queries.complete_months(date(2026, 11, 1), date(2027, 2, 1)) == ["2026-11", "2026-12", "2027-01"]
+    assert queries.months_ending(date(2026, 9, 1), 3) == ["2026-06", "2026-07", "2026-08"]
+    assert queries.months_ending(date(2026, 8, 15), 2) == ["2026-06", "2026-07"]
+    assert queries.months_ending(date(2027, 1, 1), 2) == ["2026-11", "2026-12"]
+    assert queries.fiscal_year_start_date(date(2026, 2, 1), 4) == date(2025, 4, 1)
+    assert queries.fiscal_year_start_date(date(2026, 8, 1), 1) == date(2026, 1, 1)
+    # Fiscal years starting in April: FY2026-Q1 is April-June 2025, so the quarter before starts in January 2025.
+    q1 = parse_period("2026-Q1", "Europe/Paris", 4)
+    assert q1.start_local == date(2025, 4, 1)
+    assert queries.shift_period(q1, -1, 4).start_local == date(2025, 1, 1)
+    assert queries.variance_pct(110.0, 100.0) == 10.0 and queries.variance_pct(5.0, None) is None
+
+
+def test_quarterly_after_the_data_date_has_no_cost_months(ops_profile_rw):
+    snap = _snapshot(ops_profile_rw, "quarterly", "2026-Q4")
+    facts = {k: v["value"] for k, v in snap.facts.items()}
+    assert snap.as_of == "2026-09-01" and snap.period_end == "2027-01-01"
+    assert facts["cost.actual.qtd"] is None and facts["cost.budget.qtd"] is None
+    assert facts["cost.variance.qtd_pct"] is None
+    assert (facts["cost.actual.ytd"], facts["cost.budget.ytd"]) == _cost(
+        ops_profile_rw, [f"2026-{m:02d}" for m in range(1, 9)]
+    )
+    assert facts["renewals.2q.count"] == _contract_count(ops_profile_rw, "end_date", date(2026, 9, 1), 182)
+
+
 def test_quarterly_rejects_a_month_period_with_exit_2(ops_profile_rw):
     code, out = _cli(
         "report", "snapshot", "quarterly", "--period", "2026-08", "--profile", "synthetic",

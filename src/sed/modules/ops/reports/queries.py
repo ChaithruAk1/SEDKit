@@ -92,10 +92,43 @@ def latest_budget_version(conn: sqlite3.Connection) -> str | None:
     return conn.execute("SELECT MAX(as_of) FROM cost_line WHERE line_type = 'budget'").fetchone()[0]
 
 
-def cost_totals(conn: sqlite3.Connection, months: list[str], *, vendor_id: str | None = None) -> dict[str, Any]:
-    """Actual and (latest-version) budget totals in base currency over `months`, optionally for one vendor."""
+def actual_months(conn: sqlite3.Connection, months: list[str]) -> set[str]:
+    """The months among `months` for which any actual cost line was imported (for any application or vendor)."""
     if not months:
-        return {"actual": 0.0, "budget": None}
+        return set()
+    rows = conn.execute(
+        f"SELECT DISTINCT period FROM cost_line WHERE line_type = 'actual' AND period IN ({_marks(months)})", months
+    ).fetchall()
+    return {r[0] for r in rows}
+
+
+def cost_months(conn: sqlite3.Connection, start: date, end: date) -> list[str]:
+    """Months to aggregate cost over: complete calendar months inside `[start, end)` whose actuals were imported.
+
+    Cost exports usually lag the ticket data, so a month without any actual line is left out of both the actual and
+    the budget side instead of being compared as zero spend against a full budget.
+    """
+    months = complete_months(start, end)
+    covered = actual_months(conn, months)
+    return [m for m in months if m in covered]
+
+
+def like_for_like_months(conn: sqlite3.Connection, months: list[str], period: Period) -> list[str]:
+    """The previous period's counterparts of `months` (same position in the period) that have imported actuals."""
+    span = len(complete_months(period.start_local, period.end_local))
+    previous = [shift_label(m, -span) for m in months]
+    covered = actual_months(conn, previous)
+    return [m for m in previous if m in covered]
+
+
+def cost_totals(conn: sqlite3.Connection, months: list[str], *, vendor_id: str | None = None) -> dict[str, Any]:
+    """Actual and (latest-version) budget totals in base currency over `months`, optionally for one vendor.
+
+    `actual` is None when no actual cost line exists for any of the months (nothing imported yet, or no month to
+    report), and 0.0 when actuals exist but none were booked to the vendor.
+    """
+    if not months:
+        return {"actual": None, "budget": None}
     vendor_clause, params = ("AND c.vendor_id = ?", [vendor_id]) if vendor_id else ("", [])
     row = conn.execute(
         "SELECT SUM(CASE WHEN c.line_type = 'actual' THEN c.amount_base END), "
@@ -103,11 +136,16 @@ def cost_totals(conn: sqlite3.Connection, months: list[str], *, vendor_id: str |
         f"FROM cost_line c WHERE c.period IN ({_marks(months)}) {vendor_clause}",
         [latest_budget_version(conn), *months, *params],
     ).fetchone()
-    return {"actual": _money(row[0] or 0.0), "budget": _money(row[1])}
+    actual = _money(row[0] or 0.0) if actual_months(conn, months) else None
+    return {"actual": actual, "budget": _money(row[1])}
 
 
 def cost_by_month(conn: sqlite3.Connection, months: list[str], *, vendor_id: str | None = None) -> list[dict[str, Any]]:
-    """One row per month in `months` (zero actual when nothing was booked): period, actual, budget, variance_pct."""
+    """One row per month in `months`: period, actual, budget, variance_pct.
+
+    A month's actual is 0.0 when actuals were imported for that month but none were booked (to the vendor), and None
+    when no actual cost line exists for the month at all.
+    """
     if not months:
         return []
     vendor_clause, params = ("AND c.vendor_id = ?", [vendor_id]) if vendor_id else ("", [])
@@ -118,10 +156,11 @@ def cost_by_month(conn: sqlite3.Connection, months: list[str], *, vendor_id: str
         [latest_budget_version(conn), *months, *params],
     ).fetchall()
     by_period = {r["period"]: r for r in rows}
+    covered = actual_months(conn, months)
     out = []
     for month in months:
         r = by_period.get(month)
-        actual = _money(r["actual"] or 0.0) if r else 0.0
+        actual = (_money(r["actual"] or 0.0) if r else 0.0) if month in covered else None
         budget = _money(r["budget"]) if r else None
         out.append({"period": month, "actual": actual, "budget": budget, "variance_pct": variance_pct(actual, budget)})
     return out

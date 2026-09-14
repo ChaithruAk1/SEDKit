@@ -4,8 +4,9 @@ Spend vs budget by application and category (quarter to date, QoQ, YTD); idle li
 opportunities; renewals and notice deadlines in the next two quarters; vendor/renewal/license risks ordered by
 severity x spend; portfolio health (criticality x life cycle, quiet applications).
 
-Cost aggregates cover the calendar months of `req.window` that are complete (an open quarter is reported to date);
-renewal and notice windows, license utilization, quiet applications and rule findings use `req.as_of`.
+Cost aggregates cover the calendar months of `req.window` that are complete by `req.as_of` and have imported actuals
+(an open quarter is reported to date); renewal and notice windows, license utilization, quiet applications and rule
+findings use `req.as_of`.
 """
 
 from __future__ import annotations
@@ -74,14 +75,16 @@ def build(req: SnapshotRequest) -> SnapshotParts:
         req.as_of,
     )
     fys = settings.fiscal_year_start
-    suffix = " (to date)" if window.end_local < period.end_local else ""
+    cutoff = min(window.end_local, as_of)  # a period after the data date has no cost months at all
 
-    qtd_months = queries.complete_months(window.start_local, window.end_local)
+    qtd_months = queries.cost_months(conn, window.start_local, cutoff)
     prev_period = queries.shift_period(period, -1, fys)
-    prev_months = queries.complete_months(prev_period.start_local, prev_period.end_local)[: len(qtd_months)]
-    ytd_months = queries.complete_months(queries.fiscal_year_start_date(period.start_local, fys), window.end_local)
+    prev_months = queries.like_for_like_months(conn, qtd_months, period)
+    ytd_months = queries.cost_months(conn, queries.fiscal_year_start_date(period.start_local, fys), cutoff)
     qtd = queries.cost_totals(conn, qtd_months)
     ytd = queries.cost_totals(conn, ytd_months)
+    full_quarter = queries.complete_months(period.start_local, period.end_local)
+    suffix = "" if qtd_months == full_quarter else " (to date)"
 
     low = queries.license_low_threshold(paths)
     idle = [
@@ -113,7 +116,7 @@ def build(req: SnapshotRequest) -> SnapshotParts:
         for row in queries.portfolio_health(conn, window, qtd_months)
     ]
     risks = queries.risk_rows(analytics.findings_as_of(conn, paths, as_of))
-    months_note = f"{qtd_months[0]} to {qtd_months[-1]}" if qtd_months else "no complete month yet"
+    months_note = f"{qtd_months[0]} to {qtd_months[-1]}" if qtd_months else "no month with actuals yet"
 
     facts = {
         "period.label": fact(period.label, "text", "Period"),

@@ -3,8 +3,9 @@
 Contract terms; spend trend; license position; SLA/MTTR/reassignment trend on the vendor's incidents (ticket vendor,
 set from its assignment groups); incidents by application; renewal and notice timeline; risks.
 
-Period aggregates (spend, SLA, MTTR, reassignments, incidents) use `req.window`; contract terms, the renewal timeline,
-license utilization, the 6-month SLA trend and rule findings use `req.as_of`.
+Period aggregates (SLA, MTTR, reassignments, incidents) use `req.window`, and spend covers the window's complete months
+with imported actuals up to `req.as_of`; contract terms, the renewal timeline, license utilization, the 6-month SLA
+trend and rule findings use `req.as_of`.
 """
 
 from __future__ import annotations
@@ -53,11 +54,13 @@ def build(req: SnapshotRequest) -> SnapshotParts:
     src = metrics.sla_source(conn)
     f = metrics.Filters(vendor_id=vendor_id)
 
-    months = queries.complete_months(window.start_local, window.end_local)
+    cutoff = min(window.end_local, as_of)  # a period after the data date has no cost months at all
+    months = queries.cost_months(conn, window.start_local, cutoff)
     prev_period = queries.shift_period(period, -1, fys)
-    prev_months = queries.complete_months(prev_period.start_local, prev_period.end_local)[: len(months)]
+    prev_months = queries.like_for_like_months(conn, months, period)
     spend = queries.cost_totals(conn, months, vendor_id=vendor_id)
     prev_spend = queries.cost_totals(conn, prev_months, vendor_id=vendor_id)
+    spend_suffix = "" if months == queries.complete_months(period.start_local, period.end_local) else " (to date)"
 
     sla = metrics.sla(conn, f, window, src)
     mttr = metrics.mttr(conn, f, window)
@@ -119,7 +122,7 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             "Annual contract value",
             "vendor.contracts.annual_value",
         ),
-        "vendor.spend.period": fact(spend["actual"], "eur", f"Vendor spend{suffix}", "vendor.spend.period"),
+        "vendor.spend.period": fact(spend["actual"], "eur", f"Vendor spend{spend_suffix}", "vendor.spend.period"),
         "vendor.spend.prev_period": fact(
             prev_spend["actual"], "eur", f"Vendor spend, {prev_period.label} (same months)", "vendor.spend.prev_period"
         ),
@@ -162,9 +165,7 @@ def build(req: SnapshotRequest) -> SnapshotParts:
                 ("budget", "Budget", "eur"),
                 ("variance_pct", "Variance %", "pct"),
             ],
-            queries.cost_by_month(
-                conn, queries.months_ending(window.end_local, SPEND_TREND_MONTHS), vendor_id=vendor_id
-            ),
+            queries.cost_by_month(conn, queries.months_ending(cutoff, SPEND_TREND_MONTHS), vendor_id=vendor_id),
         ),
         "licenses": table(
             f"License position ({name})",
