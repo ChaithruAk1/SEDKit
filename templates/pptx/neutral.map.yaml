@@ -1,0 +1,72 @@
+# Neutral template map for python-pptx's built-in default template (4:3, 10 x 7.5 in, no branding).
+# A corporate template gets its own map in DATA_DIR\config\templates\<name>.map.yaml (never in the repo), selected
+# with settings.reports.template_map or `sed report build --template-map`. Write one with `sed report template-inspect`
+# and check it with `sed report template-proof --map <name>`.
+name: neutral
+template: null                 # relative to this file; null = python-pptx default template
+slide_size: "4:3"
+fonts:
+  title: Calibri
+  body: Calibri
+  body_pt: 14
+  table_pt: 10
+series_colors: ["#1F4E79", "#2E75B6", "#9DC3E6", "#C55A11", "#7F7F7F"]
+footer_text: "{report_title} | {period}"
+classification_label: Internal
+layouts:
+  title:
+    layout_name: Title Slide
+    fallback_index: 0
+    placeholders: {title: 0, subtitle: 1}
+  section:
+    layout_name: Section Header
+    fallback_index: 2
+    placeholders: {title: 0, body: 1}
+  narrative:
+    layout_name: Title and Content
+    fallback_index: 1
+    placeholders: {title: 0, body: 1}
+  kpis:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+  line_chart:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+  bar_chart:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+  stacked_bar:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+  table:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+    max_rows: 12
+  findings:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+    max_rows: 8
+  attention_list:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+    max_rows: 12
+  provenance:
+    layout_name: Title Only
+    fallback_index: 5
+    placeholders: {title: 0}
+    content_box_in: [0.5, 1.5, 9.0, 5.5]
+    max_rows: 18

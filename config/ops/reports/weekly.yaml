@@ -42,3 +42,79 @@ sheets:
   - {table: findings, sheet: Risks}
 markdown:
   max_words: 250
+slides:
+  - kind: title
+    subtitle: "Week {period}"
+  - kind: kpis
+    title: Service KPIs vs 4-week average
+    kpis:
+      - {fact: inc.opened, compare: inc.opened.avg4w, delta: inc.opened.delta_vs_avg4w_pct}
+      - {fact: inc.resolved, compare: inc.resolved.avg4w}
+      - {fact: inc.backlog, delta: inc.backlog.delta}
+      - {fact: inc.sla.pct, compare: inc.sla.pct.avg4w, delta: inc.sla.delta_pp_vs_4w}
+      - {fact: inc.mttr.median_h, compare: inc.mttr.median_h.avg4w, delta: inc.mttr.delta_vs_avg4w_pct}
+      - {fact: inc.p1p2.opened}
+    notes: "SLA source: {{f:inc.sla.source}}. Backlog excludes stale open incidents ({{f:inc.backlog.stale_excluded}})."
+  - kind: kpis
+    title: Attention, changes and commercial indicators
+    kpis:
+      - {fact: attention.count}
+      - {fact: inc.stale_open}
+      - {fact: inc.backlog.stale_excluded}
+      - {fact: chg.success.pct}
+      - {fact: renewals.90d.count}
+      - {fact: notice.30d.count}
+      - {fact: license.idle_cost}
+      - {fact: findings.system_detected.count}
+  - kind: line_chart
+    title: Incident volume, last 12 weeks
+    table: volume_trend_12w
+    chart: {type: line, categories: period, series: [opened, resolved], title: Incidents opened vs resolved}
+  - kind: bar_chart
+    title: SLA by priority (resolved this week)
+    table: sla_by_priority
+    chart: {type: column, categories: priority, series: [pct], title: SLA met %}
+    notes: "SLA source: {{f:inc.sla.source}}."
+  - kind: stacked_bar
+    title: Backlog aging by assignment group
+    table: backlog_aging_by_group
+    chart: {type: bar, categories: group, series: [0-7d, 8-30d, 31-90d, ">90d"], title: Open incidents by age}
+  - kind: attention_list
+    title: Needs attention
+    table: attention
+    columns: [number, priority, app, assignment_group, age_days, reasons]
+  - kind: table
+    title: Top applications by incidents opened
+    table: top_apps
+  - kind: table
+    title: P1/P2 incidents opened this week
+    table: p1p2
+    columns: [number, priority, app, state, opened_at, short_description]
+  - kind: table
+    title: Changes closed with issues or unsuccessful
+    table: changes_failed
+    columns: [number, app, change_type, close_code, closed_at, short_description]
+    when: has_rows
+  - kind: table
+    title: ServiceNow category vs AI app-owner category
+    table: category_breakdown
+  - kind: section
+    title: Commercial watchlist
+    subtitle: Notice deadlines and renewals, license utilization outliers, cost vs budget
+  - kind: table
+    title: Renewals and notice deadlines (next 90 days)
+    table: renewals_90d
+    columns: [contract_number, vendor, app, end_date, notice_deadline, days_to_notice, auto_renew, annual_value_base]
+  - kind: table
+    title: License utilization outliers
+    table: license_outliers
+    columns: [license_id, app, product, entitled_qty, active_qty_90d, utilization, idle_cost_base]
+  - kind: table
+    title: Cost vs budget variance
+    table: cost_variance
+  - kind: findings
+    title: System-detected risks
+    table: findings
+    columns: [severity, title, kind, subject_id]
+  - kind: provenance
+    title: Provenance
