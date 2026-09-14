@@ -135,6 +135,14 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
                 col = next((i for i, c in enumerate(columns) if c["key"] == cond.column), None)
                 if col is None:
                     continue
+                # Excel compares an empty cell as 0, so a "< 90" rule would colour values the snapshot does not have.
+                ws.conditional_format(
+                    header_row + 1,
+                    col,
+                    header_row + len(rows),
+                    col,
+                    {"type": "blanks", "stop_if_true": True, "format": None},
+                )
                 ws.conditional_format(
                     header_row + 1,
                     col,

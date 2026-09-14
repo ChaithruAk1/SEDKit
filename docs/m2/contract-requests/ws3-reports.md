@@ -2,6 +2,8 @@
 
 ## 1. XLSX conditional formats highlight empty cells (low priority, not blocking)
 
+- **Status:** done after the I9 review: each rule is preceded by a `blanks` rule with `stop_if_true`.
+
 - **File:** `src/sed/reports/xlsx_builder.py` (frozen), the `for cond in sheet_spec.conditional:` loop in `build_xlsx`.
 - **Change:** skip empty cells before applying a spec rule, for example by adding a
   `{"type": "blanks", "stop_if_true": True}` conditional format on the same range just before each

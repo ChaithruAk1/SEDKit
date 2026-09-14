@@ -190,3 +190,10 @@ Done on main after all merges: the index file is migration `004_ops_api_indexes.
 
 Every GET is well under the 1 s budget and ticket search under 300 ms. A served-app smoke test (`sed serve` on the
 109k-ticket synthetic profile, curl) returned 200 for all routes, each under 0.1 s.
+
+## After the I9 review fixes
+
+Same test and profile after the review fixes (per-month budget versions, label run status on ticket rows, the shared
+SLA expression in vendor trends). The slowest routes: App 360 172.5 ms, apps grid 131.2 ms, vendor SLA trend
+92.3 ms, ticket SLA 77.6 ms; costs rose from 13.6 to 27.0 ms (the budget-version join). Search: 16.7 / 62.1 / 103.1 /
+106.3 ms. Every GET stays under 1 s and search under 300 ms.

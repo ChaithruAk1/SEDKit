@@ -23,6 +23,9 @@
 
 ## 2. FYI (not a frozen-file request): alias re-linking does not reach ticket `vendor_id` through assignment groups
 
+- **Status:** fixed in the I9 review (ING-3): reresolve re-resolves assignment groups first; the xfail is now a
+  normal test.
+
 - **Observed on `ops_profile_rw`:** after `POST /api/aliases {"kind": "vendor", "raw_value": "NORDWIND MS",
   "target": "V001"}`, `reresolve` re-links the licence row and marks the unmapped value resolved. The tickets of
   group `NWD-FIN-L2` (whose `assignment_group.vendor_raw` is `NORDWIND MS`) keep `vendor_id = NULL`.

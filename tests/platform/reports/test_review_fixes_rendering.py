@@ -34,6 +34,26 @@ def test_draft_workbooks_are_stamped_on_every_sheet(tmp_path):
     assert all(s.cell(row=1, column=1).value != DRAFT_BANNER for s in load_workbook(approved).worksheets)
 
 
+def test_colour_rules_skip_blank_cells(tmp_path):
+    from openpyxl import load_workbook
+
+    from sed.reports.specs import ConditionalSpec
+
+    snap = hand_snapshot()
+    rows = snap.tables["small"]["rows"]
+    snap.tables["small"]["rows"] = [{**rows[0], "value": None}, *rows[1:]]
+    sheet = SheetSpec(table="small", sheet="Small", conditional=[ConditionalSpec(column="value", rule="<", value=90)])
+    out = tmp_path / "blanks.xlsx"
+    build_xlsx(
+        snap, ReportSpec(report="weekly", title="C", kpis=[], sheets=[sheet]), out, ai_mode="none", generated_at="x"
+    )
+    rules = [rule for cf in load_workbook(out)["Small"].conditional_formatting for rule in cf.rules]
+    assert [(r.type, r.stopIfTrue) for r in sorted(rules, key=lambda r: r.priority)][:2] == [
+        ("containsBlanks", True),
+        ("cellIs", None),
+    ]
+
+
 def test_draft_markdown_is_stamped(ops_profile_rw):
     result = build_report(ops_profile_rw.paths, "weekly", "2026-W35", ["md"], "draft")
     with open(result["artifacts"][0]["path"], encoding="utf-8") as fh:
