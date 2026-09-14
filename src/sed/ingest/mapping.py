@@ -1,8 +1,11 @@
 """Column-mapping specifications (config/<module>/mappings/*.yaml) and file-to-mapping matching.
 
 A mapping says which source columns feed which canonical fields of a target, how values are transformed, and
-which PII class each field has (mandatory). Local overrides in DATA_DIR\\config\\mappings use ``extends:`` and
-usually only add header aliases (``from+``), u_* fields, formats and source_tz.
+which PII class each field has (mandatory). Mapping directories come from the enabled modules (`Module.mappings_dir`,
+indexed by `sed.modules.mapping_index`); a mapping name must be unique across modules, and `target` names an ingest
+target declared by a module (`Module.ingest_targets`). Local overrides in DATA_DIR\\config\\<module>\\mappings use
+``extends:`` and usually only add header aliases (``from+``), u_* fields, formats and source_tz; a DATA_DIR-only
+mapping is discovered as well.
 """
 
 from __future__ import annotations

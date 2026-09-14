@@ -319,30 +319,14 @@ def write_rows(conn, target: Target, rows: list[dict[str, Any]], batch_id: int) 
 # ---------------------------------------------------------------------------
 
 
-def run_import(paths: Paths, opts: ImportOptions) -> dict[str, Any]:
-    if not paths.db.exists():
-        raise PreconditionFailed(f"No database for profile '{paths.profile}'; run `sed init` first.")
-    conn = db.connect(paths.db)
-    try:
-        return _run(conn, paths, opts)
-    finally:
-        conn.close()
+def plan_import(
+    conn, paths: Paths, opts: ImportOptions, mappings: dict[str, MappingSpec], targets: dict[str, Target]
+) -> tuple[list[Entry], list[Entry], list[dict[str, Any]]]:
+    """Files to import: (planned in dependency order, unmatched, skipped as already imported).
 
-
-def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
-    meta = db.all_meta(conn)
-    if meta.get("data_class") != paths.data_class:
-        raise PreconditionFailed(f"DB data_class {meta.get('data_class')} does not match profile {paths.profile}.")
-    salt = require_salt(paths.salt_file, meta.get("salt_fingerprint"))
-    settings = load_settings(paths)
-    pii_cfg = PiiConfig.from_dict(load_layered("pii.yaml", paths))
-    fx = {k.upper(): float(v) for k, v in (load_layered("fx.yaml", paths).get("rates") or {}).items()}
-    mappings = load_all_mappings(paths)
-    targets: dict[str, Target] = registry.ingest_targets(paths)
-    hooks = registry.ingest_hooks(paths)
-    pii_mode = meta.get("pii_mode", "pseudonymize")
-    display_names = bool(settings.display_names and paths.data_class == "real" and pii_mode == "pseudonymize")
-
+    Collects the given files (and the inbox), skips files whose sha256 was already imported (moving inbox duplicates
+    to processed/ unless dry-run), checks the data class and matches each file to a mapping.
+    """
     raw_paths = [p for p in opts.files] if opts.files else []
     if opts.inbox or not raw_paths:
         raw_paths += _inbox_entries(paths)
@@ -371,8 +355,34 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
             entry.spec, entry.table, entry.score = choose_mapping(entry.path, mappings, opts.mapping)
         except SedError as exc:
             entry.error = exc.to_dict()
-    planned = plan_order(entries, targets)
-    unmatched = [e for e in entries if not e.spec]
+    return plan_order(entries, targets), [e for e in entries if not e.spec], skipped
+
+
+def run_import(paths: Paths, opts: ImportOptions) -> dict[str, Any]:
+    if not paths.db.exists():
+        raise PreconditionFailed(f"No database for profile '{paths.profile}'; run `sed init` first.")
+    conn = db.connect(paths.db)
+    try:
+        return _run(conn, paths, opts)
+    finally:
+        conn.close()
+
+
+def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
+    meta = db.all_meta(conn)
+    if meta.get("data_class") != paths.data_class:
+        raise PreconditionFailed(f"DB data_class {meta.get('data_class')} does not match profile {paths.profile}.")
+    salt = require_salt(paths.salt_file, meta.get("salt_fingerprint"))
+    settings = load_settings(paths)
+    pii_cfg = PiiConfig.from_dict(load_layered("pii.yaml", paths))
+    fx = {k.upper(): float(v) for k, v in (load_layered("fx.yaml", paths).get("rates") or {}).items()}
+    mappings = load_all_mappings(paths)
+    targets: dict[str, Target] = registry.ingest_targets(paths)
+    hooks = registry.ingest_hooks(paths)
+    pii_mode = meta.get("pii_mode", "pseudonymize")
+    display_names = bool(settings.display_names and paths.data_class == "real" and pii_mode == "pseudonymize")
+
+    planned, unmatched, skipped = plan_import(conn, paths, opts, mappings, targets)
 
     if not opts.dry_run and planned:
         has_data = conn.execute("SELECT COUNT(*) FROM import_batch").fetchone()[0] > 0
