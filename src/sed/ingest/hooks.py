@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, runtime_checkable
 
+from sed.settings import read_yaml
+
 if TYPE_CHECKING:
     from sed.ingest.mapping import MappingSpec
     from sed.ingest.resolve import Resolver
@@ -112,8 +114,6 @@ def seed_aliases(resolver: Resolver, mapping: Mapping[str, Any] | None, kind: st
 
 def read_optional_yaml(path: Path) -> dict[str, Any]:
     """A DATA_DIR-only YAML file, or {} when it does not exist."""
-    from sed.settings import read_yaml
-
     return (read_yaml(path) or {}) if path.is_file() else {}
 
 
