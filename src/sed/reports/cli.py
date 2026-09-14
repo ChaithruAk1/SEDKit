@@ -12,7 +12,6 @@ import typer
 
 from sed import db
 from sed.cli_common import DataDirOpt, JsonOpt, ProfileOpt, handle_errors, paths_for
-from sed.errors import NotImplementedByWorkstream
 from sed.output import console, emit
 
 report_app = typer.Typer(no_args_is_help=True, help="Report snapshots and artifacts")
@@ -104,7 +103,29 @@ def report_template_inspect(
     as_json: JsonOpt = False,
 ) -> None:
     """Print a template's layouts and placeholders (idx, type, size) for writing a template map."""
-    raise NotImplementedByWorkstream("ws2-pptx")
+    from sed.reports.template_tools import inspect_template
+
+    result = inspect_template(file)
+    emit(result, as_json, _print_inspect)
+
+
+def _print_inspect(result: dict) -> None:
+    out = console()
+    size = result["slide_size"]
+    out.print(
+        f"{result['path']}: {size['width_in']} x {size['height_in']} in ({size['ratio']}), {result['slides']} slides",
+        markup=False,
+    )
+    for layout in result["layouts"]:
+        index = layout["index"] if layout["index"] is not None else f"master {layout['master']}"
+        out.print(f"{index}: {layout['name']}", markup=False, style="bold")
+        for ph in layout["placeholders"]:
+            out.print(
+                f"    idx {ph['idx']:>3}  {ph['type'] or '-':<14} {ph['name']:<32} "
+                f"x {ph['left_in']} y {ph['top_in']} w {ph['width_in']} h {ph['height_in']}",
+                markup=False,
+            )
+    out.print("Starter map: rerun with --json and edit 'suggested_map' into DATA_DIR/config/templates/<name>.map.yaml")
 
 
 @report_app.command("template-proof")
@@ -119,4 +140,19 @@ def report_template_proof(
     as_json: JsonOpt = False,
 ) -> None:
     """Render every slide kind with dummy content for visual sign-off of a template map."""
-    raise NotImplementedByWorkstream("ws2-pptx")
+    from sed.reports.template_map import load_template_map
+    from sed.reports.template_tools import template_proof
+
+    paths = paths_for(profile, data_dir)
+    loaded = load_template_map(template_map, paths)
+    result = template_proof(loaded, out or paths.out / "template-proof", data_class=paths.data_class)
+    emit(
+        result,
+        as_json,
+        lambda p: console().print(
+            f"{p['path']} ({len(p['slides'])} slides, map {p['map']}"
+            + (f", fallback layouts for {', '.join(p['fallbacks'])}" if p["fallbacks"] else "")
+            + ")",
+            markup=False,
+        ),
+    )
