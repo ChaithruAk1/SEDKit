@@ -1,6 +1,7 @@
 # SED
 
-SED is a personal toolkit for an application owner. It:
+SED is a personal toolkit for an application owner, built as a platform of modules (ops is module #1; see
+`docs/modules.md`). It:
 
 1. **Imports** ITSM (incidents, requests, changes, problems, SLAs, CMDB), Jira, Confluence and Excel/SharePoint
    exports into one local SQLite database.
@@ -41,7 +42,7 @@ uv run sed doctor
 | Profile | Purpose |
 |---|---|
 | `synthetic` | Development default; generated data with planted patterns |
-| `real` | Work laptop only; real exports; record the AI approval with `--ai-approval-note` |
+| `real` | Real exports on an approved machine; record the AI approval with `--ai-approval-note` |
 | `eval-<seed>` | Fresh-seed AI evaluations |
 
 ## Checks
@@ -58,11 +59,47 @@ This runs ruff, pytest, the confidentiality guard, detect-secrets, and (when pre
 uv run sed synth --profile synthetic                  # export files + ground truth into DATA_DIR
 uv run sed import --inbox --profile synthetic         # ~270k rows in about a minute
 uv run sed analytics refresh --profile synthetic      # system-detected risks
-uv run sed report build weekly --period 2026-W35 --format xlsx,md --ai none --profile synthetic
+uv run sed report build weekly --period 2026-W35 --ai none --profile synthetic   # xlsx, md and pptx
 ```
 
 Outputs land in `DATA_DIR\out\<period>\`. Useful follow-ups: `sed alias list --unmapped`, `sed attention`,
 `sed metrics show <name>`, `sed mappings check FILE`, `sed import FILE --dry-run`.
+
+## Reports and decks
+
+| Report | Period | Example |
+|---|---|---|
+| weekly | ISO week | `uv run sed report build weekly --period 2026-W35 --profile synthetic` |
+| monthly | month | `uv run sed report build monthly --period 2026-08 --profile synthetic` |
+| quarterly | quarter | `uv run sed report build quarterly --period 2026-Q3 --profile synthetic` |
+| vendor | quarter or month | `uv run sed report build vendor --period 2026-Q3 --vendor V001 --profile synthetic` |
+
+- `--ai approved|none|draft` controls AI content; `none` builds deterministic, shareable files.
+- What each report shows (KPIs, sheets, colour rules, slides) is YAML in `config/ops/reports/`; override it locally in
+  `DATA_DIR\config\ops\reports\`.
+- Decks use a template map: `templates/pptx/neutral.map.yaml` by default. A corporate template and map go in
+  `DATA_DIR\config\templates\` (never in git); `uv run sed report template-inspect FILE.pptx` lists its layouts and
+  `uv run sed report template-proof --map corporate` renders every slide kind for sign-off.
+
+## Dashboard
+
+```bash
+npm --prefix web ci && npm --prefix web run build     # once, or after web changes
+uv run sed serve --profile synthetic                  # http://127.0.0.1:8000, opens the browser
+```
+
+The server binds 127.0.0.1 only; write requests need the per-launch token injected into the page. Development with
+hot reload: `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1`.
+
+## AI analysis (Claude Code)
+
+- Triage runs through the `sed-triage-batch` skill (small runs in-session) or the `sed-analyze` workflow (larger runs):
+  start-run writes scrubbed packets, one agent per packet labels them, `sed ai ingest` validates, `sed ai finish-run`
+  draws a review sample.
+- A human approves each run from its random sample: `uv run sed review sample RUN --template verdicts.json`, fill in
+  verdicts, `uv run sed review verdicts RUN --file verdicts.json`, then `uv run sed review approve-run RUN`.
+- Approved labels appear in reports with their sample accuracy and confidence interval. See
+  `docs/ai/walking-skeleton-runbook.md`.
 
 ## Status
 
@@ -70,7 +107,8 @@ Outputs land in `DATA_DIR\out\<period>\`. Useful follow-ups: `sed alias list --u
 |---|---|---|
 | M0 | Skeleton & guardrails | done |
 | M1 | Synthetic data, import, metrics, weekly Excel | done |
-| M2 | AI walking skeleton, all decks, dashboard core | planned |
-| M3 | Reality check on the work laptop | planned |
+| M2 | Modular platform, AI walking skeleton, all decks, API and dashboard core | done (final review in progress) |
+| M3 | Reality check with real exports | planned |
 | M4 | Full AI analysis & review | planned |
 | M5 | AI-drafted reports | planned |
+| M7 | AI-native SDLC: delivery-management module and app factory | to be planned |

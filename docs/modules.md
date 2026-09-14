@@ -42,6 +42,22 @@ Rules enforced by tests (`tests/platform/test_registry.py`, `test_core_boundarie
   `/<key>`.
 - Module tables are disjoint from core tables.
 
+## Import targets and hooks
+
+- `ingest_targets` points at a dict `name -> Target` (`src/sed/ingest/target.py`). A target describes where mapped rows
+  go and how its load mode is applied:
+  - `table`, `key`, `columns`, `build(record, ctx)`;
+  - `updated_field` (delta freshness guard), `soft_delete`, `snapshot_field` (append-snapshot scope),
+    `active_scope` (active-snapshot scope);
+  - `batch_column`, `after_load`, and ordering: `order`, then `sort_key(spec)`.
+  The loader itself knows no domain tables.
+- `ingest_hooks` points at an object implementing `IngestHooks` (`src/sed/ingest/hooks.py`):
+  - `session_start` (seed aliases, load directories);
+  - `before_target`;
+  - `relink` (the tables `sed import reresolve` re-links after an alias changes).
+- Mapping YAMLs live in `config/<key>/mappings/`, and names must be unique across modules. `entities` and `alias_kinds`
+  tell the resolver which canonical tables alias targets point at; `validate_ids=False` keeps free-text ids unvalidated.
+
 ## Shared ("portfolio") tables
 
 `vendor`, `application`, `work_item` and `doc_page` are core-owned schema shared by all modules. Any module may write

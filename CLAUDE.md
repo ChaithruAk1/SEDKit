@@ -48,17 +48,10 @@ SED is a platform of modules; ops is module #1. How to add one: `docs/modules.md
 - Report builders take a `SnapshotRequest` and return `SnapshotParts` (`sed/reports/snapshot.py`). Skills implement
   `SkillHandler` (`sed/ai/contract.py`). API routes use the models, deps and envelope in `sed/api/`.
 
-## M2 parallel build (temporary; removed when M2 merges)
-- Workstream agents work only in `C:/Projects/sed-wt/<ws>` on branch `m2/<ws>`, created from tag `m2-foundation`.
-- Every command runs through the worktree wrapper, invoked with an absolute path:
-  `bash C:/Projects/sed-wt/<ws>/scripts/wt.sh python|git|npm|node ...`. Its first command must print
-  `sed.__file__` from the worktree. No bare `uv run`, no `sed.exe`, no git merge/rebase/push/checkout.
-- File tools (Read/Edit/Write) use absolute worktree paths. Never touch `C:\Projects\sed` or
-  `%LOCALAPPDATA%\sed` profiles.
-- Ownership: `docs/m2/ownership.yaml`. Frozen files (the contracts) change only through a request appended to
-  `docs/m2/contract-requests/<ws>.md`. The finish gate is `wt.sh python scripts/check_ownership.py <ws>` plus
-  `wt.sh python scripts/ci.py`.
-- No high-entropy literals (tokens, hashes) in code or tests. Use low-entropy test values such as `test-token`.
+## Parallel builds
+Large changes can be built by parallel agents in manual worktrees, following `docs/playbooks/parallel-build.md`:
+frozen contracts, an ownership map checked by `scripts/check_ownership.py`, and the `scripts/wt.sh` wrapper. Outside
+such a build, work in the main checkout as usual. Never put high-entropy literals (tokens, hashes) in code or tests.
 
 ## Layout
 - `src/sed/` — core package:

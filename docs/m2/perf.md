@@ -152,9 +152,41 @@ Filtered lists (`app`, `kind`, `group`) already had matching `(x, opened_at)` in
   pending index this shape is slower than the plain predicate (108 ms instead of about 16 ms), so the index is required
   once it is numbered. It is, at I4.
 
-## Follow-up for I4
+## I4 result (integration, all routes required)
 
-1. `git mv src/sed/schema/pending/ops_api_indexes.sql src/sed/schema/NNN_ops_api_indexes.sql` (next free number; header
-   `-- owner: ops` stays). The perf fixture then applies it through `db.migrate` on a reused profile.
-2. Rerun with `SED_PERF_REQUIRE_ALL=1` after ws4-api-platform is merged so the eight core GETs are measured, and add
-   their rows to the table above.
+Done on main after all merges: the index file is migration `004_ops_api_indexes.sql`, and the perf test ran with
+`SED_PERF_REQUIRE_ALL=1` (no skips) on the scale-1.0 profile. p95 over 20 requests per endpoint:
+
+| Endpoint | p95 | Cold |
+|---|---|---|
+| /api/health | 2.9 ms | 3.1 ms |
+| /api/meta | 10.1 ms | 14.0 ms |
+| /api/nav | 3.6 ms | 2.7 ms |
+| /api/modules | 3.6 ms | 2.9 ms |
+| /api/findings | 9.3 ms | 9.6 ms |
+| /api/imports | 7.7 ms | 7.2 ms |
+| /api/dq/unmapped | 6.1 ms | 5.9 ms |
+| /api/alias-targets?kind=app | 7.8 ms | 20.2 ms |
+| /api/runs | 8.0 ms | 7.2 ms |
+| /api/ops/filters | 7.1 ms | 7.0 ms |
+| /api/ops/overview | 27.8 ms | 25.4 ms |
+| /api/ops/attention | 13.5 ms | 13.5 ms |
+| /api/ops/tickets | 19.7 ms | 17.3 ms |
+| /api/ops/tickets/volumes | 18.8 ms | 25.1 ms |
+| /api/ops/tickets/sla | 69.1 ms | 52.7 ms |
+| /api/ops/tickets/mttr | 35.9 ms | 38.1 ms |
+| /api/ops/tickets/backlog | 50.4 ms | 45.7 ms |
+| /api/ops/tickets/{ticket_id} | 11.6 ms | 7.0 ms |
+| /api/ops/apps | 104.5 ms | 106.8 ms |
+| /api/ops/apps/{app_id} | 168.0 ms | 165.8 ms |
+| /api/ops/costs | 13.6 ms | 12.1 ms |
+| /api/ops/contracts/renewals | 10.1 ms | 8.9 ms |
+| /api/ops/licenses/utilization | 14.3 ms | 11.0 ms |
+| /api/ops/vendors/sla-trend | 105.5 ms | 105.5 ms |
+| search `interface timeout` | 14.4 ms | 16.2 ms |
+| search `timeout` | 70.1 ms | 61.3 ms |
+| search `error` | 94.0 ms | 94.0 ms |
+| search `time*` | 72.8 ms | 67.7 ms |
+
+Every GET is well under the 1 s budget and ticket search under 300 ms. A served-app smoke test (`sed serve` on the
+109k-ticket synthetic profile, curl) returned 200 for all routes, each under 0.1 s.
