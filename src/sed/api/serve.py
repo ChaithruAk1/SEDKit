@@ -66,8 +66,11 @@ def _lock_pid(lock: Path) -> int | None:
         return None
 
 
-def acquire_lock(paths: Paths, *, port: int, pid: int | None = None) -> Path:
-    """Write `serve.lock` (pid and port). Refuses while another live server holds it; replaces a stale lock."""
+def acquire_lock(paths: Paths, *, port: int, pid: int | None = None, reuse_own: bool = False) -> Path:
+    """Write `serve.lock` (pid and port). Refuses while a live server holds it and replaces a stale lock.
+
+    `reuse_own` lets the same pid take its lock over again (the uvicorn reloader restarting `dev_app`).
+    """
     from sed import db
 
     lock = paths.serve_lock
@@ -75,13 +78,13 @@ def acquire_lock(paths: Paths, *, port: int, pid: int | None = None) -> Path:
     lock.parent.mkdir(parents=True, exist_ok=True)
     for _ in range(3):
         holder = db.serve_lock_holder(lock)
-        if holder is not None and holder != pid:
+        if holder is not None and not (reuse_own and holder == pid):
             raise PreconditionFailed(f"`sed serve` is already running for profile '{paths.profile}' (pid {holder}).")
         try:
             fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
         except FileExistsError:
             with contextlib.suppress(OSError):
-                lock.unlink()  # stale (dead pid) or ours: replace it
+                lock.unlink()  # stale (dead pid) or our own reloader's: replace it
             continue
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(f"{pid} {port}\n")
@@ -204,5 +207,5 @@ def dev_app() -> Any:
     if not paths.db.exists():
         raise PreconditionFailed(f"No database for profile '{paths.profile}'; run `sed init` first.")
     token = launch_token(dev=True)
-    acquire_lock(paths, port=0, pid=os.getppid())  # port 0: chosen on the uvicorn command line
+    acquire_lock(paths, port=0, pid=os.getppid(), reuse_own=True)  # port 0: set on the uvicorn command line
     return create_app(paths, token=token, web_dist=None)
