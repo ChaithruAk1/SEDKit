@@ -8,7 +8,8 @@ Modes:
 
 Checks: data-file extensions outside synthetic fixture paths, files over 1 MB, corporate-domain email addresses
 and hostnames, real ITSM/Atlassian/SharePoint tenant hostnames, and terms from an external denylist of real
-app/vendor/instance names kept outside the repo (%LOCALAPPDATA%\\sed\\guard\\denylist.txt or SED_GUARD_DENYLIST).
+app/vendor/instance names kept outside the repo (<data root>\\guard\\denylist.txt, where the data root is
+SED_DATA_ROOT or %LOCALAPPDATA%\\sed; or SED_GUARD_DENYLIST).
 Content checks decode UTF-8, UTF-16 and UTF-32 (with or without BOM), so Windows "Unicode" exports are scanned.
 """
 
@@ -269,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Confidential-material guard FAILED:", file=sys.stderr)
         for v in violations:
             print(f"  {v}", file=sys.stderr)
-        print("Real data belongs in DATA_DIR (%LOCALAPPDATA%\\sed\\<profile>), never in git.", file=sys.stderr)
+        print("Real data belongs in DATA_DIR (<data root>\\<profile>), never in git.", file=sys.stderr)
         return 1
     if not denylist and os.environ.get("SED_GUARD_REQUIRE_DENYLIST") == "1":
         print("Denylist required but not found at " + str(denylist_path()), file=sys.stderr)

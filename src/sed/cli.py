@@ -1,6 +1,6 @@
 """sed command-line interface.
 
-Every command accepts --profile, --data-dir and --json.
+Every command accepts --json; commands that work on one profile also accept --profile and --data-dir.
 Exit codes: 0 ok, 1 internal error (bug; JSON envelope kind=internal), 2 validation or command-line usage error,
 3 busy, 4 precondition. With --json every handled outcome prints exactly one JSON object on stdout.
 """
@@ -15,7 +15,7 @@ from typing import Annotated, Any
 
 import typer
 
-from sed import __version__, bootstrap, db, doctor
+from sed import __version__, bootstrap, db, doctor, relocate
 from sed.cli_common import (
     DataDirOpt,
     JsonOpt,
@@ -178,6 +178,39 @@ def db_info(profile: ProfileOpt = None, data_dir: DataDirOpt = None, as_json: Js
     finally:
         conn.close()
     emit(result, as_json)
+
+
+data_app = typer.Typer(no_args_is_help=True, help="Where sed keeps its data")
+app.add_typer(data_app, name="data")
+
+
+@data_app.command("move")
+@handle_errors
+def data_move(
+    to: Annotated[Path, typer.Option("--to", help="New data root: a new or empty local folder")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Run the checks and count the files; change nothing")
+    ] = False,
+    as_json: JsonOpt = False,
+) -> None:
+    """Copy the whole data root (every profile) to a new folder, verify it and mark the old one as moved."""
+    result = relocate.move_data_root(to, dry_run=dry_run)
+
+    def human(p: dict[str, Any]) -> None:
+        c = console()
+        c.print(f"{'Would copy' if p['dry_run'] else 'Copied'} {p['files']} files ({p['bytes'] / 1_048_576:,.1f} MB)")
+        c.print(f"  from {p['from']}")
+        if p["physical_from"] != p["from"]:
+            c.print(f"       (really {p['physical_from']})")
+        c.print(f"  to   {p['to']}")
+        for v in p["verified"]:
+            c.print(f"Verified profile {v['profile']}: {v['tables']} tables, {v['rows']:,} rows")
+        for w in p["warnings"]:
+            c.print(f"[yellow]warning:[/] {w}")
+        for i, step in enumerate(p.get("next_steps", []), start=1):
+            c.print(f"{i}. {step}")
+
+    emit(result, as_json, human)
 
 
 # ---------------------------------------------------------------------------

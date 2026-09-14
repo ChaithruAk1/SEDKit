@@ -19,7 +19,8 @@ Invoke-Step "uv sync" { uv sync }
 $env:UV_NO_SYNC = "1"
 $env:PYTHONUTF8 = "1"
 
-$dataDir = Join-Path $env:LOCALAPPDATA "sed\$SedProfile"
+$dataRoot = if ($env:SED_DATA_ROOT) { $env:SED_DATA_ROOT } else { Join-Path $env:LOCALAPPDATA "sed" }
+$dataDir = Join-Path $dataRoot $SedProfile
 $saltFile = Join-Path $dataDir "secret\pii_salt.txt"
 if (Test-Path $saltFile) {
     Invoke-Step "sed init" { uv run sed init --profile $SedProfile }

@@ -1,12 +1,14 @@
 """Profile and DATA_DIR resolution.
 
-DATA_DIR lives outside the repo at %LOCALAPPDATA%\\sed\\<profile> (not redirected by OneDrive
-Known Folder Move). Resolution order: --data-dir / --profile flag, then SED_PROFILE, then 'synthetic'.
-SED_DATA_ROOT overrides the root (used by tests).
+DATA_DIR lives outside the repo at <data root>\\<profile>. The data root is SED_DATA_ROOT when set, else
+%LOCALAPPDATA%\\sed (not redirected by OneDrive Known Folder Move). Set SED_DATA_ROOT where %LOCALAPPDATA% is
+redirected into an app's private storage, as it is inside the Claude desktop app (see docs/data-location.md), and in
+tests. Resolution order: --data-dir / --profile flag, then SED_PROFILE, then 'synthetic'.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -16,6 +18,7 @@ from sed.errors import PreconditionFailed
 
 DEFAULT_PROFILE = "synthetic"
 PROFILE_RE = re.compile(r"^(synthetic|real|eval-[a-z0-9]+|test-[a-z0-9-]+)$")
+MOVED_MARKER = "moved.json"  # written into an old data root by `sed data move`
 
 SUBDIRS = (
     "inbox",
@@ -141,8 +144,27 @@ class Paths:
 
 def get_paths(profile: str | None = None, data_dir: str | Path | None = None) -> Paths:
     prof = resolve_profile(profile)
-    ddir = Path(data_dir) if data_dir else data_root() / prof
-    return Paths(profile=prof, data_dir=ddir)
+    if data_dir:
+        return Paths(profile=prof, data_dir=Path(data_dir))
+    root = data_root()
+    moved = moved_to(root)
+    if moved is not None:
+        raise PreconditionFailed(
+            f"SED data was moved from {root} to {moved}. Set SED_DATA_ROOT={moved} for your Windows account, then "
+            "restart the programs that run sed (see docs/data-location.md)."
+        )
+    return Paths(profile=prof, data_dir=root / prof)
+
+
+def moved_to(root: Path) -> Path | None:
+    """The new data root recorded in an old one by `sed data move`, else None."""
+    marker = root / MOVED_MARKER
+    if not marker.is_file():
+        return None
+    try:
+        return Path(json.loads(marker.read_text(encoding="utf-8"))["moved_to"])
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise PreconditionFailed(f"{marker} marks this data root as moved but cannot be read: {exc}") from exc
 
 
 def guard_root() -> Path:
@@ -188,4 +210,27 @@ def enclosing_git_tree(path: Path) -> Path | None:
     for candidate in (p, *p.parents):
         if (candidate / ".git").exists():
             return candidate
+    return None
+
+
+def app_package_location(path: Path) -> Path | None:
+    """Where Windows really keeps `path` when it sits in an app package's private storage, else None.
+
+    Packaged (MSIX) apps such as the Claude desktop app get a private copy of %LOCALAPPDATA%: folders that the app, or
+    any program it starts, creates there really live in %LOCALAPPDATA%\\Packages\\<package>\\LocalCache. Programs
+    started outside the app (your own terminal, Explorer, Task Scheduler) do not see them, and removing or resetting
+    the app deletes them. Only the nearest existing folder can be checked.
+    """
+    logical = Path(os.path.abspath(path))
+    existing = next((p for p in (logical, *logical.parents) if p.exists()), None)
+    if existing is None:
+        return None
+    try:
+        physical = existing.resolve(strict=True)
+    except OSError:
+        return None
+    parts = [part.lower() for part in physical.parts]
+    for i in range(len(parts) - 4):
+        if parts[i : i + 3] == ["appdata", "local", "packages"] and parts[i + 4] == "localcache":
+            return physical / logical.relative_to(existing)
     return None

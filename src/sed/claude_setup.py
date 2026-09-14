@@ -48,12 +48,12 @@ def claude_md_path() -> Path:
     return Path(env) if env else repo_root() / "CLAUDE.md"
 
 
-def _registry_file() -> Path:
-    return data_root() / "profiles.json"
+def _registry_file(root: Path | None = None) -> Path:
+    return (root or data_root()) / "profiles.json"
 
 
-def _managed_file() -> Path:
-    return data_root() / "claude_managed.json"
+def _managed_file(root: Path | None = None) -> Path:
+    return (root or data_root()) / "claude_managed.json"
 
 
 def _read_json(path: Path, *, what: str) -> dict[str, Any]:
@@ -89,12 +89,25 @@ def initialized_profiles(root: Path | None = None) -> list[tuple[str, Path]]:
         for p in base.iterdir():
             if p.is_dir() and (p / "sed.db").is_file():
                 found[str(Path(os.path.abspath(p)))] = (p.name, p)
-    registry = _read_json(base / _registry_file().name, what="sed profile registry")
+    registry = _read_json(_registry_file(base), what="sed profile registry")
     for d, name in registry.get("data_dirs", {}).items():
         p = Path(d)
         if (p / "sed.db").is_file():
             found[str(Path(os.path.abspath(p)))] = (name, p)
     return sorted(found.values(), key=lambda t: (t[0], str(t[1])))
+
+
+def rebase_registry(old_root: Path, new_root: Path) -> None:
+    """After a data-root move, point registered profile dirs that were inside the old root at the new root."""
+    registry = _read_json(_registry_file(new_root), what="sed profile registry")
+    if not registry.get("data_dirs"):
+        return
+    rebased = {}
+    for d, name in registry["data_dirs"].items():
+        p = Path(d)
+        rebased[str(new_root / p.relative_to(old_root)) if p.is_relative_to(old_root) else d] = name
+    registry["data_dirs"] = rebased
+    _write_json(_registry_file(new_root), registry)
 
 
 def managed_rules(profiles: list[tuple[str, Path]], agent: AgentConfig) -> dict[str, list[str]]:
@@ -122,7 +135,7 @@ def write_settings_local(agent: AgentConfig, target: Path | None = None, root: P
     perms = data.setdefault("permissions", {})
     if not isinstance(perms, dict):
         raise PreconditionFailed(f"'permissions' in {path} must be a JSON object.")
-    previous = _read_json(_managed_file(), what="sed managed-entries record")
+    previous = _read_json(_managed_file(root), what="sed managed-entries record")
     rules = managed_rules(initialized_profiles(root), agent)
     for key in PERMISSION_KEYS:
         existing = perms.get(key, [])
@@ -132,7 +145,7 @@ def write_settings_local(agent: AgentConfig, target: Path | None = None, root: P
         kept = [e for e in existing if e not in prev_owned and e not in rules[key]]
         perms[key] = kept + rules[key]
     _write_json(path, data)
-    _write_json(_managed_file(), rules)
+    _write_json(_managed_file(root), rules)
     return {"path": str(path), **rules}
 
 

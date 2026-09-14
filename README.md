@@ -11,7 +11,8 @@ SED is a personal toolkit for an application owner, built as a platform of modul
 4. **Builds reports:** weekly, monthly, quarterly and vendor reports as PowerPoint and Excel, plus a local dashboard.
 
 > All data in this repository is synthetic. Real exports and configuration live in `DATA_DIR`
-> (`%LOCALAPPDATA%\sed\<profile>`), outside git.
+> (`%LOCALAPPDATA%\sed\<profile>`, or under `SED_DATA_ROOT` when set), outside git. If you run SED from the Claude
+> desktop app, read [docs/data-location.md](docs/data-location.md) first.
 
 ## Setup
 
@@ -107,7 +108,7 @@ hot reload: `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1`.
 |---|---|---|
 | M0 | Skeleton & guardrails | done |
 | M1 | Synthetic data, import, metrics, weekly Excel | done |
-| M2 | Modular platform, AI walking skeleton, all decks, API and dashboard core | done (final review in progress) |
+| M2 | Modular platform, AI walking skeleton, all decks, API and dashboard core | done |
 | M3 | Reality check with real exports | planned |
 | M4 | Full AI analysis & review | planned |
 | M5 | AI-drafted reports | planned |

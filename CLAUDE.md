@@ -8,7 +8,8 @@ PPTX/XLSX reports plus a local React + FastAPI dashboard. The design spec is the
 ## Hard rules
 - **No real organisational data in this repo, ever.** All data in git is synthetic and fictional (names, apps,
   vendors, instances). Real exports, mappings with real values, the corporate template, salts and ground truth live
-  in `DATA_DIR` (`%LOCALAPPDATA%\sed\<profile>`), outside the repo. The pre-commit guard enforces this.
+  in `DATA_DIR` (`<data root>\<profile>`; the data root is `SED_DATA_ROOT`, else `%LOCALAPPDATA%\sed`), outside the
+  repo. The pre-commit guard enforces this.
 - **Only SED's Python code writes the database.** Agents never run SQL or open `sed.db`; they read packets in
   `DATA_DIR\runs\<run_id>\in\`, write JSON to `...\out\`, and call `sed ai ingest`.
 - **Never open** `sed.db`, `inbox\`, `secret\`, `config\` or `ground_truth\` under DATA_DIR. Permission deny rules
@@ -29,7 +30,7 @@ runs the text tool), and edit files with the Edit tool rather than `sed`.
 `UV_NO_SYNC=1` and `PYTHONUTF8=1` come from `.claude/settings.json`; only a human runs `uv sync` (with `sed serve`
 stopped, because Windows locks `.venv\Scripts\sed.exe`). Exit codes: 0 ok, 1 internal error (a bug — report it),
 2 validation or usage error (JSON error list), 3 busy (retry), 4 precondition. The prefix block above is rendered by
-`sed init` from the machine-level agent config (`config/agent.yaml` + `%LOCALAPPDATA%\sed\agent.yaml`).
+`sed init` from the machine-level agent config (`config/agent.yaml` + `<data root>\agent.yaml`).
 
 ## Dev commands
 - Setup: `uv sync` → `uv run sed init --profile synthetic --new-salt` → `uv run pre-commit install` → `uv run sed doctor`

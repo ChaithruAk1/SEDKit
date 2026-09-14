@@ -179,9 +179,10 @@ def test_doctor_passes_on_fresh_profile(data_root: Path, monkeypatch: pytest.Mon
     problems = [c for c in out["checks"] if c["status"] != "ok" and c["name"] not in ENVIRONMENT_CHECKS]
     assert problems == [], problems
     names = {c["name"] for c in out["checks"]}
-    for required in ("db_exists", "schema_current", "wal_mode", "fts5_available", "data_class_matches_profile",
-                     "pii_mode_valid", "settings_valid", "tzdata", "salt_present", "salt_fingerprint_matches",
-                     "claude_settings_local", "prefix_allow_rule", "skill_names_valid"):  # fmt: skip
+    for required in ("data_dir_not_in_app_storage", "db_exists", "schema_current", "wal_mode", "fts5_available",
+                     "data_class_matches_profile", "pii_mode_valid", "settings_valid", "tzdata", "salt_present",
+                     "salt_fingerprint_matches", "claude_settings_local", "prefix_allow_rule",
+                     "skill_names_valid"):  # fmt: skip
         assert required in names
     env_fails = {c["name"] for c in out["checks"] if c["status"] == "fail"}
     assert (code == 0) == (not env_fails)

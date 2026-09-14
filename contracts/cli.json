@@ -811,6 +811,54 @@
     {
       "commands": [
         {
+          "help": "Copy the whole data root (every profile) to a new folder, verify it and mark the old one as moved.",
+          "name": "move",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "to",
+              "opts": [
+                "--to"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "dry_run",
+              "opts": [
+                "--dry-run"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Where sed keeps its data",
+      "name": "data"
+    },
+    {
+      "commands": [
+        {
           "help": "Online backup via the SQLite backup API.",
           "name": "backup",
           "params": [

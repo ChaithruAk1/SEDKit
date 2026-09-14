@@ -40,6 +40,7 @@ CORE_CLI_NAMES = frozenset(
         "init",
         "doctor",
         "db",
+        "data",
         "modules",
         "synth",
         "import",

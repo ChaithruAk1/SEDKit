@@ -18,6 +18,7 @@ DATA="${SED_WT_DATA:-/c/Projects/sed-wt/_data/$WS}"
 mkdir -p "$DATA"
 [ -f "$DATA/CLAUDE.md" ] || cp "$WT/CLAUDE.md" "$DATA/CLAUDE.md"
 PY="$MAIN/.venv/Scripts/python.exe"
+MACHINE_ROOT="${SED_DATA_ROOT:-${LOCALAPPDATA:+$LOCALAPPDATA/sed}}"  # the real data root, before the scratch override
 export PYTHONPATH="$(to_win "$WT/src")"
 export SED_REPO_ROOT="$(to_win "$WT")" SED_DATA_ROOT="$(to_win "$DATA")"
 export SED_CLAUDE_SETTINGS_LOCAL="$(to_win "$DATA/settings.local.json")" SED_CLAUDE_MD="$(to_win "$DATA/CLAUDE.md")"
@@ -29,8 +30,8 @@ mkdir -p "$DATA/pytest-tmp"
 export PYTEST_DEBUG_TEMPROOT="$(to_win "$DATA/pytest-tmp")"
 export PYTEST_ADDOPTS="-p no:cacheprovider"
 unset SED_PROFILE SED_EXTRA_MODULES
-if [ -n "${LOCALAPPDATA:-}" ]; then
-  export SED_GUARD_DENYLIST="${SED_GUARD_DENYLIST:-$(to_win "$LOCALAPPDATA/sed/guard/denylist.txt")}"
+if [ -n "$MACHINE_ROOT" ]; then
+  export SED_GUARD_DENYLIST="${SED_GUARD_DENYLIST:-$(to_win "$MACHINE_ROOT/guard/denylist.txt")}"
 fi
 cmd="${1:-}"
 [ $# -gt 0 ] && shift

@@ -20,7 +20,15 @@ import yaml
 
 from sed import claude_setup, db
 from sed.errors import SedError
-from sed.paths import Paths, data_root, enclosing_git_tree, is_unc, is_under_onedrive, repo_root
+from sed.paths import (
+    Paths,
+    app_package_location,
+    data_root,
+    enclosing_git_tree,
+    is_unc,
+    is_under_onedrive,
+    repo_root,
+)
 from sed.salt import fingerprint, read_salt
 from sed.settings import PII_MODES, load_agent_config, load_settings
 
@@ -50,6 +58,18 @@ def run_checks(paths: Paths, *, skip: set[str] | None = None) -> list[Check]:
 
     add(_check("data_dir_not_unc", not is_unc(ddir), str(ddir)))
     add(_check("data_dir_not_onedrive", not is_under_onedrive(ddir), "DATA_DIR must not be OneDrive-synced"))
+    packaged = app_package_location(ddir)
+    add(
+        _check(
+            "data_dir_not_in_app_storage",
+            packaged is None,
+            f"really stored in an app's private storage at {packaged}: programs outside that app cannot see it and "
+            "removing the app deletes it. Move it with `sed data move --to <folder>` (docs/data-location.md)"
+            if packaged
+            else "not inside an app's private storage",
+            severity="fail" if paths.data_class == "real" else "warn",
+        )
+    )
     git_tree = enclosing_git_tree(ddir) if ddir.exists() else None
     add(_check("data_dir_not_in_git_tree", git_tree is None, f"inside git tree {git_tree}" if git_tree else "ok"))
 

@@ -37,7 +37,8 @@ exports (ServiceNow, Jira, Confluence, Excel) -> DATA_DIR/inbox -> sed import
 3. Every report renders from one frozen snapshot (sha256), so tables, charts and text agree.
 4. Rule findings are deterministic and always published ("system-detected"); AI findings need human approval.
 5. Real data, salts, ground truth, corporate templates and real mappings live only in `DATA_DIR`
-   (`%LOCALAPPDATA%\sed\<profile>`); the repo is synthetic-only and guarded at commit time.
+   (`<data root>\<profile>`: `SED_DATA_ROOT`, else `%LOCALAPPDATA%\sed`; see `docs/data-location.md`); the repo is
+   synthetic-only and guarded at commit time.
 
 ## Where to look
 
