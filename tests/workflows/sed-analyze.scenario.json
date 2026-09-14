@@ -1,0 +1,623 @@
+{
+  "workflow": "sed-analyze.js",
+  "description": "Canned fake-agent results for the offline workflow harness (tests/workflow_harness.mjs).",
+  "cases": [
+    {
+      "name": "fresh run: two batches, one fails ingest",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "triage"
+        ],
+        "scope": "period:2026-08",
+        "limit": 100,
+        "batchSize": 50,
+        "claudeVersion": "2.1.0 (Claude Code)",
+        "triageModel": "claude-sonnet-5",
+        "maxItems": 8000
+      },
+      "responses": {
+        "start-run": {
+          "exit_code": 0,
+          "plan": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "skill": "sed-triage-batch",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 100,
+              "batches": 2,
+              "est_agents": 2,
+              "max_chars_per_batch": 17600,
+              "longest_line_chars": 448,
+              "claimed": 100
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0001.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0001.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0001.json",
+                "items": 50,
+                "chars": 17000
+              },
+              {
+                "batch": "batch_0002",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0002.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0002.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0002.json",
+                "items": 50,
+                "chars": 17600
+              }
+            ]
+          },
+          "error": null
+        },
+        "batch batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 50,
+          "errors_count": 0,
+          "low_conf": 7
+        },
+        "batch batch_0002": {
+          "batch": "batch_0002",
+          "status": "failed",
+          "ingested": 0,
+          "errors_count": 3,
+          "low_conf": 0
+        },
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "status": "completed",
+            "counts": {
+              "items": 100,
+              "claimed": 100,
+              "batches": 2,
+              "ingested_batches": 1,
+              "failed_batches": 1,
+              "labelled": 50,
+              "low_confidence": 7,
+              "claims_released": 100,
+              "random_sample": 30,
+              "lowest_conf_sample": 30
+            },
+            "failed_batches": [
+              "batch_0002"
+            ],
+            "review": {
+              "random_sample": 30,
+              "lowest_conf": 30,
+              "next": "uv run sed review sample 20260901T101500-triage-batch-0a1b --profile synthetic --json"
+            }
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Start run",
+          "Triage batches",
+          "Finish run"
+        ],
+        "agent_labels": [
+          "start-run",
+          "batch batch_0001",
+          "batch batch_0002",
+          "finish-run"
+        ],
+        "batch_agents": 2,
+        "prompt_contains": {
+          "start-run": [
+            "uv run sed ai start-run sed-triage-batch --scope period:2026-08 --limit 100 --batch-size 50 --max-items 8000 --invoked-via workflow --model claude-sonnet-5 --claude-version \"2.1.0 (Claude Code)\" --profile synthetic --json"
+          ],
+          "batch batch_0001": [
+            "uv run sed ai ingest 20260901T101500-triage-batch-0a1b \"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0001.json\" --profile synthetic --json",
+            "\"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0001.jsonl\"",
+            "\"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/context.md\"",
+            "\"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0001.txt\"",
+            "untrusted data"
+          ],
+          "batch batch_0002": [
+            "\"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0002.json\""
+          ],
+          "finish-run": [
+            "uv run sed ai finish-run 20260901T101500-triage-batch-0a1b --profile synthetic --json"
+          ]
+        },
+        "prompt_excludes": {
+          "start-run": [
+            "--resume"
+          ],
+          "batch batch_0001": [
+            "batch_0002"
+          ]
+        },
+        "opts": {
+          "batch batch_0001": {
+            "model": "claude-sonnet-5",
+            "phase": "Triage batches"
+          },
+          "start-run": {
+            "phase": "Start run"
+          }
+        },
+        "logs_contain": [
+          "Failed batches: batch_0002",
+          "Run 20260901T101500-triage-batch-0a1b: 100 items in 2 batches",
+          "finish-run marked failed: batch_0002",
+          "uv run sed review sample 20260901T101500-triage-batch-0a1b"
+        ],
+        "result": {
+          "status": "completed",
+          "run_id": "20260901T101500-triage-batch-0a1b",
+          "failed_batches": [
+            "batch_0002"
+          ]
+        }
+      }
+    },
+    {
+      "name": "resume passes the run id and triages only the remaining batch",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "triage"
+        ],
+        "scope": "period:2026-08",
+        "limit": 100,
+        "batchSize": 50,
+        "claudeVersion": "2.1.0 (Claude Code)",
+        "resumeRunIds": {
+          "triage": "20260901T101500-triage-batch-0a1b"
+        }
+      },
+      "responses": {
+        "start-run": {
+          "exit_code": 0,
+          "plan": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "skill": "sed-triage-batch",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 50,
+              "batches": 1,
+              "est_agents": 1,
+              "max_chars_per_batch": 17600,
+              "longest_line_chars": 448,
+              "claimed": 50
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0002",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0002.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0002.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0002.json",
+                "items": 50,
+                "chars": 17600
+              }
+            ]
+          },
+          "error": null
+        },
+        "batch batch_0002": {
+          "batch": "batch_0002",
+          "status": "ingested",
+          "ingested": 50,
+          "errors_count": 0,
+          "low_conf": 5
+        },
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "status": "completed",
+            "counts": {
+              "items": 100,
+              "claimed": 100,
+              "batches": 2,
+              "ingested_batches": 2,
+              "failed_batches": 0,
+              "labelled": 100,
+              "low_confidence": 12,
+              "claims_released": 100,
+              "random_sample": 30,
+              "lowest_conf_sample": 30
+            },
+            "failed_batches": [],
+            "review": {
+              "random_sample": 30,
+              "lowest_conf": 30,
+              "next": "uv run sed review sample 20260901T101500-triage-batch-0a1b --profile synthetic --json"
+            }
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Start run",
+          "Triage batches",
+          "Finish run"
+        ],
+        "agent_labels": [
+          "start-run",
+          "batch batch_0002",
+          "finish-run"
+        ],
+        "batch_agents": 1,
+        "prompt_contains": {
+          "start-run": [
+            "uv run sed ai start-run sed-triage-batch --resume 20260901T101500-triage-batch-0a1b",
+            "--profile synthetic --json"
+          ]
+        },
+        "prompt_excludes": {
+          "start-run": [
+            "--scope",
+            "--limit"
+          ]
+        },
+        "logs_exclude": [
+          "Failed batches"
+        ],
+        "result": {
+          "status": "completed",
+          "failed_batches": []
+        }
+      }
+    },
+    {
+      "name": "a batch agent that returns nothing is logged by name",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "triage"
+        ],
+        "scope": "period:2026-08",
+        "limit": 100,
+        "batchSize": 50,
+        "claudeVersion": "2.1.0 (Claude Code)"
+      },
+      "responses": {
+        "start-run": {
+          "exit_code": 0,
+          "plan": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "skill": "sed-triage-batch",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 100,
+              "batches": 2,
+              "est_agents": 2,
+              "max_chars_per_batch": 17600,
+              "longest_line_chars": 448,
+              "claimed": 100
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0001.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0001.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0001.json",
+                "items": 50,
+                "chars": 17000
+              },
+              {
+                "batch": "batch_0002",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0002.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0002.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0002.json",
+                "items": 50,
+                "chars": 17600
+              }
+            ]
+          },
+          "error": null
+        },
+        "batch batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 50,
+          "errors_count": 0,
+          "low_conf": 7
+        },
+        "batch batch_0002": null,
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "status": "completed",
+            "counts": {
+              "items": 100,
+              "claimed": 100,
+              "batches": 2,
+              "ingested_batches": 1,
+              "failed_batches": 1,
+              "labelled": 50,
+              "low_confidence": 7,
+              "claims_released": 100,
+              "random_sample": 30,
+              "lowest_conf_sample": 30
+            },
+            "failed_batches": [
+              "batch_0002"
+            ],
+            "review": {
+              "random_sample": 30,
+              "lowest_conf": 30,
+              "next": "uv run sed review sample 20260901T101500-triage-batch-0a1b --profile synthetic --json"
+            }
+          }
+        }
+      },
+      "expect": {
+        "batch_agents": 2,
+        "logs_contain": [
+          "No agent result for: batch_0002",
+          "Failed batches: batch_0002"
+        ],
+        "opts": {
+          "batch batch_0001": {
+            "phase": "Triage batches"
+          }
+        },
+        "result": {
+          "failed_batches": [
+            "batch_0002"
+          ]
+        }
+      }
+    },
+    {
+      "name": "start-run refused (exit 4) stops before any batch agent",
+      "args": {
+        "profile": "real",
+        "steps": [
+          "triage"
+        ],
+        "scope": "period:2026-08",
+        "limit": 100,
+        "batchSize": 50,
+        "claudeVersion": "2.1.0 (Claude Code)"
+      },
+      "responses": {
+        "start-run": {
+          "exit_code": 4,
+          "plan": null,
+          "error": {
+            "kind": "precondition",
+            "message": "AI use on the real profile is not recorded as approved"
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Start run"
+        ],
+        "agent_labels": [
+          "start-run"
+        ],
+        "batch_agents": 0,
+        "prompt_contains": {
+          "start-run": [
+            "--profile real --json"
+          ]
+        },
+        "logs_contain": [
+          "start-run failed (exit 4)"
+        ],
+        "result": {
+          "status": "start_failed"
+        }
+      }
+    },
+    {
+      "name": "nothing selected ends without a finish agent",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "triage"
+        ],
+        "scope": "period:2026-08",
+        "limit": 100,
+        "batchSize": 50,
+        "claudeVersion": "2.1.0 (Claude Code)"
+      },
+      "responses": {
+        "start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": null,
+            "skill": "sed-triage-batch",
+            "status": "planned",
+            "dry_run": false,
+            "plan": {
+              "items": 0,
+              "batches": 0,
+              "est_agents": 0,
+              "max_chars_per_batch": 0,
+              "longest_line_chars": 0,
+              "claimed": 0
+            },
+            "run_dir": null,
+            "out_dir": null,
+            "context": [],
+            "inputs": []
+          }
+        }
+      },
+      "expect": {
+        "agent_labels": [
+          "start-run"
+        ],
+        "logs_contain": [
+          "Nothing to triage"
+        ],
+        "result": {
+          "status": "nothing_to_do"
+        }
+      }
+    },
+    {
+      "name": "unsupported steps are logged, not silently dropped",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "import",
+          "triage",
+          "recurring"
+        ],
+        "scope": "period:2026-08",
+        "limit": 100,
+        "batchSize": 50,
+        "claudeVersion": "2.1.0 (Claude Code)"
+      },
+      "responses": {
+        "start-run": {
+          "exit_code": 0,
+          "plan": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "skill": "sed-triage-batch",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 100,
+              "batches": 2,
+              "est_agents": 2,
+              "max_chars_per_batch": 17600,
+              "longest_line_chars": 448,
+              "claimed": 100
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0001.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0001.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0001.json",
+                "items": 50,
+                "chars": 17000
+              },
+              {
+                "batch": "batch_0002",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0002.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0002.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0002.json",
+                "items": 50,
+                "chars": 17600
+              }
+            ]
+          },
+          "error": null
+        },
+        "batch batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 50,
+          "errors_count": 0,
+          "low_conf": 7
+        },
+        "batch batch_0002": {
+          "batch": "batch_0002",
+          "status": "ingested",
+          "ingested": 50,
+          "errors_count": 0,
+          "low_conf": 5
+        },
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260901T101500-triage-batch-0a1b",
+            "status": "completed",
+            "counts": {
+              "items": 100,
+              "claimed": 100,
+              "batches": 2,
+              "ingested_batches": 2,
+              "failed_batches": 0,
+              "labelled": 100,
+              "low_confidence": 12,
+              "claims_released": 100,
+              "random_sample": 30,
+              "lowest_conf_sample": 30
+            },
+            "failed_batches": [],
+            "review": {
+              "random_sample": 30,
+              "lowest_conf": 30,
+              "next": "uv run sed review sample 20260901T101500-triage-batch-0a1b --profile synthetic --json"
+            }
+          }
+        }
+      },
+      "expect": {
+        "batch_agents": 2,
+        "logs_contain": [
+          "Steps not available yet and skipped: import, recurring"
+        ],
+        "result": {
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "name": "unsafe args are rejected before any agent runs",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "triage"
+        ],
+        "scope": "period:2026-08; rm -rf /",
+        "limit": 100,
+        "batchSize": 50,
+        "claudeVersion": "2.1.0 (Claude Code)"
+      },
+      "responses": {},
+      "expect": {
+        "throws": "scope has an invalid value",
+        "agent_labels": []
+      }
+    }
+  ]
+}

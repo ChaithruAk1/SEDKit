@@ -11,7 +11,7 @@ def sample_keys(sample: dict[str, Any]) -> list[str]:
 
 
 def verdicts_for(sample: dict[str, Any], *, incorrect_every: int = 10, skip: set[str] | None = None) -> dict[str, Any]:
-    """ "correct" for every sampled item except every Nth key (sorted), which is marked incorrect as `other`.
+    """Verdict "correct" for every sampled item except every Nth key (sorted), which is marked incorrect as `other`.
 
     Keys in `skip` get null (a skipped item, which record_verdicts does not record).
     """
