@@ -39,7 +39,10 @@ def _say(message: str) -> None:
 
 def default_web_dist() -> Path | None:
     """The built dashboard (`web/dist` in the repo) when it has an index.html, else None."""
-    dist = repo_root() / "web" / "dist"
+    try:
+        dist = repo_root() / "web" / "dist"
+    except PreconditionFailed:  # not running from a checkout: serve the API only
+        return None
     return dist if (dist / "index.html").is_file() else None
 
 

@@ -31,9 +31,9 @@ def profile(data_root):
 
 
 @contextmanager
-def running(paths, **kwargs):
+def running(paths, port=None, **kwargs):
     """Run serve.run in a thread; yield (base_url, errors); stop it and wait for the thread on exit."""
-    port = free_port()
+    port = port or free_port()
     errors: list[BaseException] = []
 
     def target() -> None:
@@ -61,7 +61,8 @@ def running(paths, **kwargs):
         assert not thread.is_alive(), "server thread did not stop"
 
 
-def test_run_serves_the_api_and_holds_the_lock_while_running(profile, tmp_path, capsys):
+def test_run_serves_the_api_and_holds_the_lock_while_running(profile, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(serve, "default_web_dist", lambda: None)  # API only, even where web/dist has been built
     with running(profile) as (base, _):
         health = httpx.get(f"{base}/api/health")
         assert health.status_code == 200 and health.json()["ok"] is True
@@ -87,7 +88,7 @@ def test_run_serves_the_api_and_holds_the_lock_while_running(profile, tmp_path, 
         forbidden = httpx.post(f"{base}/api/aliases", json={"kind": "vendor", "raw_value": "a", "target": "b"})
         assert forbidden.status_code == 403 and forbidden.json()["error"]["kind"] == "forbidden"
         assert httpx.get(f"{base}/api/health", headers={"Host": "evil.com"}).status_code == 400
-        assert httpx.get(f"{base}/").status_code == 404  # no web/dist in this checkout: API only
+        assert httpx.get(f"{base}/").status_code == 404  # API only
 
         with pytest.raises(PreconditionFailed, match="already running"):
             serve.run(profile, port=free_port(), open_browser=False)
@@ -101,16 +102,19 @@ def test_run_serves_web_dist_with_the_launch_token(profile, tmp_path, monkeypatc
     (dist / "assets").mkdir(parents=True)
     (dist / "index.html").write_text('<meta name="sed-token" content="__SED_TOKEN__">', encoding="utf-8")
     monkeypatch.setattr(serve, "default_web_dist", lambda: dist)
-    with running(profile) as (base, _):
-        index = httpx.get(f"{base}/")
-        assert index.status_code == 200 and index.headers["cache-control"] == "no-store"
-        token = re.search(r'content="([^"]+)"', index.text).group(1)
-        assert token != "__SED_TOKEN__" and len(token) >= 40
-        body = {"kind": "vendor", "raw_value": "Unknown", "target": "Nobody"}
-        with_token = httpx.post(f"{base}/api/aliases", json=body, headers={"X-SED-Token": token})
-        assert with_token.status_code == 422  # past the token check; the unknown target is a validation error
-    with running(profile) as (base, _):
-        assert re.search(r'content="([^"]+)"', httpx.get(f"{base}/").text).group(1) != token  # per launch
+    port = free_port()
+    with httpx.Client() as client:  # keep-alive connections stay open while the first server shuts down
+        with running(profile, port=port) as (base, _):
+            index = client.get(f"{base}/")
+            assert index.status_code == 200 and index.headers["cache-control"] == "no-store"
+            token = re.search(r'content="([^"]+)"', index.text).group(1)
+            assert token != "__SED_TOKEN__" and len(token) >= 40
+            body = {"kind": "vendor", "raw_value": "Unknown", "target": "Nobody"}
+            with_token = client.post(f"{base}/api/aliases", json=body, headers={"X-SED-Token": token})
+            assert with_token.status_code == 422  # past the token check; the unknown target is a validation error
+        # An immediate restart on the same port works and gets a new token.
+        with running(profile, port=port) as (base, _):
+            assert re.search(r'content="([^"]+)"', httpx.get(f"{base}/").text).group(1) != token
 
 
 def test_dev_mode_uses_sed_dev_token(profile, monkeypatch):
