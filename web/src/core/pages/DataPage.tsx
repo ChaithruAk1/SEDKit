@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import type { Schema } from '../../api/types';
 import { useApi } from '../../api/useApi';
 import { useShell } from '../../app/ShellContext';
-import { AssignAliasModal } from '../../components/AssignAliasModal';
+import { AssignAliasModal, STRONG_MATCH } from '../../components/AssignAliasModal';
 import { type Column, DataTable } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { FreshnessList } from '../../components/FreshnessList';
@@ -127,8 +127,8 @@ export default function DataPage() {
           <Group gap={6} wrap="nowrap">
             <Text size="sm">{r.suggestion}</Text>
             {r.score !== null ? (
-              <Badge size="xs" variant="outline" color={r.score >= 0.85 ? 'teal' : 'gray'}>
-                {r.score.toFixed(2)}
+              <Badge size="xs" variant="outline" color={r.score >= STRONG_MATCH ? 'teal' : 'gray'}>
+                {`${Math.round(r.score)}%`}
               </Badge>
             ) : null}
           </Group>

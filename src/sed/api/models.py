@@ -170,7 +170,7 @@ class UnmappedRow(ApiModel):
     raw_value: str
     occurrences: int
     suggestion: str | None
-    score: float | None
+    score: float | None = Field(description="Suggestion similarity, 0-100 (rapidfuzz)")
     first_batch_id: int | None
     last_batch_id: int | None
 

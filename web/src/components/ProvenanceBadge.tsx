@@ -19,13 +19,16 @@ const APPROVED = new Set(['approved', 'update_pending']);
 
 /**
  * Marks every AI-derived element: run, skill, approval (by/at) and the run's sample accuracy with its interval.
- * Run details come from GET /api/runs (shared request).
+ * Approval comes from `status` (sent with the element by the API) and only falls back to the run list; run details
+ * come from GET /api/runs (shared request, latest runs only), so a run missing there is "unknown", never "not approved".
  */
 export function ProvenanceBadge({ runId, status, confidence, reviewedBy, reviewedAt, size = 'xs' }: ProvenanceBadgeProps) {
   const runs = useCachedApi('/api/runs');
   if (!runId) return null;
   const run = runs.data?.items.find((r) => r.run_id === runId);
-  const approved = APPROVED.has(status ?? '') || APPROVED.has(run?.status ?? '');
+  const effective = status ?? run?.status ?? null;
+  const approved = APPROVED.has(effective ?? '');
+  const unknown = effective === null;
   const by = reviewedBy ?? run?.reviewed_by ?? null;
   const at = reviewedAt ?? run?.reviewed_at ?? null;
   const accuracy =
@@ -38,12 +41,12 @@ export function ProvenanceBadge({ runId, status, confidence, reviewedBy, reviewe
         <Badge
           size={size}
           variant="light"
-          color={approved ? 'violet' : 'orange'}
+          color={approved ? 'violet' : unknown ? 'gray' : 'orange'}
           leftSection={<IconSparkles size={10} />}
           style={{ cursor: 'help' }}
-          aria-label={`AI provenance: run ${runId}${approved ? ', approved' : ', not approved'}`}
+          aria-label={`AI provenance: run ${runId}${approved ? ', approved' : unknown ? ', approval unknown' : ', not approved'}`}
         >
-          {approved ? 'AI' : 'AI draft'}
+          {approved || unknown ? 'AI' : 'AI draft'}
           {confidence !== null && confidence !== undefined ? ` · ${formatRatio(confidence)}` : ''}
         </Badge>
       </HoverCard.Target>
@@ -54,8 +57,11 @@ export function ProvenanceBadge({ runId, status, confidence, reviewedBy, reviewe
           </Text>
           <Row label="Run" value={runId} />
           <Row label="Skill" value={run?.skill ?? (runs.loading ? 'loading…' : 'unknown')} />
-          <Row label="Run status" value={run?.status ?? status ?? 'unknown'} />
-          <Row label="Approved by" value={approved && by ? `${by}, ${formatDateTime(at)}` : 'not approved'} />
+          <Row label="Run status" value={effective ?? (runs.loading ? 'loading…' : 'unknown')} />
+          <Row
+            label="Approved by"
+            value={approved ? (by ? `${by}, ${formatDateTime(at)}` : 'approved') : unknown ? 'unknown' : 'not approved'}
+          />
           <Row label="Sample accuracy" value={accuracy} />
           {confidence !== null && confidence !== undefined ? <Row label="Confidence" value={formatPct(confidence * 100, 0)} /> : null}
           {!run && !runs.loading ? (

@@ -12,6 +12,9 @@ type UnmappedRow = Schema<'UnmappedRow'>;
 type AliasOut = Schema<'AliasOut'>;
 type AliasTarget = Schema<'AliasTarget'>;
 
+/** Suggestion scores are rapidfuzz similarities from 0 to 100; at or above this one a suggestion counts as strong. */
+export const STRONG_MATCH = 85;
+
 function targetLabel(target: AliasTarget): string {
   return target.id === target.name ? target.name : `${target.name} (${target.id})`;
 }
@@ -46,8 +49,9 @@ export function AssignAliasModal({ row, onClose, onAssigned }: AssignAliasModalP
   const q = selected && typed === targetLabel(selected) ? null : typed || null;
   const targets = useApi(row ? '/api/alias-targets' : null, { query: { kind: row?.kind ?? '', q, limit: 50 } });
 
+  // Pre-select the suggestion only when it is a strong match; a weak one stays a hint the user has to choose.
   useEffect(() => {
-    if (selected || !row?.suggestion || !targets.data) return;
+    if (selected || !row?.suggestion || (row.score ?? 0) < STRONG_MATCH || !targets.data) return;
     const wanted = row.suggestion.toLowerCase();
     const match = targets.data.items.find((t) => t.name.toLowerCase() === wanted || t.id.toLowerCase() === wanted);
     if (match) setSelected(match);
@@ -93,7 +97,7 @@ export function AssignAliasModal({ row, onClose, onAssigned }: AssignAliasModalP
             {row.suggestion ? (
               <Text size="xs" c="dimmed">
                 Suggestion: {row.suggestion}
-                {row.score !== null ? ` (score ${row.score.toFixed(2)})` : ''}
+                {row.score !== null ? ` (match ${Math.round(row.score)}%)` : ''}
               </Text>
             ) : null}
           </Stack>

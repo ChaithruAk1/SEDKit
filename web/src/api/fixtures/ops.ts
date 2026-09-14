@@ -591,10 +591,11 @@ export function app360(appId: string, q: Common | undefined): Schema<'App360Out'
       closed_at: isoAt(addDays(AS_OF, -7 * (i + 1) + 1), 2),
       short_description: ['Quarterly patching', 'Interface queue configuration', 'Release 4.2 deployment', 'Certificate renewal'][i] ?? 'Change',
     })),
-    cost: COST_CATEGORIES.map((category, c) => {
-      const budget = round(app.annual_license_cost_base * 0.66 * [0.5, 0.25, 0.2, 0.05][c]!, 0);
-      const actual = round(budget * (0.85 + ((c + 2) * 9) % 35 / 100), 0);
-      return { key: category, label: category, actual, budget, variance_pct: budget ? round((100 * (actual - budget)) / budget, 2) : null };
+    // One row per month, like GET /api/ops/apps/{app_id}.
+    cost: months.map((month, m) => {
+      const budget = round((app.annual_license_cost_base * 0.66) / 12, 0);
+      const actual = round(budget * (0.85 + ((m + 2) * 9) % 35 / 100), 0);
+      return { key: month, label: month, actual, budget, variance_pct: budget ? round((100 * (actual - budget)) / budget, 2) : null };
     }),
     contracts: CONTRACTS.filter((c) => c.app_id === app.app_id).map((c) => c.row),
     licenses: LICENSES.filter((l) => l.app_id === app.app_id).map((l) => l.row),

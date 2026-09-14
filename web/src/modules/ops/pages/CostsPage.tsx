@@ -101,8 +101,11 @@ export default function CostsPage() {
   const vendorLines = (vendors.data?.items ?? []).slice(0, CHART_COLORS.length);
 
   const totals = costs.data;
+  // No variance without imported actuals (as the Overview KPI): a missing actual is not zero spend.
   const variance =
-    totals && totals.total_budget ? (100 * ((totals.total_actual ?? 0) - totals.total_budget)) / totals.total_budget : null;
+    totals && totals.total_budget && totals.total_actual !== null
+      ? (100 * (totals.total_actual - totals.total_budget)) / totals.total_budget
+      : null;
 
   return (
     <Stack gap="md">
@@ -264,7 +267,13 @@ export default function CostsPage() {
         </Grid.Col>
       </Grid>
 
-      <SectionCard title="Risk findings" description="Renewal, licence, vendor and cost risks" count={risks.items?.length ?? null}>
+      <SectionCard
+        title="Risk findings"
+        description={`Renewal, licence, vendor and cost risks${
+          filters.app.length || filters.family || filters.vendor ? ' · whole portfolio (filters not applied)' : ''
+        }`}
+        count={risks.items?.length ?? null}
+      >
         {risks.error ? <ErrorState error={risks.error} onRetry={risks.reload} compact /> : null}
         <FindingList
           findings={risks.items}

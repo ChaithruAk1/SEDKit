@@ -324,13 +324,13 @@ interface UnmappedState {
 
 const unmappedState: UnmappedState = {
   rows: [
-    { kind: 'app', raw_value: 'Orion ERP (Prod)', occurrences: 57, suggestion: 'Orion ERP', score: 0.93, first_batch_id: 71, last_batch_id: 95 },
-    { kind: 'app', raw_value: 'Nimbus Warehouse', occurrences: 12, suggestion: 'Nimbus WMS', score: 0.81, first_batch_id: 88, last_batch_id: 95 },
-    { kind: 'vendor', raw_value: 'NORDWIND MS GmbH', occurrences: 9, suggestion: 'Nordwind Managed Services', score: 0.88, first_batch_id: 93, last_batch_id: 93 },
-    { kind: 'group', raw_value: 'NWD_ERP_L2', occurrences: 31, suggestion: 'NWD-ERP-L2', score: 0.9, first_batch_id: 80, last_batch_id: 95 },
+    { kind: 'app', raw_value: 'Orion ERP (Prod)', occurrences: 57, suggestion: 'Orion ERP', score: 93, first_batch_id: 71, last_batch_id: 95 },
+    { kind: 'app', raw_value: 'Nimbus Warehouse', occurrences: 12, suggestion: 'Nimbus WMS', score: 81, first_batch_id: 88, last_batch_id: 95 },
+    { kind: 'vendor', raw_value: 'NORDWIND MS GmbH', occurrences: 9, suggestion: 'Nordwind Managed Services', score: 88, first_batch_id: 93, last_batch_id: 93 },
+    { kind: 'group', raw_value: 'NWD_ERP_L2', occurrences: 31, suggestion: 'NWD-ERP-L2', score: 90, first_batch_id: 80, last_batch_id: 95 },
     { kind: 'ci', raw_value: 'orion-erp-app01', occurrences: 22, suggestion: null, score: null, first_batch_id: 77, last_batch_id: 95 },
-    { kind: 'jira_project', raw_value: 'LEDG', occurrences: 140, suggestion: 'Ledgerline Finance', score: 0.62, first_batch_id: 85, last_batch_id: 89 },
-    { kind: 'confluence_space', raw_value: 'HRCORE', occurrences: 18, suggestion: 'Atlas HR Core', score: 0.7, first_batch_id: 86, last_batch_id: 86 },
+    { kind: 'jira_project', raw_value: 'LEDG', occurrences: 140, suggestion: 'Ledgerline Finance', score: 62, first_batch_id: 85, last_batch_id: 89 },
+    { kind: 'confluence_space', raw_value: 'HRCORE', occurrences: 18, suggestion: 'Atlas HR Core', score: 70, first_batch_id: 86, last_batch_id: 86 },
   ],
 };
 

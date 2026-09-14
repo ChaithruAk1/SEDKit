@@ -120,7 +120,9 @@ export default function OverviewPage() {
 
       <SectionCard
         title="Findings"
-        description={filters.include_drafts ? 'Published findings and AI drafts' : 'Published findings'}
+        description={`${filters.include_drafts ? 'Published findings and AI drafts' : 'Published findings'}${
+          filters.app.length || filters.family || filters.vendor || filters.group ? ' · whole portfolio (filters not applied)' : ''
+        }`}
         count={findings.items?.length ?? null}
       >
         {findings.error ? <ErrorState error={findings.error} onRetry={findings.reload} compact /> : null}

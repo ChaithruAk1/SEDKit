@@ -29,7 +29,7 @@ export const OPS_ROUTES = [
   {
     path: 'ops/apps/:appId',
     title: 'App 360',
-    filters: ['period', 'as_of', 'include_drafts'],
+    filters: ['as_of', 'include_drafts'], // KPIs use fixed windows (last 3 months, YTD, 12 months): no period filter
     load: () => import('./pages/App360Page'),
   },
   {

@@ -420,11 +420,11 @@ function RecurringTab() {
   return (
     <SectionCard
       title="Recurring issues"
-      description={
+      description={`${
         filters.include_drafts
           ? 'Issue clusters: approved and draft AI findings'
           : 'Approved issue clusters (AI findings reviewed by a person); turn on "Include AI drafts" to see unreviewed ones'
-      }
+      }${filters.app.length || filters.family || filters.vendor || filters.group ? ' · whole portfolio (filters not applied)' : ''}`}
       count={clusters.items?.length ?? null}
     >
       {clusters.error ? <ErrorState error={clusters.error} onRetry={clusters.reload} compact /> : null}

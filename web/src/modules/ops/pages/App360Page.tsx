@@ -60,7 +60,7 @@ const DOC_COLUMNS: Column<Schema<'DocRow'>>[] = [
 ];
 
 const COST_COLUMNS: Column<Schema<'CostRow'>>[] = [
-  { key: 'label', header: 'Category', value: (c) => c.label },
+  { key: 'label', header: 'Month', value: (c) => c.label },
   { key: 'actual', header: 'Actual', value: (c) => c.actual, render: (c) => formatMoney(c.actual), align: 'right' },
   { key: 'budget', header: 'Budget', value: (c) => c.budget, render: (c) => formatMoney(c.budget), align: 'right' },
   {
@@ -81,6 +81,9 @@ export default function App360Page() {
   const [, setTicket] = useTicketParam();
   const data = app360.data;
   const app = data?.app;
+  // The API always returns the 12 trend months; months with neither actual nor budget are not cost data.
+  const costMonths = (data?.cost ?? []).filter((c) => c.actual !== null || c.budget !== null).length;
+  const hasCost = costMonths > 0;
   const definitions = meta.data?.definitions ?? {};
   const openTicketColumns = useMemo(() => ticketColumns({ showApp: false }), []);
   const findings = useMemo(
@@ -153,7 +156,13 @@ export default function App360Page() {
           </ChartCard>
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 5 }}>
-          <ChartCard title="Cost vs budget" description="By cost category" loading={app360.loading} empty={!data?.cost.length} height={230}>
+          <ChartCard
+            title="Monthly cost vs budget"
+            description="Last 12 months"
+            loading={app360.loading}
+            empty={!hasCost}
+            height={230}
+          >
             <BarChart data={data?.cost ?? []} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="label" />
@@ -171,7 +180,7 @@ export default function App360Page() {
         <Tabs.List mb="sm">
           <Tabs.Tab value="tickets">Open tickets ({data?.open_tickets.length ?? 0})</Tabs.Tab>
           <Tabs.Tab value="changes">Changes ({data?.changes.length ?? 0})</Tabs.Tab>
-          <Tabs.Tab value="cost">Cost ({data?.cost.length ?? 0})</Tabs.Tab>
+          <Tabs.Tab value="cost">Cost ({costMonths})</Tabs.Tab>
           <Tabs.Tab value="contracts">Contracts ({data?.contracts.length ?? 0})</Tabs.Tab>
           <Tabs.Tab value="licenses">Licences ({data?.licenses.length ?? 0})</Tabs.Tab>
           <Tabs.Tab value="jira">Jira ({data?.jira.length ?? 0})</Tabs.Tab>

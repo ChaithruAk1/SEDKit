@@ -32,7 +32,7 @@ export function CategoryPair({ ticket }: { ticket: TicketRow }) {
           {ticket.am_category ? humanize(ticket.am_category) : '–'}
           {ticket.am_subcategory ? ` / ${humanize(ticket.am_subcategory)}` : ''}
         </Text>
-        <ProvenanceBadge runId={ticket.label_run_id} confidence={ticket.label_confidence} />
+        <ProvenanceBadge runId={ticket.label_run_id} status={ticket.label_run_status} confidence={ticket.label_confidence} />
       </Group>
     </Stack>
   );

@@ -93,7 +93,11 @@ function Body({ ticket }: { ticket: TicketDetail }) {
                 {ticket.am_category ? humanize(ticket.am_category) : 'Not triaged'}
                 {ticket.am_subcategory ? ` / ${humanize(ticket.am_subcategory)}` : ''}
               </span>
-              <ProvenanceBadge runId={ticket.label_run_id} confidence={ticket.label_confidence} />
+              <ProvenanceBadge
+                runId={ticket.label_run_id}
+                status={ticket.label_run_status}
+                confidence={ticket.label_confidence}
+              />
             </Group>
           </Field>
         </SimpleGrid>
@@ -143,7 +147,12 @@ function Body({ ticket }: { ticket: TicketDetail }) {
 
 export function TicketDrawer() {
   const [ticketId, setTicketId] = useTicketParam();
-  const detail = useApi(ticketId ? '/api/ops/tickets/{ticket_id}' : null, { params: { ticket_id: ticketId } });
+  const { filters } = useFilters();
+  // Unreviewed AI labels only with "Include AI drafts" (the API also leaves out rejected runs and outdated labels).
+  const detail = useApi(ticketId ? '/api/ops/tickets/{ticket_id}' : null, {
+    params: { ticket_id: ticketId },
+    query: filters.include_drafts ? { include_drafts: true } : {},
+  });
   const ticket = detail.data && detail.data.ticket_id === ticketId ? detail.data : undefined;
   return (
     <Drawer

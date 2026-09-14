@@ -1304,7 +1304,10 @@ export interface components {
             occurrences: number;
             /** Raw Value */
             raw_value: string;
-            /** Score */
+            /**
+             * Score
+             * @description Suggestion similarity, 0-100 (rapidfuzz)
+             */
             score: number | null;
             /** Suggestion */
             suggestion: string | null;

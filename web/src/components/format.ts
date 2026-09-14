@@ -80,9 +80,19 @@ export function formatSigned(value: number | null | undefined, digits = 1): stri
 }
 
 /** Format a value according to a metric unit. */
+/**
+ * Money units: 'eur' (report facts), 'currency', 'money', or the base currency code (the API sends it in lower case,
+ * e.g. 'usd', as the unit of money KPIs).
+ */
+export function isMoneyUnit(unit: string | null | undefined): boolean {
+  const u = unit?.toLowerCase();
+  return u === 'eur' || u === 'currency' || u === 'money' || u === baseCurrency.toLowerCase();
+}
+
 export function formatByUnit(value: number | string | null | undefined, unit: string | null | undefined): string {
   if (value === null || value === undefined) return DASH;
   if (typeof value === 'string') return value;
+  if (isMoneyUnit(unit)) return formatMoney(value, { compact: Math.abs(value) >= 100_000 });
   switch (unit) {
     case 'pct':
       return formatPct(value);
@@ -94,10 +104,6 @@ export function formatByUnit(value: number | string | null | undefined, unit: st
       return formatHours(value);
     case 'days':
       return formatDays(value);
-    case 'eur':
-    case 'currency':
-    case 'money':
-      return formatMoney(value, { compact: Math.abs(value) >= 100_000 });
     case 'count':
       return formatInt(value);
     default:
@@ -109,7 +115,7 @@ export function formatByUnit(value: number | string | null | undefined, unit: st
 export function formatDelta(value: number | null | undefined, unit: string | null | undefined): string {
   if (!isNumber(value)) return DASH;
   if (unit === 'pct' || unit === 'pp') return formatPp(value);
-  if (unit === 'eur' || unit === 'currency' || unit === 'money') {
+  if (isMoneyUnit(unit)) {
     return `${value > 0 ? '+' : ''}${formatMoney(value, { compact: Math.abs(value) >= 100_000 })}`;
   }
   if (unit === 'hours') return `${formatSigned(value)} h`;

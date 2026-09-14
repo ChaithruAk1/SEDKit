@@ -7,7 +7,7 @@
  * `useSearchParam`.
  */
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router';
+import { useMatches, useSearchParams } from 'react-router';
 
 import type { CommonFilterQuery } from '../api/types';
 
@@ -87,10 +87,33 @@ export interface FiltersApi {
   clearFilters: () => void;
 }
 
+/** Filters with every key the page does not declare reset, so a filter the page does not show never changes it. */
+export function onlyKeys(filters: Filters, keys: readonly FilterKey[] | null): Filters {
+  if (keys === null) return filters;
+  const out: Filters = { ...EMPTY_FILTERS };
+  for (const key of keys) (out as unknown as Record<FilterKey, unknown>)[key] = filters[key];
+  return out;
+}
+
+/** The global filters the current page declares (route handle `filters`); null outside a page route. */
+function useRouteFilterKeys(): readonly FilterKey[] | null {
+  const matches = useMatches();
+  for (let i = matches.length - 1; i >= 0; i -= 1) {
+    const handle = matches[i]?.handle as { filters?: readonly FilterKey[] } | undefined;
+    if (handle?.filters) return handle.filters;
+  }
+  return null;
+}
+
+/**
+ * The page's filters. Filters in the URL that the page does not declare (carried over from another page by nav
+ * links) stay in the URL for the next page but are not applied here: `filters` and `query` only hold declared keys.
+ */
 export function useFilters(): FiltersApi {
   const [params, setParams] = useSearchParams();
   const serialized = params.toString();
-  const filters = useMemo(() => parseFilters(new URLSearchParams(serialized)), [serialized]);
+  const keys = useRouteFilterKeys(); // the route's static array: a stable dependency
+  const filters = useMemo(() => onlyKeys(parseFilters(new URLSearchParams(serialized)), keys), [serialized, keys]);
   const query = useMemo(() => toQuery(filters), [filters]);
   const search = useMemo(() => filterSearch(new URLSearchParams(serialized)), [serialized]);
 
