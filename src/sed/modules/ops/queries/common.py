@@ -22,7 +22,6 @@ from sed.errors import ValidationFailed
 from sed.paths import Paths
 from sed.settings import Settings, load_settings
 
-TICKET_KINDS = ("incident", "sc_req_item", "change_request", "problem")
 FINDINGS_SCAN_LIMIT = 100_000
 
 # Definitions for KPI keys that are not in sed.metrics.METRICS (shown as dashboard tooltips).
@@ -98,17 +97,7 @@ def marks(values: Sequence[Any]) -> str:
 
 def ticket_filter_sql(f: CommonFilters, alias: str = "t") -> tuple[list[str], list[Any]]:
     """WHERE clauses for app (repeatable), family, vendor and group on a ticket alias."""
-    clauses: list[str] = []
-    params: list[Any] = []
-    if f.app:
-        clauses.append(f"{alias}.app_id IN ({marks(f.app)})")
-        params += list(f.app)
-    if f.family:
-        clauses.append(f"{alias}.app_id IN (SELECT app_id FROM application WHERE app_family = ?)")
-        params.append(f.family)
-    if f.vendor:
-        clauses.append(f"{alias}.vendor_id = ?")
-        params.append(f.vendor)
+    clauses, params = entity_filter_sql(f, alias)
     if f.group:
         clauses.append(f"{alias}.assignment_group = ?")
         params.append(f.group)
@@ -276,10 +265,6 @@ class Bucketer:
 
 def pct(num: float, den: float) -> float | None:
     return round(100.0 * num / den, 2) if den else None
-
-
-def rounded(value: float | None, digits: int = 2) -> float | None:
-    return None if value is None else round(value, digits)
 
 
 def kpi(
