@@ -62,9 +62,13 @@ def steps() -> list[tuple[str, list[str] | None, str]]:
 
     web = REPO / "web" / "package.json"
     npm = shutil.which("npm")
+    if web.exists() and npm and not (REPO / "web" / "node_modules").is_dir():
+        out.append(("web install (npm ci)", [npm, "--prefix", "web", "ci"], ""))
+    out.append(("generated contracts", [PY, "scripts/codegen.py", "--check"], ""))
     if web.exists() and npm:
         out.append(("web typecheck", [npm, "--prefix", "web", "run", "typecheck"], ""))
         out.append(("web build", [npm, "--prefix", "web", "run", "build"], ""))
+        out.append(("web checks", [npm, "--prefix", "web", "run", "--if-present", "check"], ""))
     else:
         out.append(("web", None, "no web app yet"))
     return out
