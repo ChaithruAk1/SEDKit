@@ -23,7 +23,9 @@ def wilson_interval(p: float, n: int, z: float = Z95) -> tuple[float, float]:
     denom = 1.0 + z2 / n
     centre = (p + z2 / (2 * n)) / denom
     margin = z * math.sqrt(p * (1.0 - p) / n + z2 / (4 * n * n)) / denom
-    return max(0.0, centre - margin), min(1.0, centre + margin)
+    low = 0.0 if p == 0.0 else max(0.0, centre - margin)
+    high = 1.0 if p == 1.0 else min(1.0, centre + margin)
+    return low, high
 
 
 def weighted_accuracy(items: Iterable[tuple[float, bool]]) -> float | None:
