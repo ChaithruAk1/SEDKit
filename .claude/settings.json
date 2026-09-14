@@ -1,0 +1,17 @@
+{
+  "env": {
+    "UV_NO_SYNC": "1",
+    "PYTHONUTF8": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(uv run amkit:*)",
+      "PowerShell(uv run amkit:*)",
+      "Read(./.claude/skills/**)"
+    ],
+    "deny": [
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}

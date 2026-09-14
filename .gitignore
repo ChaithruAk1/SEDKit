@@ -1,0 +1,29 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Web
+web/node_modules/
+web/dist/
+
+# Data never lives in the repo (DATA_DIR is %LOCALAPPDATA%\amkit\<profile>)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+data/
+out/
+*.log
+
+# Secrets / machine-local config
+.env
+.env.*
+.claude/settings.local.json

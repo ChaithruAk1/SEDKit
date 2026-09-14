@@ -1,0 +1,32 @@
+# Deterministic rule-origin findings ("system-detected"). Always published; only a human can acknowledge
+# or suppress them. Thresholds are synthetic defaults.
+version: 1
+rules:
+  notice_deadline:
+    enabled: true
+    kind: renewal_risk
+    max_days_to_notice: 45
+    critical_days: 21
+  renewal_horizon:
+    enabled: true
+    kind: renewal_risk
+    max_days_to_end: 180
+  license_utilization:
+    enabled: true
+    kind: license_risk
+    low: 0.70
+    high: 1.00
+  vendor_sla_decline:
+    enabled: true
+    kind: vendor_risk
+    delta_pp: -5.0
+    window_months: 3
+  cost_variance:
+    enabled: true
+    kind: cost_risk
+    variance_pct: 25.0
+  quiet_app:
+    enabled: true
+    kind: rationalization
+    months_without_tickets: 5
+    min_annual_cost_base: 50000

@@ -1,0 +1,34 @@
+# App-owner taxonomy used by AI triage (am_category / am_subcategory).
+# The ServiceNow category/subcategory on each ticket is kept untouched and reported side by side.
+version: 1
+categories:
+  access:
+    description: Login, SSO, authorization, role or password problems
+    subcategories: [login_failure, sso, authorization, password_reset, account_locked]
+  integration:
+    description: Interfaces between systems, message queues, API calls, file transfers
+    subcategories: [interface_timeout, message_failure, file_transfer, api_error, mapping_error]
+  performance:
+    description: Slowness, timeouts in the UI, resource exhaustion
+    subcategories: [slow_ui, timeout, resource_exhaustion]
+  data_quality:
+    description: Wrong, missing or duplicated business data
+    subcategories: [missing_data, wrong_data, duplicate_data, master_data]
+  batch_job:
+    description: Scheduled jobs, month-end runs, reports that did not complete
+    subcategories: [job_failure, job_delay, report_generation]
+  defect:
+    description: Application bug or regression after a release or change
+    subcategories: [functional_bug, regression, ui_bug]
+  how_to:
+    description: User question, training need, documentation request
+    subcategories: [usage_question, training, documentation]
+  infrastructure:
+    description: Server, network, storage, certificate or hosting problems
+    subcategories: [server, network, storage, certificate, hosting]
+  other:
+    description: Does not fit any category above
+    subcategories: [other]
+
+# Values AI may set in misfiled_as when a ticket is filed under the wrong ServiceNow record type.
+misfiled_as: [request, change, problem, none]

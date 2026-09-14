@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\<you>\\AppData\\Local\\amkit\\synthetic\\runs"
+    ],
+    "allow": [
+      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/runs/**)",
+      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/runs/**)"
+    ],
+    "deny": [
+      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/ground_truth/**)",
+      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/ground_truth/**)",
+      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/secret/**)",
+      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/secret/**)",
+      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/inbox/**)",
+      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/inbox/**)",
+      "Read(//c/Users/<you>/AppData/Local/amkit/synthetic/config/**)",
+      "Edit(//c/Users/<you>/AppData/Local/amkit/synthetic/config/**)"
+    ]
+  }
+}

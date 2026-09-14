@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.xlsx binary
+*.xls binary
+*.pptx binary
+*.potx binary
+*.parquet binary
+*.png binary
+# Byte-hashed synthetic CSV fixtures must not be touched by autocrlf
+tests/fixtures/**/*.csv -text

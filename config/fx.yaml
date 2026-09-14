@@ -1,0 +1,8 @@
+# Static conversion rates into the base currency (synthetic defaults).
+version: 1
+base: EUR
+rates:
+  EUR: 1.0
+  USD: 0.92
+  GBP: 1.17
+  CHF: 1.05

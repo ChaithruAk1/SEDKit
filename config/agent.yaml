@@ -1,0 +1,6 @@
+# How Claude Code agents invoke the amkit CLI. This is MACHINE-level (it drives the repo-wide CLAUDE.md block
+# and the shared settings.local.json): override it in %LOCALAPPDATA%\amkit\agent.yaml on a machine where uv is
+# blocked, then run `amkit init` to re-render. Use forward slashes: the Bash tool is Git Bash.
+command_prefix: uv run amkit
+fallback_prefix: .venv/Scripts/python -m amkit
+shell_tool: Bash

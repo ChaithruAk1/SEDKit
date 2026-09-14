@@ -1,0 +1,3 @@
+# Assignment group -> vendor mapping (fictional synthetic defaults; real mapping in DATA_DIR\config).
+version: 1
+groups: {}

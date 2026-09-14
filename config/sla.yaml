@@ -1,0 +1,14 @@
+# Fallback SLA targets (calendar hours) used only when neither task_sla nor made_sla is available.
+version: 1
+resolution_hours_by_priority:
+  1: 4
+  2: 8
+  3: 40
+  4: 120
+  5: 240
+response_hours_by_priority:
+  1: 0.5
+  2: 1
+  3: 8
+  4: 24
+  5: 48

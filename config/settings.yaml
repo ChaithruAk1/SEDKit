@@ -1,0 +1,19 @@
+# Synthetic defaults. Real values go in DATA_DIR\config\settings.yaml (deep-merged over this file).
+base_currency: EUR
+fiscal_year_start: 1          # month number; 1 = calendar year (2026-Q3 = Jul–Sep)
+reporting_tz: Europe/Paris    # week/month/quarter bucketing; storage is always UTC
+display_names: false          # real profile only: keep a local pid -> name table for dashboard/attention lists
+pii_mode: pseudonymize        # pseudonymize | drop | keep (synthetic only)
+as_of: null                   # optional fixed as-of date (YYYY-MM-DD) for reproducible reports
+
+thresholds:
+  aged_ticket_days: 30
+  sla_warning_ratio: 0.8      # open tickets at >= 80% of their SLA target appear in Needs attention
+  reassignment_pingpong: 3
+
+ai:
+  triage_batch_size: 100
+  triage_packet_max_chars: 40000   # re-tuned from the M2 walking-skeleton Read-limit measurement
+  max_items_per_run: 8000
+  backfill_days: 90
+  claim_lease_hours: 6
