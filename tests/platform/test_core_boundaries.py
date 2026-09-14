@@ -18,7 +18,6 @@ REGISTRY_FILES = {"modules/__init__.py", "modules/contract.py", "modules/cli.py"
 # Legacy files that still reach ops code directly. Every entry is debt: remove it when the file is migrated.
 ALLOWLIST = {
     "cli.py",  # legacy top-level ops commands (metrics, attention, analytics)
-    "ingest/loader.py",  # registry-driven ingest lands with ws7-ingest
 }
 
 
