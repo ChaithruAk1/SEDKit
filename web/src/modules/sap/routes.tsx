@@ -11,7 +11,7 @@ export const SAP_ROUTES = [
   {
     path: 'sap/tickets',
     title: 'SAP L3 tickets',
-    filters: ['period', 'as_of'],
+    filters: ['period', 'as_of', 'include_drafts'], // include_drafts: the AI-assisted subcategory breakdown
     load: () => import('./pages/SapTicketsPage'),
   },
   {
