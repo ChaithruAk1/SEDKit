@@ -1,4 +1,4 @@
-"""SAP dashboard read models: the /api/sap responses built from the L3 queries (read-only, no refresh)."""
+"""SAP dashboard read models: the /api/sap responses built from the L3 and change queries (read-only)."""
 
 from __future__ import annotations
 
@@ -12,20 +12,31 @@ from sed.modules.sap.api_models import (
     SapAreaRow,
     SapAttentionRow,
     SapBacklogAreaRow,
+    SapChangeRow,
+    SapChangesOut,
+    SapFailedImportRow,
     SapFlowRow,
+    SapImportIncidentsRow,
+    SapImportWeekRow,
     SapL3Out,
     SapLandscapeRow,
     SapOption,
     SapOverview,
     SapSlaPriorityRow,
+    SapStageRow,
+    SapStuckChangeRow,
     SapTrendRow,
+    SapUrgentAreaRow,
+    SapWaitingTransportRow,
 )
+from sed.modules.sap.charm import load_charm
 from sed.modules.sap.definitions import DEFINITIONS
-from sed.modules.sap.queries import l3
+from sed.modules.sap.queries import changes, l3
 from sed.modules.sap.scope import Scope, load_scope
 
 FLOW_WEEKS = 8
 FINDING_LIMIT = 200
+LIST_LIMIT = 100
 
 
 def _kpi(key: str, label: str, value: float | int | None, unit: str, compare: float | None = None) -> Kpi:
@@ -58,6 +69,8 @@ def overview(ctx: Context) -> SapOverview:
     backlog = l3.backlog(ctx.conn, scope, at)
     p1p2_open = metrics.backlog(ctx.conn, l3.filters(scope, priorities=[1, 2]), at)["total"]
     findings = sap_findings(ctx)
+    cs = changes.load(ctx.conn, load_charm(ctx.paths, scope), at)
+    change_summary = changes.summary(ctx.conn, cs, week)
     kpis = [
         _kpi("sap.l3.backlog", "Open SAP incidents", backlog["total"], "count"),
         _kpi(
@@ -78,6 +91,15 @@ def overview(ctx: Context) -> SapOverview:
         ),
         _kpi("sap.l3.p1p2.open", "Open P1/P2", p1p2_open, "count"),
         _kpi("sap.findings.count", "System-detected SAP risks", len(findings), "count"),
+        _kpi("sap.changes.open", "Open SAP changes", change_summary["open"], "count"),
+        _kpi(
+            "sap.changes.urgent_ratio_8w",
+            "Urgent changes (8 weeks)",
+            change_summary["urgent_ratio_8w"],
+            "pct",
+            change_summary["urgent_ratio_previous_8w"],
+        ),
+        _kpi("sap.transports.failed_4w", "Failed transport imports (28 days)", change_summary["failed_4w"], "count"),
     ]
     return SapOverview(
         as_of=ctx.as_of.isoformat(),
@@ -125,4 +147,77 @@ def l3_view(ctx: Context, area: str | None, landscape: str | None, weeks: int) -
         ],
         attention_count=attention["count"],
         attention=[SapAttentionRow(**{k: r.get(k) for k in SapAttentionRow.model_fields}) for r in attention["items"]],
+    )
+
+
+def _at(ctx: Context) -> str:
+    at_iso = ctx.as_of_end_iso
+    if ctx.filters.period:
+        at_iso = min(ctx.parse(ctx.filters.period).end_iso, at_iso)
+    return at_iso
+
+
+def changes_view(ctx: Context, area: str | None, landscape: str | None, weeks: int) -> SapChangesOut:
+    scope: Scope = load_scope(ctx.paths)
+    scope.check_area(area)
+    scope.check_landscape(landscape)
+    scope = scope.resolve(ctx.conn)
+    at_iso = _at(ctx)
+    cs = changes.load(ctx.conn, load_charm(ctx.paths, scope), parse_utc(at_iso))
+    week = series_end(ctx, "week")
+    periods = trend_periods(week, weeks)
+    window = trend_periods(week, 8)
+    previous = [window[0].previous(k) for k in range(8, 0, -1)]
+    selected = changes.select(cs, area=area, landscape=landscape)
+    s = changes.summary(ctx.conn, cs, week, area=area, landscape=landscape)
+    kpis = [
+        _kpi("sap.changes.open", "Open changes", s["open"], "count"),
+        _kpi(
+            "sap.changes.urgent_ratio_8w",
+            "Urgent changes (8 weeks)",
+            s["urgent_ratio_8w"],
+            "pct",
+            s["urgent_ratio_previous_8w"],
+        ),
+        _kpi("sap.changes.stuck", "Stuck changes", s["stuck"], "count"),
+        _kpi("sap.changes.without_jira", "Without a Jira story", s["without_jira"], "count"),
+        _kpi("sap.changes.prod_imports", f"Production imports ({week.label})", s["prod_imports_week"], "count"),
+        _kpi("sap.transports.failed_4w", "Failed imports (28 days)", s["failed_4w"], "count"),
+        _kpi("sap.transports.waiting", "Waiting for production", s["waiting"], "count"),
+    ]
+    without = changes.without_jira(cs, selected)
+    since = periods[0].start_iso
+    return SapChangesOut(
+        as_of=ctx.as_of.isoformat(),
+        at=at_iso,
+        period=week.label,
+        area=area,
+        landscape=landscape,
+        areas=_options(scope.area_labels, l3.area_order(scope)),
+        landscapes=_options(scope.landscape_labels, l3.landscape_order(scope)),
+        kpis=kpis,
+        stages=[SapStageRow(**r) for r in changes.stage_matrix(selected)],
+        urgent_by_area=[
+            SapUrgentAreaRow(**r) for r in changes.urgent_by_area(cs, window, previous, landscape=landscape)
+        ],
+        production_imports=[
+            SapImportWeekRow(**r) for r in changes.production_imports(cs, periods, area=area, landscape=landscape)
+        ],
+        stuck=[SapStuckChangeRow(**r) for r in changes.stuck(cs, selected)[:LIST_LIMIT]],
+        waiting=[
+            SapWaitingTransportRow(**r)
+            for r in changes.waiting_for_production(cs, area=area, landscape=landscape)[:LIST_LIMIT]
+        ],
+        failed=[
+            SapFailedImportRow(**r)
+            for r in changes.failed_imports(cs, since, area=area, landscape=landscape)[:LIST_LIMIT]
+        ],
+        incidents_after_imports=[
+            SapImportIncidentsRow(**r)
+            for r in changes.incidents_after_imports(
+                ctx.conn, cs, since, at_iso, area=area, landscape=landscape, limit=LIST_LIMIT
+            )
+        ],
+        without_jira_count=len(without),
+        without_jira=[SapChangeRow(**r) for r in without[:LIST_LIMIT]],
     )

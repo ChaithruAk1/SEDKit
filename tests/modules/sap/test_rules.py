@@ -56,7 +56,8 @@ def test_planted_ewm_risks_fire_and_nothing_else(sap_profile):
 
 def test_compute_matches_the_persisted_findings(sap_profile, ro_conn):
     computed = rules.compute(ro_conn, sap_profile.paths, AS_OF)
-    assert {f["stable_key"] for f in computed} == set(_published(sap_profile.paths))
+    kinds = tuple(modules.get("sap").finding_kinds)
+    assert {f["stable_key"] for f in computed} == set(_published(sap_profile.paths, kinds))
     assert db.get_meta(ro_conn, rule_findings.state_key("sap")) == AS_OF.isoformat()
 
 
@@ -153,3 +154,52 @@ def test_findings_for_an_older_as_of_are_computed_read_only(sap_profile_rw):
     assert GROWTH in {f["stable_key"] for f in mid}  # W26-W33: six growth weeks (W28-W33) are enough
     assert next(f for f in mid if f["stable_key"] == GROWTH)["finding_id"]  # the persisted id is reused
     assert tuple(before) == tuple(after) and state == AS_OF.isoformat()
+
+
+CHANGE_KINDS = ("sap_change_risk",)
+
+
+def test_planted_change_risks_fire_and_nothing_else(sap_profile, sap_truth):
+    found = _published(sap_profile.paths, CHANGE_KINDS)
+    assert set(found) == set(sap_truth["patterns"]["changes"]["expected_findings"])
+    cp1 = sap_truth["patterns"]["changes"]["CP1"]
+    failed = found[f"sap_change_risk:failed_import:{cp1['transport']}:HP1"]
+    assert (failed["subject_type"], failed["subject_id"], failed["severity"]) == (
+        "sap_transport",
+        cp1["transport"],
+        "high",
+    )
+    assert _evidence(failed) == {
+        f"sap.transport.{cp1['transport']}.return_code": 8,
+        f"sap.transport.{cp1['transport']}.incidents_after": cp1["incidents"],
+    }
+    assert "14 SAP incidents within 72 h" in failed["title"]
+    urgent = _evidence(found["sap_change_risk:urgent_ratio:mm"])
+    assert urgent["sap.changes.mm.urgent_ratio_pct"] >= 50 and urgent["sap.changes.mm.urgent_ratio_previous_pct"] <= 15
+    assert _evidence(found["sap_change_risk:stuck:pp_qm"])["sap.changes.pp_qm.stuck"] == 4
+    assert found["sap_change_risk:stuck:pp_qm"]["severity"] == "medium"  # 45 days against 30: under twice the limit
+    assert _evidence(found["sap_change_risk:waiting:ecc"])["sap.transports.ecc.waiting"] == 6
+
+
+def test_change_rule_thresholds_and_switches(sap_profile_rw):
+    paths = sap_profile_rw.paths
+    write_sap_config(
+        paths,
+        "risk_rules.yaml",
+        {
+            "rules": {
+                "change_stuck": {"min_changes": 5},
+                "urgent_ratio": {"enabled": False},
+                "failed_production_import": {"lookback_days": 1},
+                "waiting_for_production": {"min_transports": 7},
+            }
+        },
+    )
+    _refresh(paths)
+    assert _published(paths, CHANGE_KINDS) == {}
+    write_sap_config(paths, "charm.yaml", {"thresholds": {"stuck_days": {"in_test": 60}}})
+    write_sap_config(paths, "risk_rules.yaml", {"rules": {"waiting_for_production": {"min_transports": 1}}})
+    _refresh(paths)
+    found = set(_published(paths, CHANGE_KINDS))
+    assert "sap_change_risk:stuck:pp_qm" not in found  # 45 days in test is within a 60-day limit
+    assert {"sap_change_risk:urgent_ratio:mm", "sap_change_risk:waiting:ecc"} <= found

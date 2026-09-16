@@ -23,6 +23,11 @@ const LOWER_IS_BETTER = new Set([
   'sap.l3.mttr.median_h',
   'sap.l3.p1p2.open',
   'sap.findings.count',
+  'sap.changes.urgent_ratio_8w',
+  'sap.changes.stuck',
+  'sap.changes.without_jira',
+  'sap.transports.failed_4w',
+  'sap.transports.waiting',
 ]);
 
 export interface KpiTileProps {

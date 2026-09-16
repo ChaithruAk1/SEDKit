@@ -39,3 +39,13 @@ custom_fields:
 landscapes:
   - {code: ecc, label: "SAP ECC", apps: [APM0990001]}
   - {code: s4, label: "SAP S/4HANA", apps: [APM0990002]}
+
+# SAP systems by system id (as in ChaRM and transport exports), with their landscape and role (dev, qa, preprod, prod,
+# other). Transports into unlisted systems show as landscape "unknown".
+systems:
+  - {sid: ED1, landscape: ecc, role: dev}
+  - {sid: EQ1, landscape: ecc, role: qa}
+  - {sid: EP1, landscape: ecc, role: prod}
+  - {sid: HD1, landscape: s4, role: dev}
+  - {sid: HQ1, landscape: s4, role: qa}
+  - {sid: HP1, landscape: s4, role: prod}

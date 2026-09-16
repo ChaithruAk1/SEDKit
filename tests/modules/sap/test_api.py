@@ -26,7 +26,17 @@ OVERVIEW_KPIS = [
     "sap.l3.mttr.median_h",
     "sap.l3.p1p2.open",
     "sap.findings.count",
+    "sap.changes.open",
+    "sap.changes.urgent_ratio_8w",
+    "sap.transports.failed_4w",
 ]
+EXPECTED_FINDINGS = {
+    ("sap_backlog_risk", "sap_area", "ewm"),
+    ("sap_change_risk", "sap_area", "pp_qm"),
+    ("sap_change_risk", "sap_area", "mm"),
+    ("sap_change_risk", "sap_transport", None),
+    ("sap_change_risk", "sap_landscape", "ecc"),
+}
 
 
 @pytest.fixture(scope="module")
@@ -62,15 +72,17 @@ def test_overview_kpis_areas_landscapes_and_findings(client, sap_profile, ro_con
     weekly = l3.week_kpis(ro_conn, scope, week, [week.previous(k) for k in range(4, 0, -1)], "made_sla")
     assert kpis["sap.l3.opened"]["value"] == weekly["opened"]
     assert kpis["sap.l3.opened"]["compare"] == weekly["opened_avg"]
-    assert kpis["sap.findings.count"]["value"] == len(body["findings"]) == 2
+    assert kpis["sap.findings.count"]["value"] == len(body["findings"]) == 6
 
     assert [a["area"] for a in body["areas"]][:9] == [a.code for a in scope.config.areas]
     assert sum(a["open"] for a in body["areas"]) == backlog["total"]
     assert {x["landscape"] for x in body["landscapes"]} == {"ecc", "s4"}
     assert sum(x["open"] for x in body["landscapes"]) == backlog["total"]
-    assert {(f["kind"], f["subject_type"], f["subject_id"]) for f in body["findings"]} == {
-        ("sap_backlog_risk", "sap_area", "ewm")
+    seen = {
+        (f["kind"], f["subject_type"], None if f["subject_type"] == "sap_transport" else f["subject_id"])
+        for f in body["findings"]
     }
+    assert seen == EXPECTED_FINDINGS
     assert all(f["system_detected"] and f["origin"] == "rule" for f in body["findings"])
 
 
@@ -148,7 +160,11 @@ def test_attention_rows_open_the_ops_ticket_detail(client):
 def test_nav_lists_the_sap_pages(client):
     items = client.get("/api/nav").json()["items"]
     sap = [i for i in items if i["id"].startswith("sap.")]
-    assert [(i["id"], i["path"]) for i in sap] == [("sap.overview", "/sap"), ("sap.tickets", "/sap/tickets")]
+    assert [(i["id"], i["path"]) for i in sap] == [
+        ("sap.overview", "/sap"),
+        ("sap.tickets", "/sap/tickets"),
+        ("sap.changes", "/sap/changes"),
+    ]
     modules = {mod["key"]: mod for mod in client.get("/api/modules").json()["modules"]}
     assert modules["sap"]["enabled"] is True
 
@@ -174,3 +190,70 @@ def test_disabled_module_routes_are_not_served(sap_profile_rw):
     client = api_client(sap_profile_rw.paths)
     assert client.get("/api/sap/overview").status_code == 404
     assert not [i for i in client.get("/api/nav").json()["items"] if i["id"].startswith("sap.")]
+
+
+def test_changes_view_agrees_with_the_read_models(client, sap_profile, ro_conn, sap_truth):
+    from datetime import timedelta
+
+    from sed.calendar import iso_utc
+    from sed.modules.sap.charm import load_charm
+    from sed.modules.sap.queries import changes
+
+    body = get_ok(client, "/api/sap/changes", m.SapChangesOut)
+    assert body["period"] == "2026-W35" and body["area"] is None
+    kpis = {k["key"]: k for k in body["kpis"]}
+    assert list(kpis) == [
+        "sap.changes.open",
+        "sap.changes.urgent_ratio_8w",
+        "sap.changes.stuck",
+        "sap.changes.without_jira",
+        "sap.changes.prod_imports",
+        "sap.transports.failed_4w",
+        "sap.transports.waiting",
+    ]
+    assert all(k["definition"] for k in body["kpis"])
+    scope, settings, at = _env(sap_profile)
+    resolved = scope.resolve(ro_conn)
+    cs = changes.load(ro_conn, load_charm(sap_profile.paths, resolved), at)
+    week = parse_period("2026-W35", settings.reporting_tz, settings.fiscal_year_start)
+    summary = changes.summary(ro_conn, cs, week)
+    assert kpis["sap.changes.open"]["value"] == summary["open"] == sum(r["total"] for r in body["stages"])
+    assert kpis["sap.changes.urgent_ratio_8w"]["value"] == summary["urgent_ratio_8w"]
+    assert kpis["sap.changes.urgent_ratio_8w"]["compare"] == summary["urgent_ratio_previous_8w"]
+    assert kpis["sap.changes.stuck"]["value"] == len(body["stuck"]) == 4
+    assert kpis["sap.transports.waiting"]["value"] == len(body["waiting"]) == 6
+    assert kpis["sap.changes.without_jira"]["value"] == body["without_jira_count"] == 5
+    assert kpis["sap.transports.failed_4w"]["value"] == 1
+    assert len(body["production_imports"]) == 12 and body["production_imports"][-1]["period"] == "2026-W35"
+    cp1 = sap_truth["patterns"]["changes"]["CP1"]
+    assert body["incidents_after_imports"][0]["change_id"] == cp1["change_id"]
+    assert body["incidents_after_imports"][0]["incidents"] == cp1["incidents"]
+    assert {r["transport"] for r in body["failed"]} == {cp1["transport"]}
+    overview = {k["key"]: k["value"] for k in client.get("/api/sap/overview").json()["kpis"]}
+    for key in ("sap.changes.open", "sap.changes.urgent_ratio_8w", "sap.transports.failed_4w"):
+        assert overview[key] == kpis[key]["value"], key
+    assert iso_utc(at - timedelta(days=28)) < cp1_imported(ro_conn, cp1["transport"])
+
+
+def cp1_imported(conn, transport):
+    return conn.execute(
+        "SELECT imported_at FROM sap_transport_import WHERE transport = ? AND system_id = 'HP1'", (transport,)
+    ).fetchone()[0]
+
+
+def test_changes_view_filters_narrow(client):
+    full = get_ok(client, "/api/sap/changes", m.SapChangesOut)
+    mm = get_ok(client, "/api/sap/changes", m.SapChangesOut, area="mm")
+    assert mm["stuck"] == [] and mm["waiting"] == [] and mm["failed"] == []
+    assert {r["area"] for r in mm["incidents_after_imports"]} <= {"mm"}
+    assert mm["urgent_by_area"] == full["urgent_by_area"]  # the area comparison always covers every area
+    ecc = get_ok(client, "/api/sap/changes", m.SapChangesOut, landscape="ecc")
+    assert {r["landscape"] for r in ecc["waiting"]} == {"ecc"} and ecc["failed"] == []
+    s4 = get_ok(client, "/api/sap/changes", m.SapChangesOut, landscape="s4")
+    assert s4["waiting"] == [] and {r["system_id"] for r in s4["failed"]} == {"HP1"}
+    opened = {k["key"]: k["value"] for k in full["kpis"]}["sap.changes.open"]
+    parts = [{k["key"]: k["value"] for k in v["kpis"]}["sap.changes.open"] for v in (ecc, s4)]
+    unknown = get_ok(client, "/api/sap/changes", m.SapChangesOut, landscape="unknown")
+    assert sum(parts) + {k["key"]: k["value"] for k in unknown["kpis"]}["sap.changes.open"] == opened
+    for params in ({"area": "hr"}, {"landscape": "bw"}, {"weeks": 7}, {"weeks": 53}):
+        assert client.get("/api/sap/changes", params=params).status_code == 422, params

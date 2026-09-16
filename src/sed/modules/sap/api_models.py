@@ -110,3 +110,111 @@ class SapL3Out(ApiModel):
     sla_by_priority: list[SapSlaPriorityRow]
     attention_count: int
     attention: list[SapAttentionRow]
+
+
+class SapStageRow(ApiModel):
+    stage: str
+    label: str
+    normal: int
+    urgent: int
+    standard: int
+    defect_correction: int
+    general: int
+    other: int
+    total: int
+
+
+class SapUrgentAreaRow(ApiModel):
+    area: str
+    label: str
+    created: int
+    urgent: int
+    ratio_pct: float | None
+    previous_created: int
+    previous_urgent: int
+    previous_ratio_pct: float | None
+    delta_pp: float | None
+
+
+class SapImportWeekRow(ApiModel):
+    period: str
+    imports: int
+    failed: int
+    changes: int
+
+
+class SapChangeRow(ApiModel):
+    change_id: str
+    title: str | None
+    change_type: str
+    type_label: str
+    area: str
+    area_label: str
+    landscape: str
+    stage: str
+    stage_label: str
+    created_at: str | None
+
+
+class SapStuckChangeRow(SapChangeRow):
+    status: str | None
+    days_in_status: float
+    threshold_days: int
+    jira_keys: list[str]
+
+
+class SapWaitingTransportRow(ApiModel):
+    transport: str
+    change_id: str | None
+    title: str | None
+    landscape: str
+    qa_system: str
+    qa_imported_at: str
+    days_waiting: float
+
+
+class SapFailedImportRow(ApiModel):
+    transport: str
+    system_id: str
+    role: str | None
+    landscape: str
+    return_code: int | None
+    imported_at: str
+    change_id: str | None
+    title: str | None
+    change_type: str | None
+
+
+class SapImportIncidentsRow(ApiModel):
+    change_id: str | None
+    transports: int
+    title: str | None
+    change_type: str | None
+    area: str
+    area_label: str
+    landscape: str
+    system_id: str
+    imported_at: str
+    return_code: int | None
+    incidents: int
+    numbers: list[str]
+
+
+class SapChangesOut(ApiModel):
+    as_of: str
+    at: str
+    period: str  # the last full week: production imports and urgent-ratio windows end with it
+    area: str | None
+    landscape: str | None
+    areas: list[SapOption]
+    landscapes: list[SapOption]
+    kpis: list[Kpi]
+    stages: list[SapStageRow]
+    urgent_by_area: list[SapUrgentAreaRow]
+    production_imports: list[SapImportWeekRow]
+    stuck: list[SapStuckChangeRow]
+    waiting: list[SapWaitingTransportRow]
+    failed: list[SapFailedImportRow]
+    incidents_after_imports: list[SapImportIncidentsRow]
+    without_jira_count: int
+    without_jira: list[SapChangeRow]

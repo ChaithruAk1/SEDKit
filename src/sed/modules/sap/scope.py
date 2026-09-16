@@ -50,6 +50,12 @@ class LandscapeDef(StrictModel):
     apps: list[str] = Field(default_factory=list)
 
 
+class SystemDef(StrictModel):
+    sid: str = Field(pattern=r"^[A-Z][A-Z0-9]{2}$")
+    landscape: str
+    role: Literal["dev", "qa", "preprod", "prod", "other"]
+
+
 class ScopeConfig(StrictModel):
     version: Literal[1] = 1
     areas: list[AreaDef] = Field(default_factory=list)
@@ -57,6 +63,7 @@ class ScopeConfig(StrictModel):
     categories: list[str] = Field(default_factory=list)
     custom_fields: list[CustomFieldDef] = Field(default_factory=list)
     landscapes: list[LandscapeDef] = Field(default_factory=list)
+    systems: list[SystemDef] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _consistent(self) -> ScopeConfig:
@@ -70,6 +77,14 @@ class ScopeConfig(StrictModel):
         problems += [f"group '{n}' is listed twice" for n in sorted({n for n in names if names.count(n) > 1})]
         apps = [a for x in self.landscapes for a in x.apps]
         problems += [f"app '{a}' is in two landscapes" for a in sorted({a for a in apps if apps.count(a) > 1})]
+        landscapes = {x.code for x in self.landscapes}
+        problems += [
+            f"system '{s.sid}' has unknown landscape '{s.landscape}'"
+            for s in self.systems
+            if s.landscape not in landscapes
+        ]
+        sids = [s.sid for s in self.systems]
+        problems += [f"system '{s}' is listed twice" for s in sorted({s for s in sids if sids.count(s) > 1})]
         if problems:
             raise ValueError("; ".join(problems))
         return self

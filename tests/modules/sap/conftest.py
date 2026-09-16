@@ -25,12 +25,16 @@ def ro_conn(sap_profile: Any):
 
 @pytest.fixture(scope="session")
 def sap_truth(sap_profile: Any) -> dict[str, Any]:
-    """Ground truth written by the SAP generator: `tickets` (number -> row) and `patterns`."""
+    """Ground truth written by the SAP generator: `tickets` (number -> row), `changes` (change id -> row), `patterns`
+    and `pii`."""
     folder: Path = sap_profile.ground_truth
     with (folder / "ticket_truth.csv").open(encoding="utf-8", newline="") as fh:
         tickets = {row["number"]: row for row in csv.DictReader(fh)}
+    with (folder / "change_truth.csv").open(encoding="utf-8", newline="") as fh:
+        changes = {row["change_id"]: row for row in csv.DictReader(fh)}
     return {
         "tickets": tickets,
+        "changes": changes,
         "patterns": json.loads((folder / "patterns.json").read_text(encoding="utf-8")),
         "pii": json.loads((folder / "pii_injections.json").read_text(encoding="utf-8")),
     }

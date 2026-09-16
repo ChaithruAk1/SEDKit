@@ -55,13 +55,21 @@ def test_same_seed_gives_identical_files(tmp_path):
 def test_file_set_and_counts(tmp_path):
     paths, result = _gen(tmp_path)
     files = sorted(inbox_manifest.load(paths.inbox)["sap"]["files"])
-    assert files[0] == "sap_business_apps.csv"
+    assert {"sap_business_apps.csv", "jira_export_SAPS4.csv"} <= set(files)
     assert f"sap_incident_active_{AS_OF.isoformat()}.csv" in files
     months = [f for f in files if f.startswith("sap_incident_2")]
     assert months[0] == "sap_incident_2025-03.csv" and months[-1] == "sap_incident_2026-08.csv" and len(months) == 18
     incidents = sum(len(_rows(paths.inbox / f)) for f in months)
     active = _rows(paths.inbox / f"sap_incident_active_{AS_OF.isoformat()}.csv")
-    assert result["counts"] == {"application": 2, "incident": incidents, "open_incident": len(active)}
+    changes = {r["change_id"] for f in files if f.startswith("sap_charm_changes_") for r in _rows(paths.inbox / f)}
+    imports = sum(len(_rows(paths.inbox / f)) for f in files if f.startswith("sap_transport_imports_"))
+    assert result["counts"] == {
+        "application": 2,
+        "incident": incidents,
+        "open_incident": len(active),
+        "change": len(changes),
+        "transport_import": imports,
+    }
     assert all(not r["resolved_at"] for r in active)
     truth = _rows(paths.ground_truth / "sap" / "ticket_truth.csv")
     assert len(truth) == incidents
@@ -155,7 +163,12 @@ def test_ground_truth_stays_outside_the_inbox(tmp_path):
     paths, result = _gen(tmp_path)
     truth = paths.ground_truth / "sap"
     assert Path(result["ground_truth"]) == truth
-    assert {p.name for p in truth.iterdir()} == {"ticket_truth.csv", "patterns.json", "pii_injections.json"}
+    assert {p.name for p in truth.iterdir()} == {
+        "ticket_truth.csv",
+        "change_truth.csv",
+        "patterns.json",
+        "pii_injections.json",
+    }
     assert not any("truth" in p.name or "pattern" in p.name for p in paths.inbox.iterdir())
     pii = json.loads((truth / "pii_injections.json").read_text(encoding="utf-8"))
     assert any("@example.com" in v for v in pii) and any(v.startswith("+33 6 ") for v in pii)
@@ -169,3 +182,38 @@ def test_refuses_the_real_profile(tmp_path):
 def test_as_of_before_anchor_is_refused(tmp_path):
     with pytest.raises(PreconditionFailed, match="on or after the pattern anchor"):
         generate(_paths(tmp_path), SynthRequest(as_of=date(2026, 8, 1), anchor=AS_OF))
+
+
+def test_change_exports_and_patterns(tmp_path):
+    paths, result = _gen(tmp_path)
+    files = sorted(inbox_manifest.load(paths.inbox)["sap"]["files"])
+    weekly = [f for f in files if f.startswith("sap_charm_changes_")]
+    days = [date.fromisoformat(f[18:28]) for f in weekly]
+    assert weekly and max(days) <= AS_OF
+    assert all(d.weekday() == 6 for d in days if d != AS_OF)  # Sunday-night deltas, plus the partial as-of week
+    truth = {r["change_id"]: r for r in _rows(paths.ground_truth / "sap" / "change_truth.csv")}
+    last: dict[str, dict[str, str]] = {}
+    for f in weekly:
+        for row in _rows(paths.inbox / f):
+            last[row["change_id"]] = row
+    assert set(last) == set(truth) and result["counts"]["change"] == len(truth)
+    stage_names = {"in_test": "To Be Tested", "ready_for_production": "Authorized for Production"}
+    for change_id, row in truth.items():
+        if row["stage_at_as_of"] in stage_names:
+            assert last[change_id]["status"] == stage_names[row["stage_at_as_of"]], change_id
+    patterns = _patterns(paths)["changes"]
+    assert len(patterns["CP3"]["changes"]) == 4 and len(patterns["CP4"]["transports"]) == 6
+    assert len(patterns["CP5"]["changes"]) == 5 and len(patterns["CN1"]["changes"]) == 10
+    assert sum(1 for r in truth.values() if r["pattern"] == "CP2") == 30
+    imports = [r for f in files if f.startswith("sap_transport_imports_") for r in _rows(paths.inbox / f)]
+    cp1 = [r for r in imports if r["transport"] == patterns["CP1"]["transport"] and r["system_id"] == "HP1"]
+    assert [r["return_code"] for r in cp1] == ["8"]
+    jira = _rows(paths.inbox / "jira_export_SAPS4.csv")
+    labelled = {label for row in jira for label in (row.get("Labels") or "").split() if label.startswith("charm-")}
+    assert not {f"charm-{c}" for c in patterns["CP5"]["changes"]} & labelled
+    small, large = _patterns(paths)["changes"], None
+    other, _ = _gen(tmp_path / "large", scale=0.3)
+    large = _patterns(other)["changes"]
+    for key in ("CP1", "CP2", "CP3", "CP4", "CP5", "CN1"):
+        assert small[key].keys() == large[key].keys(), key
+    assert small["CP2"] == large["CP2"] and small["CP1"]["incidents"] == large["CP1"]["incidents"]

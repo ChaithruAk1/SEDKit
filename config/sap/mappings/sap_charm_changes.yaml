@@ -1,0 +1,24 @@
+# SAP Solution Manager ChaRM change documents: list export of change documents, weekly deltas on "Changed On".
+# Each import that shows a change with a new user status adds a row to the status history (sap_change_status).
+name: sap_charm_changes
+target: sap_change
+load_mode: delta
+description: ChaRM change documents (weekly delta exports filtered on Changed On)
+match:
+  glob: ["sap_charm_changes_*.csv", "sap_charm_changes_*.xlsx"]
+source_tz: Europe/Paris
+fields:
+  change_id:        {from: [change_id, Transaction ID, Change Document ID], pii: none, required: true}
+  transaction_type: {from: [transaction_type, Transaction Type], pii: none}
+  title:            {from: [title, Description, Short Text], pii: free_text}
+  status:           {from: [status, User Status, Status], pii: none}
+  priority:         {from: [priority, Priority], pii: none}
+  component:        {from: [component, Component, Application Component], pii: none}
+  cycle:            {from: [cycle, Change Cycle, Release], pii: none}
+  created_at:       {from: [created_at, Created On], transform: datetime, pii: none}
+  changed_at:       {from: [changed_at, Changed On], transform: datetime, pii: none}
+  requester:        {from: [requester, Requester, Reported By], pii: person}
+  developer:        {from: [developer, Developer], pii: person}
+  change_manager:   {from: [change_manager, Change Manager], pii: person}
+  external_ref:     {from: [external_ref, External Reference], pii: none}
+  ticket_ref:       {from: [ticket_ref, ServiceNow Ticket, Incident Number], pii: none}

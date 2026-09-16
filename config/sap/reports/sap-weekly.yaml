@@ -12,6 +12,13 @@ kpis:
   - {fact: sap.l3.p1p2.opened}
   - {fact: sap.l3.attention.count}
   - {fact: sap.findings.count}
+  - {fact: sap.changes.open}
+  - {fact: sap.changes.urgent_ratio_8w, compare: sap.changes.urgent_ratio_previous_8w, delta: sap.changes.urgent_ratio_delta_pp}
+  - {fact: sap.changes.stuck}
+  - {fact: sap.changes.prod_imports}
+  - {fact: sap.transports.failed_4w}
+  - {fact: sap.transports.waiting}
+  - {fact: sap.changes.without_jira}
 sheets:
   - table: sap_l3_trend_12w
     sheet: Volume trend
@@ -29,6 +36,18 @@ sheets:
     conditional: [{column: pct, rule: "<", value: 90, style: bad}]
   - {table: sap_attention, sheet: Needs attention}
   - {table: sap_findings, sheet: Risks}
+  - {table: sap_change_stages, sheet: Change stages}
+  - table: sap_urgent_by_area
+    sheet: Urgent changes
+    conditional: [{column: delta_pp, rule: ">=", value: 15, style: bad}]
+  - table: sap_prod_imports_12w
+    sheet: Production imports
+    chart: {type: column, categories: period, series: [imports, failed], title: Production imports per week}
+  - {table: sap_transports_failed, sheet: Failed imports}
+  - {table: sap_incidents_after_imports, sheet: Incidents after imports}
+  - {table: sap_changes_stuck, sheet: Stuck changes}
+  - {table: sap_transports_waiting, sheet: Waiting for production}
+  - {table: sap_changes_without_jira, sheet: Changes without Jira}
 markdown:
   max_words: 250
 slides:
@@ -63,6 +82,39 @@ slides:
     title: SAP tickets needing attention
     table: sap_attention
     columns: [number, priority, area_label, app, age_days, reasons]
+  - kind: kpis
+    title: SAP changes and transports
+    kpis:
+      - {fact: sap.changes.open}
+      - {fact: sap.changes.urgent_ratio_8w, compare: sap.changes.urgent_ratio_previous_8w, delta: sap.changes.urgent_ratio_delta_pp}
+      - {fact: sap.changes.stuck}
+      - {fact: sap.changes.prod_imports}
+      - {fact: sap.transports.failed_4w}
+      - {fact: sap.transports.waiting}
+  - kind: bar_chart
+    title: Production imports, last 12 weeks
+    table: sap_prod_imports_12w
+    chart: {type: column, categories: period, series: [imports, failed], title: Production imports}
+  - kind: table
+    title: Failed transport imports
+    table: sap_transports_failed
+    columns: [transport, system_id, return_code, imported_at, change_id]
+  - kind: table
+    title: SAP incidents after production imports
+    table: sap_incidents_after_imports
+    columns: [change_id, system_id, imported_at, return_code, incidents]
+  - kind: table
+    title: Urgent share of new changes by area
+    table: sap_urgent_by_area
+    columns: [label, created, urgent, ratio_pct, previous_ratio_pct, delta_pp]
+  - kind: table
+    title: Stuck changes
+    table: sap_changes_stuck
+    columns: [change_id, area_label, status, days_in_status, threshold_days]
+  - kind: table
+    title: Transports waiting for production
+    table: sap_transports_waiting
+    columns: [transport, change_id, landscape, qa_system, days_waiting]
   - kind: findings
     title: System-detected SAP risks
     table: sap_findings

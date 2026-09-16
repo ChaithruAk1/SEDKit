@@ -1,0 +1,20 @@
+# Transport requests of ChaRM changes with their import into each system (one row per transport and target system).
+# The latest import per transport and system is kept, so a successful re-import replaces a failed one.
+name: sap_charm_transports
+target: sap_transport_import
+load_mode: delta
+description: Transport imports per system (monthly exports of import events)
+match:
+  glob: ["sap_transport_imports_*.csv", "sap_transport_imports_*.xlsx"]
+source_tz: Europe/Paris
+fields:
+  transport:      {from: [transport, Transport Request, Request], pii: none, required: true}
+  system_id:      {from: [system_id, Target System, System], pii: none, required: true}
+  change_id:      {from: [change_id, Change Document ID, Transaction ID], pii: none}
+  transport_type: {from: [transport_type, Request Type, Type], pii: none}
+  description:    {from: [description, Short Description, Description], pii: free_text}
+  owner:          {from: [owner, Owner], pii: person}
+  released_at:    {from: [released_at, Released On], transform: datetime, pii: none}
+  import_status:  {from: [import_status, Import Status], pii: none}
+  return_code:    {from: [return_code, Return Code, RC], transform: int, pii: none}
+  imported_at:    {from: [imported_at, Imported On, Import Date], transform: datetime, pii: none}

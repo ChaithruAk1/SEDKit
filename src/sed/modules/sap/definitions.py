@@ -7,6 +7,11 @@ SCOPE_TEXT = (
     "ServiceNow category or custom field."
 )
 
+CHARM_TEXT = (
+    "Change type, stage and area come from the exported transaction type, user status and component "
+    "(config/sap/charm.yaml)."
+)
+
 DEFINITIONS: dict[str, tuple[str, str]] = {
     "sap.l3.opened": ("count", f"SAP incidents opened in the period. {SCOPE_TEXT}"),
     "sap.l3.resolved": ("count", "SAP incidents resolved in the period."),
@@ -39,5 +44,44 @@ DEFINITIONS: dict[str, tuple[str, str]] = {
     "sap.area.weeks_growing": (
         "count",
         "Complete weeks in the rule window in which an SAP area received more than it closed.",
+    ),
+    "sap.changes.open": (
+        "count",
+        f"Open SAP changes: ChaRM change documents (requests for change excluded) whose stage is not confirmed or "
+        f"withdrawn. {CHARM_TEXT}",
+    ),
+    "sap.changes.urgent_ratio_8w": (
+        "pct",
+        "Urgent changes as a share of all changes (requests excluded) created in the last 8 complete weeks.",
+    ),
+    "sap.changes.stuck": (
+        "count",
+        "Open changes whose status has not changed for longer than their stage allows (config/sap/charm.yaml "
+        "thresholds.stuck_days); the status date is the first export that showed it.",
+    ),
+    "sap.changes.without_jira": (
+        "count",
+        "Open normal, urgent and defect-correction changes without a Jira story: no Jira key in the change and no "
+        "Jira issue of the SAP projects naming the change.",
+    ),
+    "sap.changes.prod_imports": (
+        "count",
+        "Imports of transports into production systems (role prod in config/sap/scope.yaml) in the week; the latest "
+        "import per transport and system counts.",
+    ),
+    "sap.transports.failed_4w": (
+        "count",
+        "Transport imports (any system) whose latest return code is at or above the failure code "
+        "(thresholds.failed_return_code), imported in the 28 days before the as-of date.",
+    ),
+    "sap.transports.waiting": (
+        "count",
+        "Transports of tested changes (ready for or in production) imported into QA without errors and not into "
+        "production longer than thresholds.waiting_for_production_days after the QA import.",
+    ),
+    "sap.changes.incidents_after_import": (
+        "count",
+        "SAP incidents of the same landscape (and the change's area, when known) opened within "
+        "thresholds.incident_window_hours after a production import. A correlation signal, not causation.",
     ),
 }

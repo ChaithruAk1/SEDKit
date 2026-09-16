@@ -7,7 +7,8 @@ Run: `uv run pytest -m slow tests/modules/ops/api/test_api_perf.py`
   else `<tempdir>/sed-perf`, and reused while its marker matches. Pending migrations and then
   `src/sed/schema/pending/*.sql` are applied to that database (db.split_sql inside write_tx), as the integrator will
   when numbering them. The synthetic data of every other enabled module with a generator (same seed, as-of and scale)
-  is then imported on top, once per module, and its rule findings refreshed.
+  is then generated and imported on top on every run (files already imported are skipped by hash, so only new or
+  changed module data loads) and its rule findings refreshed.
 * Every GET operation must have an entry in PERF_PARAMS (default filters; required parameters only); a missing or stale
   entry fails. Each endpoint gets 20 requests through the in-process client; p95 (nearest rank, the first, cold request
   included) must stay below 1 s, and ticket search (`/api/ops/tickets?q=`) below 300 ms.
@@ -75,6 +76,7 @@ PERF_PARAMS: dict[str, dict[str, Any]] = {
     "/api/ops/vendors/sla-trend": {},
     "/api/sap/overview": {},
     "/api/sap/l3": {},
+    "/api/sap/changes": {},
 }
 # Full-text searches held to the 300 ms budget: planted multi-word text, a common word, a very broad word, a prefix.
 SEARCH_QUERIES = ("interface timeout", "timeout", "error", "time*")
@@ -107,8 +109,8 @@ def apply_pending(conn: sqlite3.Connection) -> list[str]:
     return applied
 
 
-def add_module_data(base: Path, paths: Any, done: list[str]) -> list[str]:
-    """Generate and import the synthetic data of enabled modules other than ops that are not in `done` yet."""
+def add_module_data(base: Path, paths: Any) -> list[str]:
+    """Generate and import the synthetic data of enabled modules other than ops (idempotent: unchanged files skip)."""
     from datetime import date
 
     from sed import db, modules, rule_findings
@@ -122,7 +124,7 @@ def add_module_data(base: Path, paths: Any, done: list[str]) -> list[str]:
         mp.setenv("SED_CLAUDE_SETTINGS_LOCAL", str(base / "settings.local.json"))
         mp.setenv("SED_CLAUDE_MD", str(base / "CLAUDE.md"))
         for module in modules.enabled(paths):
-            if module.key == "ops" or module.synth is None or module.key in done:
+            if module.key == "ops" or module.synth is None:
                 continue
             modules.load_ref(module.synth.generate)(paths, SynthRequest(seed=SEED, as_of=as_of, scale=SCALE))
             result = run_import(paths, ImportOptions(inbox=True))
@@ -172,9 +174,9 @@ def build_or_reuse(root: Path) -> dict[str, Any]:
         pending = apply_pending(conn)
     finally:
         conn.close()
-    added = add_module_data(base, paths, list(stored.get("modules", [])))
-    if added:
-        stored["modules"] = sorted({*stored.get("modules", []), *added})
+    added = add_module_data(base, paths)
+    if added != stored.get("modules"):
+        stored["modules"] = added
         marker.write_text(json.dumps(stored), encoding="utf-8")
     conn = db.connect(db_path)
     try:

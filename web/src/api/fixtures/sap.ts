@@ -1,7 +1,7 @@
 /** SAP module API fixtures (SAP overview and L3 tickets). Fictional SAP groups, applications and ticket numbers. */
 import { ApiError } from '../client';
 import type { GetQuery, Schema } from '../types';
-import { AS_OF, int, isoAt, lastWeeks, pick, rng, round } from './random';
+import { AS_OF, addDays, int, isoAt, lastWeeks, pick, rng, round } from './random';
 
 const AREAS = [
   { value: 'fi_co', label: 'FI/CO' },
@@ -52,6 +52,7 @@ function sapFindings(): Schema<'FindingOut'>[] {
     reviewed_by: null,
     reviewed_at: null,
   };
+  const change = { ...base, kind: 'sap_change_risk', severity: 'high' };
   return [
     {
       ...base,
@@ -69,6 +70,44 @@ function sapFindings(): Schema<'FindingOut'>[] {
       severity: 'high',
       title: 'SAP EWM: 22 open tickets older than 30 days',
       evidence: [{ fact_key: 'sap.area.ewm.aged_30d', value: 22 }],
+    },
+    {
+      ...change,
+      finding_id: 'rule-sap-failed-import',
+      subject_type: 'sap_transport',
+      subject_id: 'HD1K900023',
+      title: 'Failed production import: transport HD1K900023 into HP1 (return code 8) for change 8000009001; 14 SAP incidents within 72 h',
+      evidence: [
+        { fact_key: 'sap.transport.HD1K900023.return_code', value: 8 },
+        { fact_key: 'sap.transport.HD1K900023.incidents_after', value: 14 },
+      ],
+    },
+    {
+      ...change,
+      finding_id: 'rule-sap-urgent-mm',
+      subject_id: 'mm',
+      title: 'SAP MM: 65% of new changes urgent in the last 8 weeks (was 7%)',
+      evidence: [
+        { fact_key: 'sap.changes.mm.urgent_ratio_pct', value: 64.7 },
+        { fact_key: 'sap.changes.mm.urgent_ratio_previous_pct', value: 7.1 },
+      ],
+    },
+    {
+      ...change,
+      severity: 'medium',
+      finding_id: 'rule-sap-stuck-ppqm',
+      subject_id: 'pp_qm',
+      title: 'SAP PP/QM: 4 changes stuck in their status (oldest 46 days)',
+      evidence: [{ fact_key: 'sap.changes.pp_qm.stuck', value: 4 }],
+    },
+    {
+      ...change,
+      severity: 'medium',
+      finding_id: 'rule-sap-waiting-ecc',
+      subject_type: 'sap_landscape',
+      subject_id: 'ecc',
+      title: 'SAP ECC: 6 tested transports waiting for production (oldest 26 days since the QA import)',
+      evidence: [{ fact_key: 'sap.transports.ecc.waiting', value: 6 }],
     },
   ];
 }
@@ -101,7 +140,10 @@ export function overview(): Schema<'SapOverview'> {
       kpi('sap.l3.sla.pct', 'SLA met (2026-W35)', 84.2, 'pct', 88.1),
       kpi('sap.l3.mttr.median_h', 'MTTR median (2026-W35)', 31.4, 'hours', 27.9),
       kpi('sap.l3.p1p2.open', 'Open P1/P2', 3, 'count'),
-      kpi('sap.findings.count', 'System-detected SAP risks', 2, 'count'),
+      kpi('sap.findings.count', 'System-detected SAP risks', 6, 'count'),
+      kpi('sap.changes.open', 'Open SAP changes', 15, 'count'),
+      kpi('sap.changes.urgent_ratio_8w', 'Urgent changes (8 weeks)', 33.3, 'pct', 4.8),
+      kpi('sap.transports.failed_4w', 'Failed transport imports (28 days)', 1, 'count'),
     ],
     areas: counts.map((a) => {
       const opened = int(r, 1, 12);
@@ -205,5 +247,155 @@ export function l3(query: GetQuery<'/api/sap/l3'> | undefined): Schema<'SapL3Out
     ],
     attention_count: attention.length,
     attention,
+  };
+}
+
+const STAGES = [
+  ['requested', 'Requested'],
+  ['approved', 'Approved'],
+  ['in_development', 'In development'],
+  ['in_test', 'In test'],
+  ['ready_for_production', 'Ready for production'],
+  ['in_production', 'In production'],
+] as const;
+const TYPES: Record<string, string> = { normal: 'Normal', urgent: 'Urgent', standard: 'Standard', defect_correction: 'Defect correction' };
+const CHANGE_TITLES = [
+  'Pricing condition changes for sales organisation S100',
+  'Release strategy for purchase orders above limit 50000',
+  'Inspection plan changes for plant P200',
+  'Adjust GL account determination for company code 1000',
+  'Warehouse process type for outbound deliveries in warehouse W001',
+];
+
+export function changes(query: GetQuery<'/api/sap/changes'> | undefined): Schema<'SapChangesOut'> {
+  const q = query ?? {};
+  const area = q.area ?? null;
+  const landscape = q.landscape ?? null;
+  if (area && !AREAS.some((a) => a.value === area)) throw new ApiError(422, 'validation', `Unknown SAP area '${area}'`);
+  if (landscape && !LANDSCAPES.some((l) => l.value === landscape)) {
+    throw new ApiError(422, 'validation', `Unknown SAP landscape '${landscape}'`);
+  }
+  const r = rng(911 + (area ?? '').length * 7 + (landscape ?? '').length);
+  const weeks = lastWeeks(AS_OF, q.weeks ?? 12);
+  const kpi = (key: string, label: string, value: number | null, unit: string, compare: number | null = null) => ({
+    key,
+    label,
+    value,
+    unit,
+    compare,
+    delta: value !== null && compare !== null ? round(value - compare) : null,
+    definition: null,
+  });
+  const areaOf = (code: string) => AREAS.find((a) => a.value === code) ?? { value: 'unassigned', label: 'Unassigned' };
+  const changeRow = (i: number, code: string, stage: (typeof STAGES)[number], type = 'normal') => ({
+    change_id: `80000${String(9000 + i).padStart(5, '0')}`,
+    title: pick(r, CHANGE_TITLES),
+    change_type: type,
+    type_label: TYPES[type] ?? 'Other',
+    area: code,
+    area_label: areaOf(code).label,
+    landscape: code === 'ewm' || code === 'sd' ? 's4' : 'ecc',
+    stage: stage[0],
+    stage_label: stage[1],
+    created_at: isoAt(addDays(AS_OF, -(20 + i)), 10),
+  });
+  const stuck = [0, 1, 2, 3].map((i) => ({
+    ...changeRow(32 + i, 'pp_qm', STAGES[3]),
+    status: 'To Be Tested',
+    days_in_status: round(45.5 - i * 0.1, 1),
+    threshold_days: 30,
+    jira_keys: [`SAPS4-${40 + i}`],
+  }));
+  const waiting = Array.from({ length: 6 }, (_, i) => ({
+    transport: `ED1K9000${83 + i}`,
+    change_id: `80000090${36 + Math.floor(i / 2)}`,
+    title: 'Adjust GL account determination for company code 1000',
+    landscape: 'ecc',
+    qa_system: 'EQ1',
+    qa_imported_at: isoAt(addDays(AS_OF, -(25)), 10),
+    days_waiting: round(25.6 - i * 0.02, 1),
+  }));
+  const keep = <T extends { area?: string; landscape: string }>(rows: T[]) =>
+    rows.filter((row) => (!area || row.area === undefined || row.area === area) && (!landscape || row.landscape === landscape));
+  const without = [0, 1, 2, 3, 4].map((i) => changeRow(39 + i, 'ewm', STAGES[2]));
+  return {
+    as_of: AS_OF,
+    at: `${AS_OF}T22:00:00Z`,
+    period: weeks.at(-1) ?? '2026-W35',
+    area,
+    landscape,
+    areas: AREAS,
+    landscapes: LANDSCAPES,
+    kpis: [
+      kpi('sap.changes.open', 'Open changes', 15, 'count'),
+      kpi('sap.changes.urgent_ratio_8w', 'Urgent changes (8 weeks)', 33.3, 'pct', 4.8),
+      kpi('sap.changes.stuck', 'Stuck changes', 4, 'count'),
+      kpi('sap.changes.without_jira', 'Without a Jira story', 5, 'count'),
+      kpi('sap.changes.prod_imports', `Production imports (${weeks.at(-1) ?? '2026-W35'})`, 4, 'count'),
+      kpi('sap.transports.failed_4w', 'Failed imports (28 days)', 1, 'count'),
+      kpi('sap.transports.waiting', 'Waiting for production', 6, 'count'),
+    ],
+    stages: STAGES.slice(1).map(([stage, label]) => {
+      const normal = int(r, 0, 6);
+      const urgent = int(r, 0, 2);
+      return { stage, label, normal, urgent, standard: 0, defect_correction: 0, general: 0, other: 0, total: normal + urgent };
+    }),
+    urgent_by_area: AREAS.slice(0, 5).map((a) => {
+      const created = a.value === 'mm' ? 17 : int(r, 2, 14);
+      const urgent = a.value === 'mm' ? 11 : int(r, 0, 1);
+      const previous = int(r, 4, 14);
+      const ratio = round((100 * urgent) / created, 1);
+      const prev = a.value === 'mm' ? 7.1 : round((100 * int(r, 0, 1)) / previous, 1);
+      return {
+        area: a.value,
+        label: a.label,
+        created,
+        urgent,
+        ratio_pct: ratio,
+        previous_created: previous,
+        previous_urgent: a.value === 'mm' ? 1 : 0,
+        previous_ratio_pct: prev,
+        delta_pp: round(ratio - prev, 1),
+      };
+    }),
+    production_imports: weeks.map((period, i) => ({
+      period,
+      imports: i === weeks.length - 3 ? 34 : int(r, 2, 8),
+      failed: i === weeks.length - 1 ? 1 : 0,
+      changes: int(r, 1, 5),
+    })),
+    stuck: keep(stuck),
+    waiting: keep(waiting),
+    failed: keep([
+      {
+        transport: 'HD1K900023',
+        system_id: 'HP1',
+        role: 'prod',
+        landscape: 's4',
+        return_code: 8,
+        imported_at: isoAt(addDays(AS_OF, -(8)), 10),
+        change_id: '8000009001',
+        title: 'Urgent correction of billing document output for sales organisation S100',
+        change_type: 'urgent',
+      },
+    ]),
+    incidents_after_imports: keep([
+      {
+        change_id: '8000009001',
+        transports: 1,
+        title: 'Urgent correction of billing document output for sales organisation S100',
+        change_type: 'urgent',
+        area: 'sd',
+        area_label: 'SD',
+        landscape: 's4',
+        system_id: 'HP1',
+        imported_at: isoAt(addDays(AS_OF, -(8)), 10),
+        return_code: 8,
+        incidents: 14,
+        numbers: ['INC24317800', 'INC24317801', 'INC24317802', 'INC24317803', 'INC24317804'],
+      },
+    ]),
+    without_jira_count: keep(without).length,
+    without_jira: keep(without),
   };
 }

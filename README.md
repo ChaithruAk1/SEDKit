@@ -107,9 +107,19 @@ uv run sed analytics refresh --profile synthetic      # SAP backlog risks per ar
 uv run sed report build sap-weekly --period 2026-W35 --ai none --profile synthetic
 ```
 
-Dashboard pages: `#/sap` (KPIs, areas, landscapes, SAP risks) and `#/sap/tickets` (area and landscape filters, trend,
-aging, SLA, arrivals vs closures, attention list). Metrics stay at group (area) level, never per person. ChaRM changes
-and transports, IDoc health and SAP subcategories in AI triage follow in the next SAP phases.
+Changes come from the Solution Manager ChaRM exports: change documents (weekly deltas; each new user status is kept
+as history) and transport imports per system. `config/sap/charm.yaml` maps transaction types, statuses, components and
+change cycles, and names the Jira projects whose stories reference ChaRM changes (either way round);
+`config/sap/scope.yaml` lists the SAP systems with their landscape and role.
+
+Dashboard pages:
+- `#/sap`: KPIs, areas, landscapes and SAP risks.
+- `#/sap/tickets`: area and landscape filters, trend, aging, SLA, arrivals vs closures, attention list.
+- `#/sap/changes`: open changes by stage, urgent share by area, production imports, failed imports, SAP incidents
+  after production imports, stuck changes, transports waiting for production, changes without a Jira story.
+
+Metrics stay at group (area) level, never per person. IDoc health and SAP subcategories in AI triage follow in the next
+SAP phases.
 
 ## AI analysis (Claude Code)
 

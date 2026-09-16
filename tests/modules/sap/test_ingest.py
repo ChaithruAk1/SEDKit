@@ -76,6 +76,8 @@ def test_mappings_are_owned_by_sap_and_globs_do_not_overlap_ops(sap_profile):
         "sap_business_apps",
         "sap_incidents",
         "sap_incidents_active",
+        "sap_charm_changes",
+        "sap_charm_transports",
     }
     assert mapping_glob_overlaps(sap_profile.paths) == []
     specs = load_all_mappings(sap_profile.paths)

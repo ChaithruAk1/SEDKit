@@ -2,8 +2,12 @@
 
 * sap_backlog_risk:growth:<area>: an SAP area received more tickets than it closed in most complete weeks of the window.
 * sap_backlog_risk:aged:<area>: an SAP area holds many open tickets older than 30 days.
+* sap_change_risk:stuck:<area>: several open changes of an area kept their status longer than charm.yaml allows.
+* sap_change_risk:urgent_ratio:<area>: the urgent share of an area's new changes is high and rising.
+* sap_change_risk:failed_import:<transport>:<system>: a production import ended at or above the failure return code.
+* sap_change_risk:waiting:<landscape>: many tested transports imported into QA and not into production.
 
-Thresholds live in config/sap/risk_rules.yaml.
+Thresholds live in config/sap/risk_rules.yaml (change definitions in config/sap/charm.yaml).
 """
 
 from __future__ import annotations
@@ -14,10 +18,11 @@ from typing import Any
 
 from pydantic import Field
 
-from sed.calendar import as_of_end_utc, parse_period, week_label
+from sed.calendar import as_of_end_utc, iso_utc, parse_period, week_label
 from sed.errors import ValidationFailed
-from sed.modules.sap.queries import l3
-from sed.modules.sap.scope import load_scope
+from sed.modules.sap.charm import load_charm
+from sed.modules.sap.queries import changes, l3
+from sed.modules.sap.scope import Scope, load_scope
 from sed.paths import Paths
 from sed.settings import StrictModel, load_layered, load_settings
 
@@ -34,9 +39,36 @@ class AgedRule(StrictModel):
     min_tickets: int = Field(10, ge=1)
 
 
+class StuckRule(StrictModel):
+    enabled: bool = True
+    min_changes: int = Field(2, ge=1)
+
+
+class UrgentRatioRule(StrictModel):
+    enabled: bool = True
+    window_weeks: int = Field(8, ge=2, le=26)
+    min_changes: int = Field(8, ge=1)
+    min_ratio_pct: float = Field(30, gt=0, le=100)
+    min_rise_pp: float = Field(15, ge=0, le=100)
+
+
+class FailedImportRule(StrictModel):
+    enabled: bool = True
+    lookback_days: int = Field(30, ge=1, le=365)
+
+
+class WaitingRule(StrictModel):
+    enabled: bool = True
+    min_transports: int = Field(5, ge=1)
+
+
 class Rules(StrictModel):
     area_backlog_growth: GrowthRule = Field(default_factory=GrowthRule)
     area_aged_backlog: AgedRule = Field(default_factory=AgedRule)
+    change_stuck: StuckRule = Field(default_factory=StuckRule)
+    urgent_ratio: UrgentRatioRule = Field(default_factory=UrgentRatioRule)
+    failed_production_import: FailedImportRule = Field(default_factory=FailedImportRule)
+    waiting_for_production: WaitingRule = Field(default_factory=WaitingRule)
 
 
 def load_rules(paths: Paths | None) -> Rules:
@@ -56,6 +88,14 @@ def compute(conn: sqlite3.Connection, paths: Paths | None, as_of: date) -> list[
     scope = scope.resolve(conn)
     rules = load_rules(paths)
     settings = load_settings(paths)
+    return _backlog_findings(conn, as_of, scope, rules, settings) + _change_findings(
+        conn, paths, as_of, scope, rules, settings
+    )
+
+
+def _backlog_findings(
+    conn: sqlite3.Connection, as_of: date, scope: Scope, rules: Rules, settings: Any
+) -> list[dict[str, Any]]:
     tz = settings.reporting_tz
     out: list[dict[str, Any]] = []
 
@@ -109,4 +149,135 @@ def compute(conn: sqlite3.Connection, paths: Paths | None, as_of: date) -> list[
                         ],
                     }
                 )
+    return out
+
+
+def _finding(
+    stable_key: str, subject_type: str, subject_id: str, severity: str, title: str, evidence: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "stable_key": stable_key,
+        "kind": "sap_change_risk",
+        "subject_type": subject_type,
+        "subject_id": subject_id,
+        "severity": severity,
+        "title": title,
+        "evidence": [{"fact_key": k, "value": v} for k, v in evidence.items()],
+    }
+
+
+def _change_findings(
+    conn: sqlite3.Connection, paths: Paths | None, as_of: date, scope: Scope, rules: Rules, settings: Any
+) -> list[dict[str, Any]]:
+    wanted = (rules.change_stuck, rules.urgent_ratio, rules.failed_production_import, rules.waiting_for_production)
+    if not any(r.enabled for r in wanted):
+        return []
+    charm = load_charm(paths, scope)
+    at = as_of_end_utc(as_of, settings.reporting_tz)
+    cs = changes.load(conn, charm, at)
+    out: list[dict[str, Any]] = []
+
+    if rules.change_stuck.enabled:
+        by_area: dict[str, list[dict[str, Any]]] = {}
+        for row in changes.stuck(cs, changes.select(cs)):
+            by_area.setdefault(row["area"], []).append(row)
+        for code, rows in sorted(by_area.items()):
+            if len(rows) < rules.change_stuck.min_changes:
+                continue
+            oldest = max(r["days_in_status"] for r in rows)
+            worst = max(r["days_in_status"] / r["threshold_days"] for r in rows)
+            label = scope.area_labels[code]
+            out.append(
+                _finding(
+                    f"sap_change_risk:stuck:{code}",
+                    "sap_area",
+                    code,
+                    "high" if worst >= 2 else "medium",
+                    f"SAP {label}: {len(rows)} changes stuck in their status (oldest {oldest:.0f} days)",
+                    {f"sap.changes.{code}.stuck": len(rows), f"sap.changes.{code}.stuck_oldest_days": oldest},
+                )
+            )
+
+    ratio_rule = rules.urgent_ratio
+    if ratio_rule.enabled:
+        n = ratio_rule.window_weeks
+        last = parse_period(week_label(as_of - timedelta(days=7)), settings.reporting_tz, settings.fiscal_year_start)
+        weeks = [last.previous(k) for k in range(2 * n - 1, -1, -1)]
+        for row in changes.urgent_by_area(cs, weeks[n:], weeks[:n]):
+            ratio, before = row["ratio_pct"], row["previous_ratio_pct"] or 0.0
+            if row["created"] < ratio_rule.min_changes or ratio is None or ratio < ratio_rule.min_ratio_pct:
+                continue
+            if ratio - before < ratio_rule.min_rise_pp:
+                continue
+            code = row["area"]
+            out.append(
+                _finding(
+                    f"sap_change_risk:urgent_ratio:{code}",
+                    "sap_area",
+                    code,
+                    "high" if ratio >= 2 * ratio_rule.min_ratio_pct else "medium",
+                    f"SAP {row['label']}: {ratio:.0f}% of new changes urgent in the last {n} weeks (was {before:.0f}%)",
+                    {
+                        f"sap.changes.{code}.urgent_ratio_pct": ratio,
+                        f"sap.changes.{code}.urgent_ratio_previous_pct": before,
+                        f"sap.changes.{code}.created": row["created"],
+                        f"sap.changes.{code}.urgent": row["urgent"],
+                    },
+                )
+            )
+
+    if rules.failed_production_import.enabled:
+        since = iso_utc(at - timedelta(days=rules.failed_production_import.lookback_days))
+        hours = charm.config.thresholds.incident_window_hours
+        after = {
+            (r["change_id"], r["system_id"]): r["incidents"]
+            for r in changes.incidents_after_imports(conn, cs, since, iso_utc(at), limit=100_000)
+        }
+        for row in changes.failed_imports(cs, since):
+            if row["role"] != "prod":
+                continue
+            count = after.get((row["change_id"], row["system_id"]), 0)
+            transport, system_id = row["transport"], row["system_id"]
+            title = (
+                f"Failed production import: transport {transport} into {system_id} (return code {row['return_code']})"
+            )
+            if row["change_id"]:
+                title += f" for change {row['change_id']}"
+            if count:
+                title += f"; {count} SAP incidents within {hours} h"
+            out.append(
+                _finding(
+                    f"sap_change_risk:failed_import:{transport}:{system_id}",
+                    "sap_transport",
+                    transport,
+                    "high",
+                    title,
+                    {
+                        f"sap.transport.{transport}.return_code": row["return_code"],
+                        f"sap.transport.{transport}.incidents_after": count,
+                    },
+                )
+            )
+
+    if rules.waiting_for_production.enabled:
+        limit = charm.config.thresholds.waiting_for_production_days
+        by_landscape: dict[str, list[dict[str, Any]]] = {}
+        for row in changes.waiting_for_production(cs):
+            by_landscape.setdefault(row["landscape"], []).append(row)
+        for code, rows in sorted(by_landscape.items()):
+            if len(rows) < rules.waiting_for_production.min_transports:
+                continue
+            oldest = max(r["days_waiting"] for r in rows)
+            label = scope.landscape_labels.get(code, code)
+            out.append(
+                _finding(
+                    f"sap_change_risk:waiting:{code}",
+                    "sap_landscape",
+                    code,
+                    "high" if oldest >= 2 * limit else "medium",
+                    f"{label}: {len(rows)} tested transports waiting for production "
+                    f"(oldest {oldest:.0f} days since the QA import)",
+                    {f"sap.transports.{code}.waiting": len(rows), f"sap.transports.{code}.waiting_oldest_days": oldest},
+                )
+            )
     return out

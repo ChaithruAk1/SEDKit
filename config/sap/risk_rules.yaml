@@ -10,3 +10,22 @@ rules:
   area_aged_backlog:
     enabled: true
     min_tickets: 10
+  # Open SAP changes whose status has not moved for longer than config/sap/charm.yaml allows, per area.
+  change_stuck:
+    enabled: true
+    min_changes: 2
+  # The urgent share of new SAP changes in an area is high and rising (complete weeks against the weeks before).
+  urgent_ratio:
+    enabled: true
+    window_weeks: 8
+    min_changes: 8         # changes created in the window
+    min_ratio_pct: 30
+    min_rise_pp: 15
+  # A production import whose latest return code is at or above the failure code (charm.yaml), per transport.
+  failed_production_import:
+    enabled: true
+    lookback_days: 30
+  # Tested transports imported into QA and not into production for too long (charm.yaml), per landscape.
+  waiting_for_production:
+    enabled: true
+    min_transports: 5

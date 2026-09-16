@@ -2801,6 +2801,309 @@
         "title": "SapBacklogAreaRow",
         "type": "object"
       },
+      "SapChangeRow": {
+        "additionalProperties": false,
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "area_label": {
+            "title": "Area Label",
+            "type": "string"
+          },
+          "change_id": {
+            "title": "Change Id",
+            "type": "string"
+          },
+          "change_type": {
+            "title": "Change Type",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "landscape": {
+            "title": "Landscape",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "stage_label": {
+            "title": "Stage Label",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type_label": {
+            "title": "Type Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_id",
+          "title",
+          "change_type",
+          "type_label",
+          "area",
+          "area_label",
+          "landscape",
+          "stage",
+          "stage_label",
+          "created_at"
+        ],
+        "title": "SapChangeRow",
+        "type": "object"
+      },
+      "SapChangesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "areas": {
+            "items": {
+              "$ref": "#/components/schemas/SapOption"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "failed": {
+            "items": {
+              "$ref": "#/components/schemas/SapFailedImportRow"
+            },
+            "title": "Failed",
+            "type": "array"
+          },
+          "incidents_after_imports": {
+            "items": {
+              "$ref": "#/components/schemas/SapImportIncidentsRow"
+            },
+            "title": "Incidents After Imports",
+            "type": "array"
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/Kpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "landscape": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landscape"
+          },
+          "landscapes": {
+            "items": {
+              "$ref": "#/components/schemas/SapOption"
+            },
+            "title": "Landscapes",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "production_imports": {
+            "items": {
+              "$ref": "#/components/schemas/SapImportWeekRow"
+            },
+            "title": "Production Imports",
+            "type": "array"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/SapStageRow"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "stuck": {
+            "items": {
+              "$ref": "#/components/schemas/SapStuckChangeRow"
+            },
+            "title": "Stuck",
+            "type": "array"
+          },
+          "urgent_by_area": {
+            "items": {
+              "$ref": "#/components/schemas/SapUrgentAreaRow"
+            },
+            "title": "Urgent By Area",
+            "type": "array"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/SapWaitingTransportRow"
+            },
+            "title": "Waiting",
+            "type": "array"
+          },
+          "without_jira": {
+            "items": {
+              "$ref": "#/components/schemas/SapChangeRow"
+            },
+            "title": "Without Jira",
+            "type": "array"
+          },
+          "without_jira_count": {
+            "title": "Without Jira Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "as_of",
+          "at",
+          "period",
+          "area",
+          "landscape",
+          "areas",
+          "landscapes",
+          "kpis",
+          "stages",
+          "urgent_by_area",
+          "production_imports",
+          "stuck",
+          "waiting",
+          "failed",
+          "incidents_after_imports",
+          "without_jira_count",
+          "without_jira"
+        ],
+        "title": "SapChangesOut",
+        "type": "object"
+      },
+      "SapFailedImportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "change_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Id"
+          },
+          "change_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Type"
+          },
+          "imported_at": {
+            "title": "Imported At",
+            "type": "string"
+          },
+          "landscape": {
+            "title": "Landscape",
+            "type": "string"
+          },
+          "return_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Code"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "system_id": {
+            "title": "System Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "transport": {
+            "title": "Transport",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transport",
+          "system_id",
+          "role",
+          "landscape",
+          "return_code",
+          "imported_at",
+          "change_id",
+          "title",
+          "change_type"
+        ],
+        "title": "SapFailedImportRow",
+        "type": "object"
+      },
       "SapFlowRow": {
         "additionalProperties": false,
         "properties": {
@@ -2838,6 +3141,135 @@
           "net"
         ],
         "title": "SapFlowRow",
+        "type": "object"
+      },
+      "SapImportIncidentsRow": {
+        "additionalProperties": false,
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "area_label": {
+            "title": "Area Label",
+            "type": "string"
+          },
+          "change_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Id"
+          },
+          "change_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Type"
+          },
+          "imported_at": {
+            "title": "Imported At",
+            "type": "string"
+          },
+          "incidents": {
+            "title": "Incidents",
+            "type": "integer"
+          },
+          "landscape": {
+            "title": "Landscape",
+            "type": "string"
+          },
+          "numbers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Numbers",
+            "type": "array"
+          },
+          "return_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Code"
+          },
+          "system_id": {
+            "title": "System Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "transports": {
+            "title": "Transports",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "change_id",
+          "transports",
+          "title",
+          "change_type",
+          "area",
+          "area_label",
+          "landscape",
+          "system_id",
+          "imported_at",
+          "return_code",
+          "incidents",
+          "numbers"
+        ],
+        "title": "SapImportIncidentsRow",
+        "type": "object"
+      },
+      "SapImportWeekRow": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "title": "Changes",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "imports": {
+            "title": "Imports",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "imports",
+          "failed",
+          "changes"
+        ],
+        "title": "SapImportWeekRow",
         "type": "object"
       },
       "SapL3Out": {
@@ -3113,6 +3545,163 @@
         "title": "SapSlaPriorityRow",
         "type": "object"
       },
+      "SapStageRow": {
+        "additionalProperties": false,
+        "properties": {
+          "defect_correction": {
+            "title": "Defect Correction",
+            "type": "integer"
+          },
+          "general": {
+            "title": "General",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "normal": {
+            "title": "Normal",
+            "type": "integer"
+          },
+          "other": {
+            "title": "Other",
+            "type": "integer"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "standard": {
+            "title": "Standard",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "urgent": {
+            "title": "Urgent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stage",
+          "label",
+          "normal",
+          "urgent",
+          "standard",
+          "defect_correction",
+          "general",
+          "other",
+          "total"
+        ],
+        "title": "SapStageRow",
+        "type": "object"
+      },
+      "SapStuckChangeRow": {
+        "additionalProperties": false,
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "area_label": {
+            "title": "Area Label",
+            "type": "string"
+          },
+          "change_id": {
+            "title": "Change Id",
+            "type": "string"
+          },
+          "change_type": {
+            "title": "Change Type",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "days_in_status": {
+            "title": "Days In Status",
+            "type": "number"
+          },
+          "jira_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Jira Keys",
+            "type": "array"
+          },
+          "landscape": {
+            "title": "Landscape",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "stage_label": {
+            "title": "Stage Label",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "threshold_days": {
+            "title": "Threshold Days",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type_label": {
+            "title": "Type Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_id",
+          "title",
+          "change_type",
+          "type_label",
+          "area",
+          "area_label",
+          "landscape",
+          "stage",
+          "stage_label",
+          "created_at",
+          "status",
+          "days_in_status",
+          "threshold_days",
+          "jira_keys"
+        ],
+        "title": "SapStuckChangeRow",
+        "type": "object"
+      },
       "SapTrendRow": {
         "additionalProperties": false,
         "properties": {
@@ -3152,6 +3741,139 @@
           "sla_pct"
         ],
         "title": "SapTrendRow",
+        "type": "object"
+      },
+      "SapUrgentAreaRow": {
+        "additionalProperties": false,
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "delta_pp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Pp"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "previous_created": {
+            "title": "Previous Created",
+            "type": "integer"
+          },
+          "previous_ratio_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Ratio Pct"
+          },
+          "previous_urgent": {
+            "title": "Previous Urgent",
+            "type": "integer"
+          },
+          "ratio_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ratio Pct"
+          },
+          "urgent": {
+            "title": "Urgent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "area",
+          "label",
+          "created",
+          "urgent",
+          "ratio_pct",
+          "previous_created",
+          "previous_urgent",
+          "previous_ratio_pct",
+          "delta_pp"
+        ],
+        "title": "SapUrgentAreaRow",
+        "type": "object"
+      },
+      "SapWaitingTransportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "change_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Id"
+          },
+          "days_waiting": {
+            "title": "Days Waiting",
+            "type": "number"
+          },
+          "landscape": {
+            "title": "Landscape",
+            "type": "string"
+          },
+          "qa_imported_at": {
+            "title": "Qa Imported At",
+            "type": "string"
+          },
+          "qa_system": {
+            "title": "Qa System",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "transport": {
+            "title": "Transport",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transport",
+          "change_id",
+          "title",
+          "landscape",
+          "qa_system",
+          "qa_imported_at",
+          "days_waiting"
+        ],
+        "title": "SapWaitingTransportRow",
         "type": "object"
       },
       "SlaOut": {
@@ -8087,6 +8809,244 @@
         "summary": "Runs",
         "tags": [
           "core"
+        ]
+      }
+    },
+    "/api/sap/changes": {
+      "get": {
+        "operationId": "sap_changes",
+        "parameters": [
+          {
+            "description": "SAP area code, or 'unassigned'",
+            "in": "query",
+            "name": "area",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "SAP area code, or 'unassigned'",
+              "title": "Area"
+            }
+          },
+          {
+            "description": "Landscape code, or 'unknown'",
+            "in": "query",
+            "name": "landscape",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Landscape code, or 'unknown'",
+              "title": "Landscape"
+            }
+          },
+          {
+            "in": "query",
+            "name": "weeks",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 52,
+              "minimum": 8,
+              "title": "Weeks",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "app_id (repeatable)",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "schema": {
+              "description": "app_id (repeatable)",
+              "items": {
+                "type": "string"
+              },
+              "title": "App",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          },
+          {
+            "description": "vendor_id",
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "vendor_id",
+              "title": "Vendor"
+            }
+          },
+          {
+            "description": "assignment group",
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "assignment group",
+              "title": "Group"
+            }
+          },
+          {
+            "description": "2026-W35, 2026-08 or 2026-Q3",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2026-W35, 2026-08 or 2026-Q3",
+              "title": "Period"
+            }
+          },
+          {
+            "description": "YYYY-MM-DD (default: data as-of)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "YYYY-MM-DD (default: data as-of)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Include unapproved AI content",
+            "in": "query",
+            "name": "include_drafts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include unapproved AI content",
+              "title": "Include Drafts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SapChangesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Changes",
+        "tags": [
+          "sap"
         ]
       }
     },

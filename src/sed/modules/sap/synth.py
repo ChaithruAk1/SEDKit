@@ -1,6 +1,7 @@
 """Synthetic SAP data (fictional; generic SAP terms only): SAP business applications, SAP L3 incidents with planted
-patterns, and the "all open SAP incidents" snapshot. Files go through the SAP mappings (sap_business_apps,
-sap_incidents, sap_incidents_active); ground truth goes to ground_truth/sap/.
+patterns, the "all open SAP incidents" snapshot, and ChaRM changes, transports and SAP Jira stories (synth_changes.py).
+Files go through the SAP mappings (sap_business_apps, sap_incidents, sap_incidents_active, sap_charm_changes,
+sap_charm_transports) and the ops Jira mapping; ground truth goes to ground_truth/sap/.
 
 Determinism: one RNG per (seed, stream, day). Planted patterns are anchored to the anchor date and generated at
 absolute counts whatever --scale is; a later --as-of with the same anchor gives a superset of tickets.
@@ -11,6 +12,8 @@ Planted patterns (ground_truth/sap/patterns.json):
 * SN1 SD go-live surge (negative control): 8 SD incidents per business day for 3 weeks, all resolved within 2 days.
 * SC1 service desk tickets with the SAP category (area "unassigned"); SC2 tickets marked only by the u_sap_component
   custom field.
+* CP1 incidents after a failed import: 14 SD incidents on S/4HANA in the two days after the CP1 urgent change's
+  production import (8 and 6 incidents, 7 and 6 days before the anchor).
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ from sed.errors import PreconditionFailed
 from sed.ingest import manifest as inbox_manifest
 from sed.ingest.loader import file_sha256
 from sed.modules.contract import SynthRequest
+from sed.modules.sap import synth_changes
 from sed.paths import Paths
 from sed.synth import writers as W
 from sed.synth.catalog import build_catalog
@@ -41,7 +45,7 @@ from sed.synth.tickets import (
     number,
 )
 
-GENERATOR_VERSION = 1
+GENERATOR_VERSION = 2
 KEY = "sap"
 ECC_APP = ("APM0990001", "SAP ECC")
 S4_APP = ("APM0990002", "SAP S/4HANA")
@@ -50,7 +54,7 @@ MONTH_INCIDENTS = 150
 WEEKDAY_WEIGHT = [1.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.1]
 WEIGHTED_DAYS_PER_MONTH = 21.7 + 8.7 * 0.1
 MEDIAN_H = {1: 3.0, 2: 6.0, 3: 30.0, 4: 80.0, 5: 120.0}
-BLOCK = {"background": 6000, "SP1": 7000, "SP2": 7200, "SN1": 7400, "SC1": 7600, "SC2": 7700}
+BLOCK = {"background": 6000, "SP1": 7000, "SP2": 7200, "SN1": 7400, "SC1": 7600, "SC2": 7700, "CP1": 7800}
 INCIDENT_FIELDS = [
     "number", "opened_at", "sys_updated_on", "resolved_at", "closed_at", "state", "priority", "impact", "urgency",
     "category", "subcategory", "short_description", "description", "close_code", "close_notes", "caller_id",
@@ -103,6 +107,8 @@ AREAS: dict[str, tuple[str, float, float, list[tuple[str, str]]]] = {
     ]),
 }  # fmt: skip
 MONTH_END = ("Period-end close job failed for company code {cc}", "sap_month_end_close")
+AFTER_IMPORT = ("Billing document {doc} not posted after the latest transport import", "sap_transport_issue")
+CP1_INCIDENTS = {7: 8, 6: 6}  # days before the anchor -> incidents (the CP1 import is 8 days before, 18:30)
 COMPONENTS = ["FI-GL", "SD-BIL", "MM-PUR", "PP-SFC", "EWM-OUT"]
 MESSAGE_TYPES = ["ORDERS", "INVOIC", "DESADV", "MATMAS", "DEBMAS"]
 TCODES = ["FB60", "VA02", "ME21N", "CO11N", "MIGO", "VL02N"]
@@ -236,6 +242,15 @@ class SapGenerator:
         for i in range(count):
             area = rnd.choices(codes, weights=weights, k=1)[0]
             out.append(self._ticket(rnd, day, BLOCK["background"] + i, area, rnd.choice(AREAS[area][3])))
+        before = (self.anchor - day).days
+        if before in CP1_INCIDENTS:
+            r0 = self._rnd("cp1", day)
+            for k in range(CP1_INCIDENTS[before]):
+                t = self._ticket(
+                    r0, day, BLOCK["CP1"] + k, "sd", AFTER_IMPORT, pattern="CP1", priority=r0.choice([2, 3]),
+                    resolve_h=r0.uniform(4, 30), s4_share=1.0,
+                )  # fmt: skip
+                out.append(t)
         if day.weekday() >= 5:
             return out
         if self.sp1_start <= day < self.sp1_end:
@@ -402,6 +417,11 @@ def generate(paths: Paths, req: SynthRequest) -> dict[str, Any]:
     )
     written.append("sap_business_apps.csv")
 
+    change_gen = synth_changes.ChangeGenerator(req.seed, anchor, window_start, moment, req.scale, gen.callers)
+    changes = [c for c in change_gen.background() + change_gen.patterns() if c.created < moment]
+    written += synth_changes.write_exports(inbox, changes, moment, req.as_of)
+    gen.pii += change_gen.pii
+
     by_month: dict[str, list[list[Any]]] = defaultdict(list)
     active: list[list[Any]] = []
     truth: list[list[Any]] = []
@@ -430,13 +450,25 @@ def generate(paths: Paths, req: SynthRequest) -> dict[str, Any]:
         "files": {name: file_sha256(inbox / name) for name in sorted(written)},
     }
     inbox_manifest.save_section(inbox, KEY, section)
-    truth_dir = _ground_truth(paths.ground_truth / KEY, gen, tickets, truth, moment)
-    counts = {"application": 2, "incident": len(tickets), "open_incident": len(active)}
+    truth_dir = _ground_truth(paths.ground_truth / KEY, gen, tickets, truth, moment, changes, anchor)
+    counts = {
+        "application": 2,
+        "incident": len(tickets),
+        "open_incident": len(active),
+        "change": len(changes),
+        "transport_import": sum(1 for c in changes for *_, m, _rc in c.imports if m < moment),
+    }
     return {"inbox": str(inbox), "files": len(written), "counts": counts, "ground_truth": truth_dir}
 
 
 def _ground_truth(
-    folder: Path, gen: SapGenerator, tickets: list[SapTicket], truth: list[list[Any]], moment: datetime
+    folder: Path,
+    gen: SapGenerator,
+    tickets: list[SapTicket],
+    truth: list[list[Any]],
+    moment: datetime,
+    changes: list[synth_changes.SynthChange],
+    anchor: date,
 ) -> str:
     folder.mkdir(parents=True, exist_ok=True)
     with (folder / "ticket_truth.csv").open("w", encoding="utf-8", newline="") as fh:
@@ -465,8 +497,14 @@ def _ground_truth(
         },
         "SC1": {"tickets": len(pattern("SC1")), "category": "SAP"},
         "SC2": {"tickets": len(pattern("SC2")), "custom_field": "u_sap_component"},
+        "CP1_incidents": {"area": "sd", "landscape": "s4", "tickets": len(pattern("CP1"))},
         "controls": {"SN1": "SD surge with matching closures: no backlog-growth finding"},
+        "changes": synth_changes.patterns_section(changes, anchor),
     }
+    with (folder / "change_truth.csv").open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["change_id", "pattern", "change_type", "area", "landscape", "stage_at_as_of", "jira"])
+        writer.writerows(synth_changes.truth_rows(changes, moment))
     (folder / "patterns.json").write_text(json.dumps(patterns, indent=2), encoding="utf-8")
     (folder / "pii_injections.json").write_text(json.dumps(sorted(set(gen.pii)), indent=0), encoding="utf-8")
     return str(folder)

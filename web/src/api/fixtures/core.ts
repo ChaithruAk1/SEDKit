@@ -73,6 +73,7 @@ export function nav(): Schema<'NavOut'> {
       { id: 'ops.costs', module: 'ops', label: 'Costs & Contracts', path: '/ops/costs', order: 50, icon: 'currency-euro' },
       { id: 'sap.overview', module: 'sap', label: 'SAP', path: '/sap', order: 60, icon: 'building-factory' },
       { id: 'sap.tickets', module: 'sap', label: 'SAP L3 tickets', path: '/sap/tickets', order: 61, icon: 'ticket' },
+      { id: 'sap.changes', module: 'sap', label: 'SAP changes', path: '/sap/changes', order: 62, icon: 'git-pull-request' },
       { id: 'core.data', module: 'core', label: 'Data', path: '/data', order: 900, icon: 'database' },
     ],
   };
@@ -93,7 +94,7 @@ export function modules(): Schema<'ModulesOut'> {
       {
         key: 'sap',
         title: 'SAP application support',
-        description: 'SAP L3 support by area and landscape, with system-detected SAP risks and the weekly SAP review',
+        description: 'SAP L3 support by area and landscape, ChaRM changes and transports, SAP risks and the weekly review',
         version: '1',
         enabled: true,
         reports: ['sap-weekly'],

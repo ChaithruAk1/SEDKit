@@ -92,7 +92,7 @@ def test_facts_agree_with_the_read_models_and_the_api(sap_profile_rw):
     assert rows == [{k: r[k] for k in rows[0]} for r in areas]
     assert sum(r["total"] for r in snap.tables["sap_backlog_aging_by_area"]["rows"]) == backlog["total"]
     assert len(snap.tables["sap_l3_trend_12w"]["rows"]) == 12
-    assert _value(snap, "sap.findings.count") == len(snap.tables["sap_findings"]["rows"]) == 2
+    assert _value(snap, "sap.findings.count") == len(snap.tables["sap_findings"]["rows"]) == 6
     assert (
         _value(snap, "sap.scope.note")
         == "SAP scope: 9 SAP groups, 1 category name, 1 custom field (config/sap/scope.yaml)"
@@ -131,7 +131,7 @@ def test_provenance_lists_only_sap_suppressions(sap_profile_rw):
         conn.close()
     sap = _snapshot(sap_profile_rw)
     assert [f["stable_key"] for f in sap.suppressed_findings] == ["sap_backlog_risk:aged:ewm"]
-    assert _value(sap, "sap.findings.count") == 1
+    assert _value(sap, "sap.findings.count") == 5
     ops = _snapshot(sap_profile_rw, report="weekly")
     assert ops_key in {f["stable_key"] for f in ops.suppressed_findings}
     assert not any(f["kind"] == "sap_backlog_risk" for f in ops.suppressed_findings)
@@ -148,3 +148,43 @@ def test_refused_when_the_module_is_disabled(sap_profile_rw):
     (config / "modules.yaml").write_text("enabled: [ops]\n", encoding="utf-8")
     with pytest.raises(PreconditionFailed, match="Module 'sap' is disabled"):
         build_report(sap_profile_rw.paths, "sap-weekly", PERIOD, ["md"], "none")
+
+
+def test_change_facts_and_tables(sap_profile_rw, sap_truth):
+    from sed.modules.sap.charm import load_charm
+    from sed.modules.sap.queries import changes
+
+    paths = sap_profile_rw.paths
+    snap = _snapshot(sap_profile_rw)
+    settings = load_settings(paths)
+    week = parse_period(PERIOD, settings.reporting_tz, settings.fiscal_year_start)
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        scope = load_scope(paths).resolve(conn)
+        cs = changes.load(conn, load_charm(paths, scope), week.end_utc)
+        summary = changes.summary(conn, cs, week)
+    finally:
+        conn.close()
+    assert _value(snap, "sap.changes.open") == summary["open"]
+    assert _value(snap, "sap.changes.urgent_ratio_8w") == summary["urgent_ratio_8w"]
+    assert _value(snap, "sap.changes.stuck") == summary["stuck"] == len(snap.tables["sap_changes_stuck"]["rows"]) == 4
+    assert _value(snap, "sap.transports.waiting") == len(snap.tables["sap_transports_waiting"]["rows"]) == 6
+    assert _value(snap, "sap.changes.without_jira") == len(snap.tables["sap_changes_without_jira"]["rows"]) == 5
+    cp1 = sap_truth["patterns"]["changes"]["CP1"]
+    assert [r["transport"] for r in snap.tables["sap_transports_failed"]["rows"]] == [cp1["transport"]]
+    after = snap.tables["sap_incidents_after_imports"]["rows"]
+    assert after[0]["change_id"] == cp1["change_id"] and after[0]["incidents"] == cp1["incidents"]
+    assert len(snap.tables["sap_prod_imports_12w"]["rows"]) == 12
+    assert sum(r["total"] for r in snap.tables["sap_change_stages"]["rows"]) == summary["open"]
+    mm = next(r for r in snap.tables["sap_urgent_by_area"]["rows"] if r["label"] == "MM")
+    assert mm["delta_pp"] >= 35
+
+    result = build_report(paths, "sap-weekly", PERIOD, ["xlsx", "md"], "none")
+    files = {a["format"]: Path(a["path"]) for a in result["artifacts"]}
+    from python_calamine import CalamineWorkbook
+
+    sheets = set(CalamineWorkbook.from_path(str(files["xlsx"])).sheet_names)
+    assert {"Change stages", "Urgent changes", "Production imports", "Failed imports", "Incidents after imports",
+            "Stuck changes", "Waiting for production", "Changes without Jira"} <= sheets  # fmt: skip
+    md = files["md"].read_text(encoding="utf-8")
+    assert "- **Changes:** " in md and "transports waiting for production" in md

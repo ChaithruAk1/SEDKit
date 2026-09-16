@@ -6,6 +6,7 @@ import {
   IconCurrencyEuro,
   IconDatabase,
   IconFileText,
+  IconGitPullRequest,
   IconLayoutDashboard,
   IconListCheck,
   IconPoint,
@@ -25,6 +26,7 @@ const ICONS: Record<string, Icon> = {
   database: IconDatabase,
   'chart-bar': IconChartBar,
   'file-text': IconFileText,
+  'git-pull-request': IconGitPullRequest,
   'list-check': IconListCheck,
   robot: IconRobot,
 };

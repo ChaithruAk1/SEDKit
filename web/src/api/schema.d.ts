@@ -429,6 +429,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sap/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Changes */
+        get: operations["sap_changes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sap/l3": {
         parameters: {
             query?: never;
@@ -1228,6 +1245,87 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** SapChangeRow */
+        SapChangeRow: {
+            /** Area */
+            area: string;
+            /** Area Label */
+            area_label: string;
+            /** Change Id */
+            change_id: string;
+            /** Change Type */
+            change_type: string;
+            /** Created At */
+            created_at: string | null;
+            /** Landscape */
+            landscape: string;
+            /** Stage */
+            stage: string;
+            /** Stage Label */
+            stage_label: string;
+            /** Title */
+            title: string | null;
+            /** Type Label */
+            type_label: string;
+        };
+        /** SapChangesOut */
+        SapChangesOut: {
+            /** Area */
+            area: string | null;
+            /** Areas */
+            areas: components["schemas"]["SapOption"][];
+            /** As Of */
+            as_of: string;
+            /** At */
+            at: string;
+            /** Failed */
+            failed: components["schemas"]["SapFailedImportRow"][];
+            /** Incidents After Imports */
+            incidents_after_imports: components["schemas"]["SapImportIncidentsRow"][];
+            /** Kpis */
+            kpis: components["schemas"]["Kpi"][];
+            /** Landscape */
+            landscape: string | null;
+            /** Landscapes */
+            landscapes: components["schemas"]["SapOption"][];
+            /** Period */
+            period: string;
+            /** Production Imports */
+            production_imports: components["schemas"]["SapImportWeekRow"][];
+            /** Stages */
+            stages: components["schemas"]["SapStageRow"][];
+            /** Stuck */
+            stuck: components["schemas"]["SapStuckChangeRow"][];
+            /** Urgent By Area */
+            urgent_by_area: components["schemas"]["SapUrgentAreaRow"][];
+            /** Waiting */
+            waiting: components["schemas"]["SapWaitingTransportRow"][];
+            /** Without Jira */
+            without_jira: components["schemas"]["SapChangeRow"][];
+            /** Without Jira Count */
+            without_jira_count: number;
+        };
+        /** SapFailedImportRow */
+        SapFailedImportRow: {
+            /** Change Id */
+            change_id: string | null;
+            /** Change Type */
+            change_type: string | null;
+            /** Imported At */
+            imported_at: string;
+            /** Landscape */
+            landscape: string;
+            /** Return Code */
+            return_code: number | null;
+            /** Role */
+            role: string | null;
+            /** System Id */
+            system_id: string;
+            /** Title */
+            title: string | null;
+            /** Transport */
+            transport: string;
+        };
         /** SapFlowRow */
         SapFlowRow: {
             /** Area */
@@ -1240,6 +1338,44 @@ export interface components {
             label: string;
             /** Net */
             net: number;
+            /** Period */
+            period: string;
+        };
+        /** SapImportIncidentsRow */
+        SapImportIncidentsRow: {
+            /** Area */
+            area: string;
+            /** Area Label */
+            area_label: string;
+            /** Change Id */
+            change_id: string | null;
+            /** Change Type */
+            change_type: string | null;
+            /** Imported At */
+            imported_at: string;
+            /** Incidents */
+            incidents: number;
+            /** Landscape */
+            landscape: string;
+            /** Numbers */
+            numbers: string[];
+            /** Return Code */
+            return_code: number | null;
+            /** System Id */
+            system_id: string;
+            /** Title */
+            title: string | null;
+            /** Transports */
+            transports: number;
+        };
+        /** SapImportWeekRow */
+        SapImportWeekRow: {
+            /** Changes */
+            changes: number;
+            /** Failed */
+            failed: number;
+            /** Imports */
+            imports: number;
             /** Period */
             period: string;
         };
@@ -1323,6 +1459,58 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** SapStageRow */
+        SapStageRow: {
+            /** Defect Correction */
+            defect_correction: number;
+            /** General */
+            general: number;
+            /** Label */
+            label: string;
+            /** Normal */
+            normal: number;
+            /** Other */
+            other: number;
+            /** Stage */
+            stage: string;
+            /** Standard */
+            standard: number;
+            /** Total */
+            total: number;
+            /** Urgent */
+            urgent: number;
+        };
+        /** SapStuckChangeRow */
+        SapStuckChangeRow: {
+            /** Area */
+            area: string;
+            /** Area Label */
+            area_label: string;
+            /** Change Id */
+            change_id: string;
+            /** Change Type */
+            change_type: string;
+            /** Created At */
+            created_at: string | null;
+            /** Days In Status */
+            days_in_status: number;
+            /** Jira Keys */
+            jira_keys: string[];
+            /** Landscape */
+            landscape: string;
+            /** Stage */
+            stage: string;
+            /** Stage Label */
+            stage_label: string;
+            /** Status */
+            status: string | null;
+            /** Threshold Days */
+            threshold_days: number;
+            /** Title */
+            title: string | null;
+            /** Type Label */
+            type_label: string;
+        };
         /** SapTrendRow */
         SapTrendRow: {
             /** Net */
@@ -1335,6 +1523,44 @@ export interface components {
             resolved: number;
             /** Sla Pct */
             sla_pct: number | null;
+        };
+        /** SapUrgentAreaRow */
+        SapUrgentAreaRow: {
+            /** Area */
+            area: string;
+            /** Created */
+            created: number;
+            /** Delta Pp */
+            delta_pp: number | null;
+            /** Label */
+            label: string;
+            /** Previous Created */
+            previous_created: number;
+            /** Previous Ratio Pct */
+            previous_ratio_pct: number | null;
+            /** Previous Urgent */
+            previous_urgent: number;
+            /** Ratio Pct */
+            ratio_pct: number | null;
+            /** Urgent */
+            urgent: number;
+        };
+        /** SapWaitingTransportRow */
+        SapWaitingTransportRow: {
+            /** Change Id */
+            change_id: string | null;
+            /** Days Waiting */
+            days_waiting: number;
+            /** Landscape */
+            landscape: string;
+            /** Qa Imported At */
+            qa_imported_at: string;
+            /** Qa System */
+            qa_system: string;
+            /** Title */
+            title: string | null;
+            /** Transport */
+            transport: string;
         };
         /** SlaOut */
         SlaOut: {
@@ -3410,6 +3636,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunsOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sap_changes: {
+        parameters: {
+            query?: {
+                /** @description SAP area code, or 'unassigned' */
+                area?: string | null;
+                /** @description Landscape code, or 'unknown' */
+                landscape?: string | null;
+                weeks?: number;
+                /** @description app_id (repeatable) */
+                app?: string[];
+                family?: string | null;
+                /** @description vendor_id */
+                vendor?: string | null;
+                /** @description assignment group */
+                group?: string | null;
+                /** @description 2026-W35, 2026-08 or 2026-Q3 */
+                period?: string | null;
+                /** @description YYYY-MM-DD (default: data as-of) */
+                as_of?: string | null;
+                /** @description Include unapproved AI content */
+                include_drafts?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SapChangesOut"];
                 };
             };
             /** @description Not found */

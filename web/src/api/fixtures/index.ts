@@ -44,6 +44,7 @@ const GET_HANDLERS: GetHandlers = {
   '/api/ops/vendors/sla-trend': (_, query) => ops.vendorTrend(query),
   '/api/sap/overview': () => sap.overview(),
   '/api/sap/l3': (_, query) => sap.l3(query),
+  '/api/sap/changes': (_, query) => sap.changes(query),
 };
 
 const POST_HANDLERS: PostHandlers = {

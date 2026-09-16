@@ -35,6 +35,14 @@ def render(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> str:
             "- **Largest backlogs:** "
             + "; ".join(f"{r['label']} {r['open']} ({r['aged_30d']} > 30d)" for r in areas[:3])
         )
+    ratio = F["sap.changes.urgent_ratio_8w"]["value"]
+    lines.append(
+        f"- **Changes:** {_fmt(F['sap.changes.open'])} open, {_fmt(F['sap.changes.prod_imports'])} production imports"
+        + (f", urgent share {ratio:.0f}% over 8 weeks" if ratio is not None else "")
+        + f"; {_fmt(F['sap.transports.failed_4w'])} failed imports in 28 days, "
+        f"{_fmt(F['sap.transports.waiting'])} transports waiting for production, {_fmt(F['sap.changes.stuck'])} stuck "
+        f"changes."
+    )
     serious = [f for f in findings if f.get("severity") in {"critical", "high"}]
     if serious:
         lines += ["", "**System-detected SAP risks (top):**"]

@@ -14,7 +14,9 @@ SCOPE = {
     "categories": [],
     "custom_fields": [],
     "landscapes": [{"code": "s4", "label": "S/4", "apps": ["APM0990002"]}],
+    "systems": [{"sid": "HP1", "landscape": "s4", "role": "prod"}],
 }
+CHARM = {"components": [{"prefix": "SCM-EWM", "area": "ewm"}], "cycles": [{"cycle": "S4 Release", "landscape": "s4"}]}
 
 
 def _by_name(paths: Any) -> dict[str, tuple[str, str]]:
@@ -23,7 +25,13 @@ def _by_name(paths: Any) -> dict[str, tuple[str, str]]:
 
 def test_all_ok_on_the_sap_profile(sap_profile):
     result = _by_name(sap_profile.paths)
-    assert list(result) == ["sap.config_valid", "sap.scope_groups_seen", "sap.landscape_apps_known"]
+    assert list(result) == [
+        "sap.config_valid",
+        "sap.scope_groups_seen",
+        "sap.landscape_apps_known",
+        "sap.transport_systems_known",
+        "sap.charm_values_mapped",
+    ]
     assert {status for status, _ in result.values()} == {"ok"}
     assert result["sap.scope_groups_seen"][1] == "every configured SAP group appears on tickets"
     names = [c.name for c in modules.doctor_checks(sap_profile.paths)]
@@ -41,6 +49,7 @@ def test_unseen_group_and_unknown_landscape_app_warn(sap_profile_rw):
             "landscapes": [{"code": "s4", "label": "S/4", "apps": ["APM0990002", "APM0999999"]}],
         },
     )
+    write_sap_config(paths, "charm.yaml", CHARM)
     result = _by_name(paths)
     assert result["sap.scope_groups_seen"] == (
         "warn",
@@ -89,3 +98,40 @@ def test_disabled_module_adds_no_checks(sap_profile_rw):
     config.mkdir(parents=True, exist_ok=True)
     (config / "modules.yaml").write_text("enabled: [ops]\n", encoding="utf-8")
     assert not [c for c in modules.doctor_checks(sap_profile_rw.paths) if c.name.startswith("sap.")]
+
+
+def test_charm_config_must_match_the_scope(sap_profile_rw):
+    paths = sap_profile_rw.paths
+    write_sap_config(paths, "scope.yaml", SCOPE)  # fewer areas and landscapes than the default charm.yaml uses
+    status, detail = _by_name(paths)["sap.config_valid"]
+    assert status == "fail" and detail.startswith("Invalid sap/charm.yaml")
+    assert "unknown SAP area 'fi_co'" in detail and "unknown landscape 'ecc'" in detail
+
+
+def test_unknown_transport_systems_and_unmapped_charm_values_warn(sap_profile_rw):
+    paths = sap_profile_rw.paths
+    write_sap_config(
+        paths,
+        "scope.yaml",
+        {
+            "systems": [
+                {"sid": "HD1", "landscape": "s4", "role": "dev"},
+                {"sid": "HP1", "landscape": "s4", "role": "prod"},
+            ]
+        },
+    )
+    write_sap_config(
+        paths,
+        "charm.yaml",
+        {
+            "change_types": [{"type": "SMMJ", "change_type": "normal"}],
+            "components": [{"prefix": "FI", "area": "fi_co"}],
+        },
+    )
+    result = _by_name(paths)
+    status, detail = result["sap.transport_systems_known"]
+    assert status == "warn" and "EP1" in detail and "EQ1" in detail and "HP1" not in detail
+    status, detail = result["sap.charm_values_mapped"]
+    assert status == "warn"
+    assert "transaction types: " in detail and "SMHF" in detail and "SMMJ" not in detail
+    assert "components: " in detail and "SD-" in detail and "FI-" not in detail

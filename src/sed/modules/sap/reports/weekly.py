@@ -1,13 +1,14 @@
-"""Weekly SAP Operations Review snapshot builder (sap-weekly): SAP L3 support for one ISO week.
+"""Weekly SAP Operations Review snapshot builder (sap-weekly): SAP L3 support and ChaRM changes for one ISO week.
 
-Aggregates of the week use `req.window` (the week clamped to the data date, labelled "to date" when open); backlog and
-attention are measured at the end of that window; rule findings use `req.as_of`.
+Aggregates of the week use `req.window` (the week clamped to the data date, labelled "to date" when open); backlog,
+attention and change status are measured at the end of that window; rule findings use `req.as_of`.
 """
 
 from __future__ import annotations
 
 from sed import metrics, rule_findings
-from sed.modules.sap.queries import l3
+from sed.modules.sap.charm import load_charm
+from sed.modules.sap.queries import changes, l3
 from sed.modules.sap.scope import Scope, load_scope
 from sed.reports.snapshot import SnapshotParts, SnapshotRequest, fact, table
 
@@ -55,6 +56,15 @@ def build(req: SnapshotRequest) -> SnapshotParts:
     findings = rule_findings.as_of_findings(conn, paths, req.as_of, "sap")
     aged = backlog_now["aging"]["d31_90"] + backlog_now["aging"]["d90p"]
 
+    cs = changes.load(conn, load_charm(paths, scope), at)
+    change_weeks = [period.previous(k) for k in range(11, 0, -1)] + [window]
+    urgent_window = change_weeks[-8:]
+    urgent_previous = [urgent_window[0].previous(k) for k in range(8, 0, -1)]
+    since = change_weeks[0].start_iso
+    all_changes = changes.select(cs)
+    cs_summary = changes.summary(conn, cs, window)
+    ratio, ratio_before = cs_summary["urgent_ratio_8w"], cs_summary["urgent_ratio_previous_8w"]
+
     facts = {
         "period.label": fact(period.label, "text", "Period"),
         "period.start": fact(period.start_local.isoformat(), "date", "Period start"),
@@ -99,6 +109,31 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             att["count"], "count", "SAP tickets needing attention", "sap.l3.attention.count"
         ),
         "sap.findings.count": fact(len(findings), "count", "System-detected SAP risks", "sap.findings.count"),
+        "sap.changes.open": fact(cs_summary["open"], "count", "Open SAP changes", "sap.changes.open"),
+        "sap.changes.urgent_ratio_8w": fact(
+            ratio, "pct", "Urgent share of new changes, 8 weeks", "sap.changes.urgent_ratio_8w"
+        ),
+        "sap.changes.urgent_ratio_previous_8w": fact(
+            ratio_before, "pct", "Urgent share of new changes, the 8 weeks before", "sap.changes.urgent_ratio_8w"
+        ),
+        "sap.changes.urgent_ratio_delta_pp": fact(
+            round(ratio - ratio_before, 1) if ratio is not None and ratio_before is not None else None,
+            "pp",
+            "Urgent share vs the 8 weeks before",
+        ),
+        "sap.changes.stuck": fact(cs_summary["stuck"], "count", "Stuck SAP changes", "sap.changes.stuck"),
+        "sap.changes.without_jira": fact(
+            cs_summary["without_jira"], "count", "Open changes without a Jira story", "sap.changes.without_jira"
+        ),
+        "sap.changes.prod_imports": fact(
+            cs_summary["prod_imports_week"], "count", f"Production imports{suffix}", "sap.changes.prod_imports"
+        ),
+        "sap.transports.failed_4w": fact(
+            cs_summary["failed_4w"], "count", "Failed transport imports (28 days)", "sap.transports.failed_4w"
+        ),
+        "sap.transports.waiting": fact(
+            cs_summary["waiting"], "count", "Transports waiting for production", "sap.transports.waiting"
+        ),
     }
 
     tables = {
@@ -186,6 +221,99 @@ def build(req: SnapshotRequest) -> SnapshotParts:
                 ("subject_id", "Subject", "text"),
             ],
             findings,
+        ),
+        "sap_change_stages": table(
+            "Open SAP changes by stage and type",
+            [
+                ("label", "Stage", "text"),
+                ("normal", "Normal", "count"),
+                ("urgent", "Urgent", "count"),
+                ("standard", "Standard", "count"),
+                ("defect_correction", "Defect correction", "count"),
+                ("total", "Open", "count"),
+            ],
+            changes.stage_matrix(all_changes),
+        ),
+        "sap_urgent_by_area": table(
+            "Urgent share of new changes by area (8 weeks vs the 8 before)",
+            [
+                ("label", "Area", "text"),
+                ("created", "Created", "count"),
+                ("urgent", "Urgent", "count"),
+                ("ratio_pct", "Urgent %", "pct"),
+                ("previous_ratio_pct", "8 weeks before %", "pct"),
+                ("delta_pp", "Change (pp)", "pp"),
+            ],
+            changes.urgent_by_area(cs, urgent_window, urgent_previous),
+        ),
+        "sap_prod_imports_12w": table(
+            "Production imports, last 12 weeks",
+            [
+                ("period", "Week", "text"),
+                ("imports", "Imports", "count"),
+                ("failed", "Failed", "count"),
+                ("changes", "Changes", "count"),
+            ],
+            changes.production_imports(cs, change_weeks),
+        ),
+        "sap_transports_failed": table(
+            "Failed transport imports, last 12 weeks",
+            [
+                ("transport", "Transport", "text"),
+                ("system_id", "System", "text"),
+                ("return_code", "RC", "count"),
+                ("imported_at", "Imported", "datetime"),
+                ("change_id", "Change", "text"),
+                ("title", "Title", "text"),
+            ],
+            changes.failed_imports(cs, since),
+        ),
+        "sap_incidents_after_imports": table(
+            "SAP incidents after production imports, last 12 weeks",
+            [
+                ("change_id", "Change", "text"),
+                ("title", "Title", "text"),
+                ("system_id", "System", "text"),
+                ("imported_at", "Imported", "datetime"),
+                ("return_code", "RC", "count"),
+                ("incidents", "Incidents", "count"),
+            ],
+            changes.incidents_after_imports(conn, cs, since, window.end_iso),
+        ),
+        "sap_changes_stuck": table(
+            "Stuck SAP changes",
+            [
+                ("change_id", "Change", "text"),
+                ("title", "Title", "text"),
+                ("area_label", "Area", "text"),
+                ("status", "Status", "text"),
+                ("days_in_status", "Days in status", "number"),
+                ("threshold_days", "Limit (days)", "count"),
+            ],
+            changes.stuck(cs, all_changes),
+        ),
+        "sap_transports_waiting": table(
+            "Transports waiting for production",
+            [
+                ("transport", "Transport", "text"),
+                ("change_id", "Change", "text"),
+                ("landscape", "Landscape", "text"),
+                ("qa_system", "QA system", "text"),
+                ("qa_imported_at", "QA import", "datetime"),
+                ("days_waiting", "Days waiting", "number"),
+            ],
+            changes.waiting_for_production(cs),
+        ),
+        "sap_changes_without_jira": table(
+            "Open changes without a Jira story",
+            [
+                ("change_id", "Change", "text"),
+                ("title", "Title", "text"),
+                ("type_label", "Type", "text"),
+                ("area_label", "Area", "text"),
+                ("stage_label", "Stage", "text"),
+            ],
+            changes.without_jira(cs, all_changes),
         ),
     }
     return SnapshotParts(facts=facts, tables=tables, sla_source=src, freshness=metrics.freshness(conn))

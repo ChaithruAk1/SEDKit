@@ -1,0 +1,68 @@
+# SAP Solution Manager ChaRM: how exported change documents and transports are read (module: sap).
+# Synthetic defaults with standard SAP vocabulary. Real transaction types, status texts, components, change cycles and
+# Jira projects belong in DATA_DIR\config\sap\charm.yaml. Each list there replaces the default list; name it with a
+# trailing "+" (for example `stages+:`) to add entries to the default list instead.
+version: 1
+
+# ChaRM transaction type -> change type (request, normal, urgent, standard, defect_correction, general).
+change_types:
+  - {type: SMCR, change_type: request}
+  - {type: SMMJ, change_type: normal}
+  - {type: SMHF, change_type: urgent}
+  - {type: SMAD, change_type: standard}
+  - {type: SMTM, change_type: defect_correction}
+  - {type: SMGC, change_type: general}
+
+# ChaRM user status as exported (compared ignoring case and repeated spaces) -> stage.
+stages:
+  - {status: Created, stage: requested}
+  - {status: To Be Approved, stage: requested}
+  - {status: Validation, stage: requested}
+  - {status: Approved, stage: approved}
+  - {status: In Development, stage: in_development}
+  - {status: Being Corrected, stage: in_development}
+  - {status: To Be Tested, stage: in_test}
+  - {status: Successfully Tested, stage: ready_for_production}
+  - {status: Authorized for Production, stage: ready_for_production}
+  - {status: Handed Over to Release, stage: ready_for_production}
+  - {status: Imported into Production, stage: in_production}
+  - {status: Confirmed, stage: confirmed}
+  - {status: Completed, stage: confirmed}
+  - {status: Withdrawn, stage: withdrawn}
+  - {status: Rejected, stage: withdrawn}
+
+# SAP application component of the change -> SAP area (codes from scope.yaml). The longest prefix wins, matched at a
+# "-" boundary (SCM-EWM-WOP matches SCM-EWM).
+components:
+  - {prefix: FI, area: fi_co}
+  - {prefix: CO, area: fi_co}
+  - {prefix: SD, area: sd}
+  - {prefix: MM, area: mm}
+  - {prefix: PP, area: pp_qm}
+  - {prefix: QM, area: pp_qm}
+  - {prefix: SCM-EWM, area: ewm}
+  - {prefix: EWM, area: ewm}
+  - {prefix: BC, area: basis}
+  - {prefix: BC-SEC, area: security}
+  - {prefix: GRC, area: security}
+  - {prefix: BC-MID, area: integration}
+  - {prefix: BC-DWB, area: abap}
+
+# ChaRM change cycle (as exported) -> landscape code from scope.yaml. Changes without a listed cycle take the landscape
+# of the systems their transports go to.
+cycles:
+  - {cycle: ECC Maintenance, landscape: ecc}
+  - {cycle: S4 Release, landscape: s4}
+
+# Where ChaRM changes and Jira issues reference each other.
+jira:
+  projects: [SAPS4]                            # Jira projects that hold SAP work
+  key_pattern: '\b([A-Z][A-Z0-9]{1,9}-\d+)\b'  # Jira keys in the change's external reference or title
+  change_id_pattern: '\b(8\d{9})\b'            # ChaRM change ids in Jira labels or summaries
+
+thresholds:
+  # Days an open change may keep the same status before it counts as stuck, per stage.
+  stuck_days: {requested: 30, approved: 30, in_development: 45, in_test: 30, ready_for_production: 14}
+  waiting_for_production_days: 14   # a tested transport imported into QA and not into production for this long
+  failed_return_code: 8             # import return code from which an import counts as failed
+  incident_window_hours: 72         # SAP incidents after a production import (correlation, not causation)
