@@ -1,0 +1,8 @@
+# Pass thresholds for offline AI evals against synthetic ground truth. Scorers print scores only; ground truth stays in
+# DATA_DIR\ground_truth and is read by Python alone.
+
+# `sed sap eval-triage <run_id>`: sed-triage-batch labels of SAP tickets against ground_truth/sap/ticket_truth.csv.
+sap-triage:
+  min_scored: 50               # SAP tickets with ground truth in the run
+  min_category_accuracy: 0.85  # am_category
+  min_subcategory_accuracy: 0.80  # am_subcategory, exact (SAP subcategory codes)

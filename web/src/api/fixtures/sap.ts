@@ -1,6 +1,7 @@
 /** SAP module API fixtures (SAP overview and L3 tickets). Fictional SAP groups, applications and ticket numbers. */
 import { ApiError } from '../client';
 import type { GetQuery, Schema } from '../types';
+import { RUNS } from './catalog';
 import { AS_OF, addDays, int, isoAt, lastWeeks, pad, pick, rng, round } from './random';
 
 const AREAS = [
@@ -19,6 +20,21 @@ const LANDSCAPES = [
   { value: 'ecc', label: 'SAP ECC' },
   { value: 's4', label: 'SAP S/4HANA' },
   { value: 'unknown', label: 'Unknown landscape' },
+];
+const AI_SUBCATEGORIES: [string, string | null, string, number][] = [
+  ['batch_job', 'sap_job_failure', 'Job failure', 21],
+  ['data_quality', 'sap_master_data', 'Master data', 17],
+  ['integration', 'sap_idoc_error', 'IDoc error', 14],
+  ['access', 'sap_authorisation', 'Authorisation', 11],
+  ['performance', 'sap_performance', 'Performance', 9],
+  ['integration', 'sap_interface', 'Interface', 8],
+  ['batch_job', 'sap_month_end_close', 'Month end close', 6],
+  ['access', 'sap_role_request', 'Role request', 5],
+  ['defect', 'sap_transport_issue', 'Transport issue', 4],
+  ['defect', 'sap_custom_code_dump', 'Custom code dump', 3],
+  ['how_to', 'sap_how_to', 'How to', 3],
+  ['infrastructure', 'sap_basis', 'Basis', 2],
+  ['defect', null, 'No subcategory', 1],
 ];
 const REASONS = ['past SLA target', 'aged > 30d', 'P2 open, near SLA target', 'reopened', 'unassigned'];
 const SHORT = [
@@ -249,6 +265,38 @@ export function l3(query: GetQuery<'/api/sap/l3'> | undefined): Schema<'SapL3Out
     ],
     attention_count: attention.length,
     attention,
+    ai_subcategories: aiSubcategories(factor * (area ? 0.2 : 1), q.include_drafts ?? false),
+  };
+}
+
+function aiSubcategories(factor: number, includeDrafts: boolean): Schema<'SapAiSubcategories'> {
+  const rows = AI_SUBCATEGORIES.map(([category, subcategory, label, n]) => ({
+    category,
+    subcategory,
+    label,
+    sap: subcategory !== null,
+    tickets: Math.round(n * factor),
+  })).filter((row) => row.tickets > 0);
+  const labelled = rows.reduce((sum, row) => sum + row.tickets, 0);
+  const drafts = includeDrafts ? Math.round(labelled * 0.25) : 0;
+  const tickets = Math.round((labelled + drafts) * 1.6 + (labelled ? 12 : 0));
+  return {
+    tickets,
+    labelled: labelled + drafts,
+    labelled_pct: tickets ? round((100 * (labelled + drafts)) / tickets, 1) : null,
+    include_drafts: includeDrafts,
+    unapproved_labels: drafts,
+    sample_accuracy: labelled ? 0.93 : null,
+    sample_ci_low: labelled ? 0.86 : null,
+    sample_ci_high: labelled ? 0.97 : null,
+    sample_n: labelled ? 60 : null,
+    runs: labelled
+      ? [
+          { run_id: RUNS.triageApproved, status: 'approved', sample_n: 60, sample_accuracy: 0.93, sample_ci_low: 0.86, sample_ci_high: 0.97 },
+          ...(drafts ? [{ run_id: RUNS.triageDraft, status: 'completed', sample_n: null, sample_accuracy: null, sample_ci_low: null, sample_ci_high: null }] : []),
+        ]
+      : [],
+    rows: rows.map((row) => ({ ...row, share: labelled ? round((100 * row.tickets) / labelled, 1) : 0 })),
   };
 }
 

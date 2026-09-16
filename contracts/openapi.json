@@ -2595,6 +2595,225 @@
         "title": "SapAging",
         "type": "object"
       },
+      "SapAiRun": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sample_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Accuracy"
+          },
+          "sample_ci_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Ci High"
+          },
+          "sample_ci_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Ci Low"
+          },
+          "sample_n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample N"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "sample_n",
+          "sample_accuracy",
+          "sample_ci_low",
+          "sample_ci_high"
+        ],
+        "title": "SapAiRun",
+        "type": "object"
+      },
+      "SapAiSubcategories": {
+        "additionalProperties": false,
+        "description": "AI-assisted: current sed-triage-batch labels of the SAP tickets opened in the trend window.",
+        "properties": {
+          "include_drafts": {
+            "title": "Include Drafts",
+            "type": "boolean"
+          },
+          "labelled": {
+            "title": "Labelled",
+            "type": "integer"
+          },
+          "labelled_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labelled Pct"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SapAiSubcategoryRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/SapAiRun"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "sample_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Accuracy"
+          },
+          "sample_ci_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Ci High"
+          },
+          "sample_ci_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Ci Low"
+          },
+          "sample_n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample N"
+          },
+          "tickets": {
+            "title": "Tickets",
+            "type": "integer"
+          },
+          "unapproved_labels": {
+            "title": "Unapproved Labels",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tickets",
+          "labelled",
+          "labelled_pct",
+          "include_drafts",
+          "unapproved_labels",
+          "sample_accuracy",
+          "sample_ci_low",
+          "sample_ci_high",
+          "sample_n",
+          "runs",
+          "rows"
+        ],
+        "title": "SapAiSubcategories",
+        "type": "object"
+      },
+      "SapAiSubcategoryRow": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "sap": {
+            "title": "Sap",
+            "type": "boolean"
+          },
+          "share": {
+            "title": "Share",
+            "type": "number"
+          },
+          "subcategory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subcategory"
+          },
+          "tickets": {
+            "title": "Tickets",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "subcategory",
+          "label",
+          "sap",
+          "tickets",
+          "share"
+        ],
+        "title": "SapAiSubcategoryRow",
+        "type": "object"
+      },
       "SapAreaRow": {
         "additionalProperties": false,
         "properties": {
@@ -3846,6 +4065,9 @@
           "aging": {
             "$ref": "#/components/schemas/SapAging"
           },
+          "ai_subcategories": {
+            "$ref": "#/components/schemas/SapAiSubcategories"
+          },
           "area": {
             "anyOf": [
               {
@@ -3961,7 +4183,8 @@
           "flow",
           "sla_by_priority",
           "attention_count",
-          "attention"
+          "attention",
+          "ai_subcategories"
         ],
         "title": "SapL3Out",
         "type": "object"

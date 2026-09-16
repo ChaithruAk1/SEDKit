@@ -3,6 +3,9 @@ ISO week.
 
 Aggregates of the week use `req.window` (the week clamped to the data date, labelled "to date" when open); backlog,
 attention, change status and IDoc errors are measured at the end of that window; rule findings use `req.as_of`.
+
+The SAP subcategory breakdown (`sap_ai_subcategories`) and the `sap.ai.*` facts are AI-derived: approved
+sed-triage-batch labels only, dropped from the rendered report with `--ai none`.
 """
 
 from __future__ import annotations
@@ -10,9 +13,19 @@ from __future__ import annotations
 from sed import metrics, rule_findings
 from sed.modules.sap.charm import load_charm
 from sed.modules.sap.idoc import load_idoc
-from sed.modules.sap.queries import changes, idocs, l3
+from sed.modules.sap.queries import ai_labels, changes, idocs, l3
 from sed.modules.sap.scope import Scope, load_scope
+from sed.modules.sap.taxonomy import load_sap_taxonomy
 from sed.reports.snapshot import SnapshotParts, SnapshotRequest, fact, table
+
+AI_TABLES = ("sap_ai_subcategories",)
+AI_FACTS = (
+    "sap.ai.labelled",
+    "sap.ai.labelled_pct",
+    "sap.ai.sample_accuracy_pct",
+    "sap.ai.sample_ci_low_pct",
+    "sap.ai.sample_ci_high_pct",
+)
 
 
 def _delta_pct(current: float | None, baseline: float | None) -> float | None:
@@ -23,6 +36,18 @@ def _delta_pct(current: float | None, baseline: float | None) -> float | None:
 
 def _count(n: int, noun: str) -> str:
     return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+
+
+def _pct(value: float | None) -> float | None:
+    return round(100.0 * value, 1) if value is not None else None
+
+
+def _ai_title(ai: dict) -> str:
+    title = "SAP subcategories (AI-assisted)"
+    if ai["sample_accuracy"] is None:
+        return title if not ai["labelled"] else f"{title[:-1]}, sample accuracy n/a)"
+    low, high = _pct(ai["sample_ci_low"]), _pct(ai["sample_ci_high"])
+    return f"{title[:-1]}, sample accuracy {_pct(ai['sample_accuracy']):.0f}%, 95% CI {low:.0f}–{high:.0f}%)"
 
 
 def _scope_note(scope: Scope) -> str:
@@ -69,6 +94,7 @@ def build(req: SnapshotRequest) -> SnapshotParts:
 
     ids = idocs.load(conn, load_idoc(paths, scope), at)
     ids_summary = idocs.summary(ids, window)
+    ai = ai_labels.breakdown(conn, scope, load_sap_taxonomy(paths), window.start_iso, window.end_iso)
 
     facts = {
         "period.label": fact(period.label, "text", "Period"),
@@ -255,6 +281,16 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             ],
             findings,
         ),
+        "sap_ai_subcategories": table(
+            _ai_title(ai),
+            [
+                ("category", "Category", "text"),
+                ("label", "Subcategory", "text"),
+                ("tickets", "Tickets", "count"),
+                ("share", "Share of labelled", "pct"),
+            ],
+            ai["rows"],
+        ),
         "sap_change_stages": table(
             "Open SAP changes by stage and type",
             [
@@ -408,4 +444,31 @@ def build(req: SnapshotRequest) -> SnapshotParts:
             ),
         ),
     }
-    return SnapshotParts(facts=facts, tables=tables, sla_source=src, freshness=metrics.freshness(conn))
+    facts.update(
+        {
+            "sap.ai.labelled": fact(
+                ai["labelled"], "count", f"SAP tickets with an AI subcategory{suffix}", "sap.ai.labelled"
+            ),
+            "sap.ai.labelled_pct": fact(
+                ai["labelled_pct"], "pct", "SAP tickets with an AI label", "sap.ai.labelled_pct"
+            ),
+            "sap.ai.sample_accuracy_pct": fact(
+                _pct(ai["sample_accuracy"]), "pct", "AI label sample accuracy", "sap.ai.sample_accuracy_pct"
+            ),
+            "sap.ai.sample_ci_low_pct": fact(
+                _pct(ai["sample_ci_low"]), "pct", "AI sample accuracy, 95% CI low", "sap.ai.sample_ci_low_pct"
+            ),
+            "sap.ai.sample_ci_high_pct": fact(
+                _pct(ai["sample_ci_high"]), "pct", "AI sample accuracy, 95% CI high", "sap.ai.sample_ci_high_pct"
+            ),
+        }
+    )
+    return SnapshotParts(
+        facts=facts,
+        tables=tables,
+        sla_source=src,
+        freshness=metrics.freshness(conn),
+        ai_runs=list(ai["runs"]),
+        ai_derived_tables=list(AI_TABLES),
+        ai_derived_facts=list(AI_FACTS),
+    )

@@ -38,6 +38,8 @@ class StartParams(StrictModel):
     max_chars: int | None = Field(None, ge=1000)
     max_items: int | None = Field(None, ge=1)
     limit: int | None = Field(None, ge=1)
+    # Restrict the run to one handler-defined subset, e.g. the tickets of a triage extension (`sap`).
+    only: str | None = Field(None, pattern=r"^[a-z][a-z0-9]{1,15}$")
     resume: str | None = None
     invoked_via: InvokedVia = "interactive"
     model_arg: str | None = None

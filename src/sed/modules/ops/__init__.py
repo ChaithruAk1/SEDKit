@@ -94,6 +94,7 @@ MODULE = Module(
     ),
     rule_findings="sed.analytics:compute_rule_findings",
     doctor_checks="sed.modules.ops.doctor:checks",
+    extension_points=("triage",),  # sed.modules.ops.ai.extensions: subcategories and context for other modules' tickets
     config_files=(
         "ops/taxonomy.yaml",
         "ops/sla.yaml",

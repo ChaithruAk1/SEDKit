@@ -40,6 +40,7 @@ sheets:
     conditional: [{column: pct, rule: "<", value: 90, style: bad}]
   - {table: sap_attention, sheet: Needs attention}
   - {table: sap_findings, sheet: Risks}
+  - {table: sap_ai_subcategories, sheet: AI subcategories}
   - {table: sap_change_stages, sheet: Change stages}
   - table: sap_urgent_by_area
     sheet: Urgent changes
@@ -93,6 +94,15 @@ slides:
     title: SAP tickets needing attention
     table: sap_attention
     columns: [number, priority, area_label, app, age_days, reasons]
+  - kind: table
+    title: SAP subcategories (AI-assisted)
+    table: sap_ai_subcategories
+    columns: [category, label, tickets, share]
+    when: has_rows
+    notes: >-
+      AI triage labels (approved runs only) of the SAP tickets opened this week: {{f:sap.ai.labelled}} labelled
+      ({{f:sap.ai.labelled_pct}}). Sample accuracy {{f:sap.ai.sample_accuracy_pct}}, 95% CI
+      {{f:sap.ai.sample_ci_low_pct}} to {{f:sap.ai.sample_ci_high_pct}}.
   - kind: kpis
     title: SAP changes and transports
     kpis:

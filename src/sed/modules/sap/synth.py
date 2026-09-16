@@ -15,6 +15,9 @@ Planted patterns (ground_truth/sap/patterns.json):
   custom field.
 * CP1 incidents after a failed import: 14 SD incidents on S/4HANA in the two days after the CP1 urgent change's
   production import (8 and 6 incidents, 7 and 6 days before the anchor).
+
+Every SAP incident comes from a Template whose AI triage truth (am_category, SAP subcategory of
+config/sap/taxonomy.yaml, misfiled_as) goes to ground_truth/sap/ticket_truth.csv for `sed sap eval-triage`.
 """
 
 from __future__ import annotations
@@ -27,7 +30,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from sed.errors import PreconditionFailed
 from sed.ingest import manifest as inbox_manifest
@@ -46,7 +49,7 @@ from sed.synth.tickets import (
     number,
 )
 
-GENERATOR_VERSION = 2
+GENERATOR_VERSION = 3
 KEY = "sap"
 ECC_APP = ("APM0990001", "SAP ECC")
 S4_APP = ("APM0990002", "SAP S/4HANA")
@@ -63,52 +66,93 @@ INCIDENT_FIELDS = [
     "problem_id", "caused_by", "parent_incident", "u_sap_component",
 ]  # fmt: skip
 
-# area -> (group, share of background volume, S/4 share, short description templates, SAP subcategory for AI truth)
-AREAS: dict[str, tuple[str, float, float, list[tuple[str, str]]]] = {
+
+class Template(NamedTuple):
+    """One kind of SAP incident and its AI triage ground truth (config/sap/taxonomy.yaml)."""
+
+    text: str
+    category: str
+    subcategory: str
+    close: str
+    misfiled: str = "none"
+
+
+# area -> (group, share of background volume, S/4 share, templates). Keep the number of templates per area: the RNG
+# draws depend on it, so changing it changes every generated ticket.
+AREAS: dict[str, tuple[str, float, float, list[Template]]] = {
     "fi_co": ("SAP-FICO-L3", 0.20, 0.45, [
-        ("Posting error in company code {cc} for document {doc}", "sap_posting_error"),
-        ("GL account determination failed for billing document {doc}", "sap_master_data"),
-        ("Cost center report shows wrong totals for {period}", "sap_reporting"),
+        Template("GL account determination failed for billing document {doc}", "data_quality", "sap_master_data",
+                 "Account determination entry maintained and the billing document released to accounting."),
+        Template("Settlement job for internal orders cancelled in company code {cc}", "batch_job", "sap_job_failure",
+                 "Locked order released and the settlement job restarted successfully."),
+        Template("How to reverse a posted document {doc} in company code {cc}", "how_to", "sap_how_to",
+                 "Explained the reversal transaction and shared the work instruction.", "request"),
     ]),
     "sd": ("SAP-SD-L3", 0.16, 0.45, [
-        ("Sales order {doc} blocked for delivery", "sap_process_error"),
-        ("Pricing condition missing for customer {cust}", "sap_master_data"),
-        ("Invoice output not sent for billing document {doc}", "sap_output"),
+        Template("Pricing condition missing for customer {cust}", "data_quality", "sap_master_data",
+                 "Condition record created for the customer and the order repriced."),
+        Template("Order response IDoc ORDRSP in status 51 for partner {partner}", "integration", "sap_idoc_error",
+                 "Partner profile corrected and the IDoc reprocessed."),
+        Template("Sales order {doc} cannot be changed: no authorisation for VA02", "access", "sap_authorisation",
+                 "Missing authorisation object added to the user's existing role."),
     ]),
     "mm": ("SAP-MM-L3", 0.14, 0.45, [
-        ("Purchase order {doc} cannot be released", "sap_workflow"),
-        ("Goods receipt posting error for material {mat}", "sap_posting_error"),
-        ("Invoice verification blocked for supplier {cust}", "sap_process_error"),
+        Template("Goods receipt for material {mat} rejected: valuation class missing in the material master",
+                 "data_quality", "sap_master_data", "Valuation class maintained and the goods receipt posted."),
+        Template("Supplier invoice IDoc INVOIC in status 51 for partner {partner}", "integration", "sap_idoc_error",
+                 "Tax code mapping fixed and the IDoc reprocessed."),
+        Template("Please add the purchase order release role for a new buyer", "access", "sap_role_request",
+                 "Release role assigned after approval by the role owner.", "request"),
     ]),
     "pp_qm": ("SAP-PPQM-L3", 0.10, 0.45, [
-        ("Production order {doc} confirmation fails in plant {plant}", "sap_posting_error"),
-        ("MRP run created no planned orders for plant {plant}", "sap_job_failure"),
+        Template("MRP run job cancelled for plant {plant}", "batch_job", "sap_job_failure",
+                 "Lock entries removed and the MRP job rescheduled."),
+        Template("Production order {doc} confirmation ends in a short dump in a custom user exit", "defect",
+                 "sap_custom_code_dump", "Null check added to the custom user exit and transported."),
     ]),
     "ewm": ("SAP-EWM-L3", 0.10, 0.90, [
-        ("Warehouse task not confirmed in warehouse {wh}", "sap_process_error"),
-        ("Handling unit stuck in staging area of warehouse {wh}", "sap_process_error"),
-        ("Outbound delivery {doc} not distributed to the warehouse", "sap_interface"),
+        Template("Outbound delivery {doc} not distributed to warehouse {wh}: qRFC queue in error", "integration",
+                 "sap_interface", "Queue unlocked and the delivery distributed again."),
+        Template("Wave release job did not run for warehouse {wh}", "batch_job", "sap_job_failure",
+                 "Job variant corrected and the wave released."),
+        Template("Warehouse monitor very slow for warehouse {wh}", "performance", "sap_performance",
+                 "Selection variant limited and statistics refreshed; response time back to normal."),
     ]),
     "basis": ("SAP-BASIS-L3", 0.10, 0.45, [
-        ("Background job {job} cancelled", "sap_job_failure"),
-        ("Slow response in transaction {tcode}", "sap_performance"),
-        ("RFC connection to {dest} failing", "sap_interface"),
+        Template("Background job {job} cancelled", "batch_job", "sap_job_failure",
+                 "Job restarted after the variant was corrected."),
+        Template("Slow response in transaction {tcode}", "performance", "sap_performance",
+                 "Expensive SQL statement tuned with a new index."),
+        Template("All dialog work processes busy on the production application server", "infrastructure",
+                 "sap_basis", "Hanging work processes cancelled and the application server restarted."),
     ]),
     "security": ("SAP-SEC-L3", 0.08, 0.45, [
-        ("Missing authorisation for transaction {tcode}", "sap_authorisation"),
-        ("User locked after password reset in production client", "sap_authorisation"),
+        Template("Missing authorisation for transaction {tcode}", "access", "sap_authorisation",
+                 "Authorisation added to the user's role after the SU53 check."),
+        Template("Role request: display access to transaction {tcode} for a new team member", "access",
+                 "sap_role_request", "Display role assigned after approval.", "request"),
     ]),
     "integration": ("SAP-INT-L3", 0.08, 0.45, [
-        ("IDoc {mtype} in error status 51 for partner {partner}", "sap_idoc_error"),
-        ("Interface message stuck in the middleware queue for {mtype}", "sap_interface"),
+        Template("IDoc {mtype} in error status 51 for partner {partner}", "integration", "sap_idoc_error",
+                 "Mapping corrected and the IDoc reprocessed."),
+        Template("RFC connection to {dest} failing, interface messages stuck", "integration", "sap_interface",
+                 "RFC destination credentials renewed and the queue restarted."),
     ]),
     "abap": ("SAP-ABAP-L3", 0.04, 0.45, [
-        ("Short dump in custom program {prog}", "sap_custom_code_dump"),
-        ("Custom report {prog} times out", "sap_performance"),
+        Template("Short dump in custom program {prog}", "defect", "sap_custom_code_dump",
+                 "Program corrected and transported to production."),
+        Template("Custom report {prog} very slow in dialog", "performance", "sap_performance",
+                 "Report selection rewritten to use an index."),
     ]),
 }  # fmt: skip
-MONTH_END = ("Period-end close job failed for company code {cc}", "sap_month_end_close")
-AFTER_IMPORT = ("Billing document {doc} not posted after the latest transport import", "sap_transport_issue")
+MONTH_END = Template(
+    "Period-end close job failed for company code {cc}", "batch_job", "sap_month_end_close",
+    "Closing job restarted after the posting period was opened.",
+)  # fmt: skip
+AFTER_IMPORT = Template(
+    "Billing document {doc} not posted after the latest transport import", "defect", "sap_transport_issue",
+    "Follow-up transport imported to correct the change; billing documents reposted.",
+)  # fmt: skip
 CP1_INCIDENTS = {7: 8, 6: 6}  # days before the anchor -> incidents (the CP1 import is 8 days before, 18:30)
 COMPONENTS = ["FI-GL", "SD-BIL", "MM-PUR", "PP-SFC", "EWM-OUT"]
 MESSAGE_TYPES = ["ORDERS", "INVOIC", "DESADV", "MATMAS", "DEBMAS"]
@@ -131,7 +175,7 @@ class SapTicket:
     category: str = "Software"
     component: str = ""
     pattern: str = ""
-    subcategory: str = ""
+    template: Template | None = None
     reassignments: int = 0
     truth: dict[str, Any] = field(default_factory=dict)
 
@@ -190,7 +234,7 @@ class SapGenerator:
         day: date,
         i: int,
         area: str | None,
-        template: tuple[str, str],
+        template: Template,
         *,
         pattern: str = "",
         priority: int | None = None,
@@ -207,7 +251,7 @@ class SapGenerator:
         share = s4_share if s4_share is not None else (AREAS[area][2] if area else 0.45)
         app = S4_APP if rnd.random() < share else ECC_APP
         caller = rnd.choice(self.callers)
-        short = self._text(rnd, template[0])
+        short = self._text(rnd, template.text)
         desc = short + ". Reported by the business; please check the logs and advise."
         if rnd.random() < 0.15:
             desc += self._signature(rnd, caller)
@@ -229,7 +273,7 @@ class SapGenerator:
             category=category,
             component=component,
             pattern=pattern,
-            subcategory=template[1],
+            template=template,
             reassignments=1 if rnd.random() < 0.2 else 0,
         )
 
@@ -368,7 +412,7 @@ def _row(t: SapTicket, state: dict[str, Any]) -> list[Any]:
         t.short,
         t.desc,
         "Solved (Permanently)" if resolved else "",
-        "Configuration corrected and the document reprocessed." if resolved else "",
+        (t.template.close if t.template else "Solved.") if resolved else "",
         t.caller,
         t.assignee or "",
         t.group,
@@ -436,7 +480,18 @@ def generate(paths: Paths, req: SynthRequest) -> dict[str, Any]:
         by_month[t.opened.strftime("%Y-%m")].append(row)
         if state["resolved_at"] is None:
             active.append(row)
-        truth.append([t.number, t.area or "unassigned", "s4" if t.app == S4_APP else "ecc", t.pattern, t.subcategory])
+        tpl = t.template
+        truth.append(
+            [
+                t.number,
+                t.area or "unassigned",
+                "s4" if t.app == S4_APP else "ecc",
+                t.pattern,
+                tpl.category if tpl else "",
+                tpl.subcategory if tpl else "",
+                tpl.misfiled if tpl else "",
+            ]
+        )
     for label, rows in sorted(by_month.items()):
         name = f"sap_incident_{label}.csv"
         W.write_csv(inbox / name, INCIDENT_FIELDS, rows)
@@ -480,7 +535,7 @@ def _ground_truth(
     folder.mkdir(parents=True, exist_ok=True)
     with (folder / "ticket_truth.csv").open("w", encoding="utf-8", newline="") as fh:
         writer = csv.writer(fh)
-        writer.writerow(["number", "area", "landscape", "pattern", "sap_subcategory"])
+        writer.writerow(["number", "area", "landscape", "pattern", "am_category", "am_subcategory", "misfiled_as"])
         writer.writerows(truth)
 
     def pattern(name: str) -> list[SapTicket]:

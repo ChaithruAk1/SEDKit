@@ -320,6 +320,18 @@
               "is_flag": false,
               "kind": "option",
               "multiple": false,
+              "name": "only",
+              "opts": [
+                "--only"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
               "name": "resume",
               "opts": [
                 "--resume"
@@ -2413,6 +2425,67 @@
       ],
       "help": "Human review of AI runs (samples, verdicts, approval)",
       "name": "review"
+    },
+    {
+      "commands": [
+        {
+          "help": "Score a triage run's SAP subcategories against the synthetic ground truth (scores only).",
+          "name": "eval-triage",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "run_id",
+              "opts": [
+                "run_id"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "SAP application support (evals)",
+      "name": "sap"
     },
     {
       "help": "Serve the local API and dashboard on 127.0.0.1 (per-launch token for write requests).",

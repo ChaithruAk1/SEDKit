@@ -8,14 +8,16 @@ import { useApi } from '../../../api/useApi';
 import { CHART_COLORS, ChartCard } from '../../../components/ChartCard';
 import { type Column, DataTable } from '../../../components/DataTable';
 import { ErrorState } from '../../../components/ErrorState';
-import { formatDate, formatInt, formatNumber, formatPct } from '../../../components/format';
+import { formatDate, formatInt, formatNumber, formatPct, formatRatio } from '../../../components/format';
 import { PageHeader } from '../../../components/PageHeader';
+import { ProvenanceBadge } from '../../../components/ProvenanceBadge';
 import { SectionCard } from '../../../components/SectionCard';
 import { useFilters, useSearchParam } from '../../../hooks/useFilters';
 import { ticketHref } from '../links';
 
 type AttentionRow = Schema<'SapAttentionRow'>;
 type PriorityRow = Schema<'SapSlaPriorityRow'>;
+type SubcategoryRow = Schema<'SapAiSubcategoryRow'>;
 type AreaFlow = { area: string; label: string; arrived: number; closed: number; net: number };
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -79,6 +81,27 @@ export default function SapTicketsPage() {
     { key: 'met', header: 'Met', value: (r) => r.met, render: (r) => formatInt(r.met), align: 'right' },
     { key: 'total', header: 'Resolved', value: (r) => r.total, render: (r) => formatInt(r.total), align: 'right' },
   ];
+  const subcategoryColumns: Column<SubcategoryRow>[] = [
+    { key: 'category', header: 'Category', value: (r) => r.category },
+    {
+      key: 'label',
+      header: 'Subcategory',
+      value: (r) => r.label,
+      render: (r) => (
+        <Text span size="sm" c={r.sap ? undefined : 'dimmed'}>
+          {r.label}
+        </Text>
+      ),
+    },
+    { key: 'tickets', header: 'Tickets', value: (r) => r.tickets, render: (r) => formatInt(r.tickets), align: 'right' },
+    { key: 'share', header: 'Share', value: (r) => r.share, render: (r) => formatPct(r.share), align: 'right' },
+  ];
+  const ai = data?.ai_subcategories;
+  const mainRun = ai?.runs.find((r) => r.sample_accuracy !== null) ?? ai?.runs[0];
+  const accuracyText =
+    ai && ai.sample_accuracy !== null
+      ? `sample accuracy ${formatRatio(ai.sample_accuracy)} (95% CI ${formatRatio(ai.sample_ci_low)}–${formatRatio(ai.sample_ci_high)}, n=${ai.sample_n ?? '?'})`
+      : 'sample accuracy not reviewed yet';
   const flowColumns: Column<AreaFlow>[] = [
     { key: 'label', header: 'Area', value: (r) => r.label },
     { key: 'arrived', header: 'Arrived', value: (r) => r.arrived, render: (r) => formatInt(r.arrived), align: 'right' },
@@ -216,6 +239,35 @@ export default function SapTicketsPage() {
           </SectionCard>
         </Grid.Col>
       </Grid>
+
+      <SectionCard
+        title="SAP subcategories (AI-assisted)"
+        description={
+          ai
+            ? `AI triage labels of the ${formatInt(ai.tickets)} SAP incidents and problems opened in the last ${data?.trend.length ?? 12} weeks: ${formatInt(ai.labelled)} labelled (${formatPct(ai.labelled_pct)}), ${accuracyText}`
+            : 'AI triage labels of SAP tickets'
+        }
+        actions={
+          <Group gap={6}>
+            {ai && ai.unapproved_labels > 0 ? (
+              <Badge variant="light" color="orange">
+                {formatInt(ai.unapproved_labels)} draft labels
+              </Badge>
+            ) : null}
+            {mainRun ? <ProvenanceBadge runId={mainRun.run_id} status={mainRun.status} size="sm" /> : null}
+          </Group>
+        }
+      >
+        <DataTable
+          rows={ai?.rows}
+          columns={subcategoryColumns}
+          rowKey={(r) => `${r.category}|${r.subcategory ?? ''}`}
+          loading={l3.loading}
+          emptyText="No approved AI labels for these tickets yet: run sed-triage-batch with --only sap and approve the run"
+          minWidth={420}
+          serverOrdered
+        />
+      </SectionCard>
 
       <SectionCard
         title="Needs attention"

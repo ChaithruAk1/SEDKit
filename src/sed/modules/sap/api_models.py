@@ -93,6 +93,40 @@ class SapAttentionRow(ApiModel):
     short_description: str | None
 
 
+class SapAiSubcategoryRow(ApiModel):
+    category: str
+    subcategory: str | None
+    label: str
+    sap: bool  # a SAP subcategory (config/sap/taxonomy.yaml) rather than a portfolio one
+    tickets: int
+    share: float  # % of the labelled tickets
+
+
+class SapAiRun(ApiModel):
+    run_id: str
+    status: str
+    sample_n: int | None
+    sample_accuracy: float | None
+    sample_ci_low: float | None
+    sample_ci_high: float | None
+
+
+class SapAiSubcategories(ApiModel):
+    """AI-assisted: current sed-triage-batch labels of the SAP tickets opened in the trend window."""
+
+    tickets: int
+    labelled: int
+    labelled_pct: float | None
+    include_drafts: bool
+    unapproved_labels: int
+    sample_accuracy: float | None  # of the run behind most labels
+    sample_ci_low: float | None
+    sample_ci_high: float | None
+    sample_n: int | None
+    runs: list[SapAiRun]
+    rows: list[SapAiSubcategoryRow]
+
+
 class SapL3Out(ApiModel):
     as_of: str
     at: str
@@ -110,6 +144,7 @@ class SapL3Out(ApiModel):
     sla_by_priority: list[SapSlaPriorityRow]
     attention_count: int
     attention: list[SapAttentionRow]
+    ai_subcategories: SapAiSubcategories
 
 
 class SapStageRow(ApiModel):

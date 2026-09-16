@@ -107,6 +107,19 @@ DEFINITIONS: dict[str, tuple[str, str]] = {
         "Persistent IDoc errors on a system within thresholds.spike_window_hours after a production import into it, "
         "against the same window before (lift). A correlation signal, not causation.",
     ),
+    "sap.ai.labelled": (
+        "count",
+        "SAP incidents and problems opened in the period that carry an approved AI triage label for their current "
+        "content (sed-triage-batch run with SAP subcategories, config/sap/taxonomy.yaml). AI-assisted.",
+    ),
+    "sap.ai.labelled_pct": ("pct", "Share of the SAP incidents and problems opened in the period with an AI label."),
+    "sap.ai.sample_accuracy_pct": (
+        "pct",
+        "Human-reviewed accuracy on the random stratified review sample of the approved triage run behind most of "
+        "these labels, weighted by stratum size.",
+    ),
+    "sap.ai.sample_ci_low_pct": ("pct", "Lower bound of the Wilson 95% interval around the AI sample accuracy."),
+    "sap.ai.sample_ci_high_pct": ("pct", "Upper bound of the Wilson 95% interval around the AI sample accuracy."),
     "sap.changes.incidents_after_import": (
         "count",
         "SAP incidents of the same landscape (and the change's area, when known) opened within "

@@ -28,6 +28,7 @@ def test_all_ok_on_the_sap_profile(sap_profile):
     result = _by_name(sap_profile.paths)
     assert list(result) == [
         "sap.config_valid",
+        "sap.taxonomy_categories_known",
         "sap.scope_groups_seen",
         "sap.landscape_apps_known",
         "sap.transport_systems_known",

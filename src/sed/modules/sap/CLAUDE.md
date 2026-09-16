@@ -1,7 +1,7 @@
 # SAP module (`sed.modules.sap`)
 
-Module #2 of SED: SAP application support on top of the ops module (`depends_on=("ops",)`). Built so far: L3 support
-(S1), ChaRM changes with transports (S2) and IDoc health (S3). SAP subcategories in AI triage (S4) follow.
+Module #2 of SED: SAP application support on top of the ops module (`depends_on=("ops",)`): L3 support (S1), ChaRM
+changes with transports (S2), IDoc health (S3) and SAP subcategories in AI triage (S4).
 
 - **Manifest:** `__init__.py` (`MODULE`). Everything else is reached through the lazy import references declared there.
 - **SAP tickets stay ops tickets.** `scope.py` turns `config/sap/scope.yaml` into a ticket predicate
@@ -11,7 +11,7 @@ Module #2 of SED: SAP application support on top of the ops module (`depends_on=
 - **Metrics:** `queries/l3.py` wraps the ops functions in `sed.metrics`, so SAP numbers follow the portfolio
   definitions (SLA source order, stale tickets excluded from backlog). Only group-level (area) breakdowns, never people.
 - **Config:** `config/sap/` holds `scope.yaml` (areas, groups, landscapes, systems), `charm.yaml`, `idoc.yaml`,
-  `risk_rules.yaml`,
+  `taxonomy.yaml`, `risk_rules.yaml`,
   `mappings/` and `reports/sap-weekly.yaml`, each overridable in `DATA_DIR\config\sap\`. Real SAP group names,
   categories, application ids, system ids and ChaRM values live only there. Config lists replace the defaults; `key+`
   appends to them.
@@ -23,6 +23,12 @@ Module #2 of SED: SAP application support on top of the ops module (`depends_on=
   them and maps message types to areas, and `queries/idocs.py` works on error episodes (first error to next processed
   status). Errors not processed within `thresholds.reprocess_grace_hours` are persistent; only those count towards
   growth and spikes after production imports.
+- **AI triage (S4):** `triage.py` contributes to the ops extension point `ops.triage`
+  (`sed.modules.ops.ai.extensions`): SAP tickets get a `sap` object (area and landscape labels) in their packet line and
+  may take the SAP subcategories of `config/sap/taxonomy.yaml` (`taxonomy.py`, codes `sap_...`) under the portfolio
+  categories. `sed ai start-run sed-triage-batch --only sap` triages SAP tickets only. `queries/ai_labels.py` builds the
+  AI-assisted breakdown (approved labels, or drafts on request) for `/api/sap/l3` and `sap-weekly`. `evals.py` scores a
+  run against the synthetic truth (`sed sap eval-triage <run>`, thresholds in `evals/thresholds.yaml`), scores only.
 - **Rule findings** (`rules.py`, refreshed per module by `sed.rule_findings`):
   - `sap_backlog_risk:growth:<area>` and `sap_backlog_risk:aged:<area>`;
   - `sap_change_risk:stuck:<area>`, `sap_change_risk:urgent_ratio:<area>`,
@@ -41,6 +47,8 @@ Module #2 of SED: SAP application support on top of the ops module (`depends_on=
   incidents, CP2 MM urgent creep, CP3 stuck in test, CP4 waiting for production, CP5 without Jira, and the CN1
   release-weekend control. `synth_idocs.py` writes daily IDoc exports for EP1 and HP1: IP1 INVOIC errors after the
   CP1 import, IP2 growing ORDERS errors for one partner, and the IN1 quick-reprocessing and IN2 cutover controls.
+  Every SAP incident comes from a `Template` whose triage truth (category, SAP subcategory, misfiled_as) goes to
+  `ticket_truth.csv`; keep the number of templates per area, because the RNG draws depend on it.
   Ground truth goes to `ground_truth/sap/`.
 - **Tests:** `tests/modules/sap/`, with the shared fixtures `sap_profile` / `sap_profile_rw`
   (`tests/fixtures/sap_profile.py`: the ops profile plus the SAP data).

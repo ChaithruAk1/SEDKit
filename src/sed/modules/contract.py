@@ -15,6 +15,7 @@ from typing import Literal
 ImportRef = str
 MODULE_KEY_RE = re.compile(r"^[a-z][a-z0-9]{1,15}$")
 IMPORT_REF_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$")
+EXTENSION_POINT_RE = re.compile(r"^[a-z][a-z0-9_]{1,31}$")
 PeriodKind = Literal["week", "month", "quarter"]
 ReportFormat = Literal["xlsx", "md", "pptx"]
 
@@ -97,6 +98,16 @@ class AliasKind:
 
 
 @dataclass(frozen=True)
+class Extension:
+    """A contribution to an extension point: `point` is "<owner module key>.<point name>" (the owner declares the name
+    in `extension_points` and is this module or one of its dependencies); what `ref` resolves to is defined by the
+    owner, e.g. `ops.triage` takes a `(Paths) -> TriageExtension` factory (sed.modules.ops.ai.extensions)."""
+
+    point: str
+    ref: ImportRef
+
+
+@dataclass(frozen=True)
 class Module:
     key: str
     title: str
@@ -119,6 +130,8 @@ class Module:
     finding_kinds: tuple[str, ...] = ()  # owned by this module alone
     rule_findings: ImportRef | None = None  # (conn, paths, as_of) -> list[dict] of finding_kinds (sed.rule_findings)
     doctor_checks: ImportRef | None = None  # (Paths) -> list[Check]
+    extension_points: tuple[str, ...] = ()  # names other modules may contribute to as "<key>.<name>"
+    extensions: tuple[Extension, ...] = ()
     config_files: tuple[str, ...] = ()
     data_subdirs: tuple[str, ...] = ()
     tables: tuple[str, ...] = ()

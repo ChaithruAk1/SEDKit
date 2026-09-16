@@ -17,10 +17,14 @@ def checks(paths: Paths) -> list[Any]:
     from sed import db
     from sed.doctor import Check
     from sed.modules import get
+    from sed.modules.ops.ai.extensions import unknown_categories
+    from sed.modules.ops.ai.taxonomy import load_taxonomy
     from sed.modules.sap.charm import load_charm
     from sed.modules.sap.idoc import load_idoc
     from sed.modules.sap.rules import load_rules
     from sed.modules.sap.scope import load_scope
+    from sed.modules.sap.taxonomy import load_sap_taxonomy
+    from sed.modules.sap.triage import extension
     from sed.reports.specs import load_report_spec
 
     try:
@@ -28,11 +32,27 @@ def checks(paths: Paths) -> list[Any]:
         charm = load_charm(paths, scope)
         idoc = load_idoc(paths, scope)
         load_rules(paths)
+        load_sap_taxonomy(paths)
         for rdef in get("sap").reports:
             load_report_spec(rdef.key, paths)
+        dropped = unknown_categories(extension(paths), load_taxonomy(paths))
     except SedError as exc:
         return [Check("sap.config_valid", "fail", f"{exc.message}: {exc.details}" if exc.details else exc.message)]
-    out = [Check("sap.config_valid", "ok", "sap scope, ChaRM and IDoc settings, risk rules and report specs load")]
+    out = [
+        Check(
+            "sap.config_valid",
+            "ok",
+            "sap scope, ChaRM, IDoc and taxonomy settings, risk rules and report specs load",
+        ),
+        Check(
+            "sap.taxonomy_categories_known",
+            "warn" if dropped else "ok",
+            "SAP subcategories under categories missing from the ops taxonomy (AI triage leaves them out): "
+            + ", ".join(f"{s.code} ({s.category})" for s in dropped)
+            if dropped
+            else "every SAP subcategory sits under a category of the ops taxonomy",
+        ),
+    ]
     if not scope.configured:
         # Ticket checks need a scope; the ChaRM and IDoc checks below still run.
         out.append(

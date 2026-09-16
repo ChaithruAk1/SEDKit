@@ -1,7 +1,7 @@
 export const meta = {
   name: 'sed-analyze',
   description: 'SED AI analysis: triage ticket batches (start-run, one agent per packet with ingest, finish-run)',
-  whenToUse: 'Triage more than 300 SED tickets (sed-triage-batch at scale). Args: {profile, steps: ["triage"], scope, limit, batchSize, maxItems, triageModel, claudeVersion, resumeRunIds: {triage}}',
+  whenToUse: 'Triage more than 300 SED tickets (sed-triage-batch at scale). Args: {profile, steps: ["triage"], scope, limit, only, batchSize, maxItems, triageModel, claudeVersion, resumeRunIds: {triage}}',
   phases: [
     { title: 'Start run', detail: 'sed ai start-run sed-triage-batch: select, claim and write packets' },
     { title: 'Triage batches', detail: 'one agent per packet: label, write out/<batch>.json, sed ai ingest (at most 2 retries)' },
@@ -378,6 +378,7 @@ const SCOPE = optionalText('scope', A.scope, /^(new|since:\d{4}-\d{2}-\d{2}|peri
 const LIMIT = optionalInt('limit', A.limit)
 const BATCH_SIZE = optionalInt('batchSize', A.batchSize)
 const MAX_ITEMS = optionalInt('maxItems', A.maxItems)
+const ONLY = optionalText('only', A.only, /^[a-z][a-z0-9]{1,15}$/)
 const TRIAGE_MODEL = optionalText('triageModel', A.triageModel, /^[A-Za-z0-9._:\[\]-]{1,100}$/)
 const CLAUDE_VERSION = optionalText('claudeVersion', A.claudeVersion, /^[A-Za-z0-9 ._()+-]{1,100}$/)
 const RESUME_IDS = A.resumeRunIds && typeof A.resumeRunIds === 'object' ? A.resumeRunIds : {}
@@ -410,6 +411,7 @@ function startCommand() {
   } else {
     parts.push('--scope', SCOPE)
     if (LIMIT) parts.push('--limit', String(LIMIT))
+    if (ONLY) parts.push('--only', ONLY)
     if (BATCH_SIZE) parts.push('--batch-size', String(BATCH_SIZE))
     if (MAX_ITEMS) parts.push('--max-items', String(MAX_ITEMS))
   }

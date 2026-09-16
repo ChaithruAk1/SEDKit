@@ -1201,6 +1201,64 @@ export interface components {
             /** D90P */
             d90p: number;
         };
+        /** SapAiRun */
+        SapAiRun: {
+            /** Run Id */
+            run_id: string;
+            /** Sample Accuracy */
+            sample_accuracy: number | null;
+            /** Sample Ci High */
+            sample_ci_high: number | null;
+            /** Sample Ci Low */
+            sample_ci_low: number | null;
+            /** Sample N */
+            sample_n: number | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * SapAiSubcategories
+         * @description AI-assisted: current sed-triage-batch labels of the SAP tickets opened in the trend window.
+         */
+        SapAiSubcategories: {
+            /** Include Drafts */
+            include_drafts: boolean;
+            /** Labelled */
+            labelled: number;
+            /** Labelled Pct */
+            labelled_pct: number | null;
+            /** Rows */
+            rows: components["schemas"]["SapAiSubcategoryRow"][];
+            /** Runs */
+            runs: components["schemas"]["SapAiRun"][];
+            /** Sample Accuracy */
+            sample_accuracy: number | null;
+            /** Sample Ci High */
+            sample_ci_high: number | null;
+            /** Sample Ci Low */
+            sample_ci_low: number | null;
+            /** Sample N */
+            sample_n: number | null;
+            /** Tickets */
+            tickets: number;
+            /** Unapproved Labels */
+            unapproved_labels: number;
+        };
+        /** SapAiSubcategoryRow */
+        SapAiSubcategoryRow: {
+            /** Category */
+            category: string;
+            /** Label */
+            label: string;
+            /** Sap */
+            sap: boolean;
+            /** Share */
+            share: number;
+            /** Subcategory */
+            subcategory: string | null;
+            /** Tickets */
+            tickets: number;
+        };
         /** SapAreaRow */
         SapAreaRow: {
             /** Aged 30D */
@@ -1560,6 +1618,7 @@ export interface components {
         /** SapL3Out */
         SapL3Out: {
             aging: components["schemas"]["SapAging"];
+            ai_subcategories: components["schemas"]["SapAiSubcategories"];
             /** Area */
             area: string | null;
             /** Areas */

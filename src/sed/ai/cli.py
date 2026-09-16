@@ -31,6 +31,9 @@ def ai_start_run(
     max_chars: Annotated[int | None, typer.Option("--max-chars", min=1000, help="Packet size limit")] = None,
     max_items: Annotated[int | None, typer.Option("--max-items", min=1, help="Refuse larger runs")] = None,
     limit: Annotated[int | None, typer.Option(min=1, help="Take at most this many items")] = None,
+    only: Annotated[
+        str | None, typer.Option(help="Only this subset of items, e.g. a triage extension key such as sap")
+    ] = None,
     resume: Annotated[str | None, typer.Option(help="Resume a run: only batches not yet ingested")] = None,
     invoked_via: Annotated[
         str, typer.Option("--invoked-via", help="interactive | workflow | headless")
@@ -55,6 +58,7 @@ def ai_start_run(
             max_chars=max_chars,
             max_items=max_items,
             limit=limit,
+            only=only,
             resume=resume,
             invoked_via=invoked_via,
             model_arg=model,

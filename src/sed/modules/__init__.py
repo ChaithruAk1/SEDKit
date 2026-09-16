@@ -19,10 +19,12 @@ from typing import Any
 
 from sed.errors import PreconditionFailed, ValidationFailed
 from sed.modules.contract import (
+    EXTENSION_POINT_RE,
     IMPORT_REF_RE,
     MODULE_KEY_RE,
     AliasKind,
     EntityRef,
+    Extension,
     Module,
     NavItem,
     ReportDef,
@@ -310,6 +312,12 @@ def entity_for_alias_kind(kind: str) -> EntityRef:
     raise ValidationFailed(f"Unknown alias kind '{kind}'", {"available": list(alias_kinds())})
 
 
+def extensions(point: str, paths: Paths | None = None) -> list[tuple[str, Any]]:
+    """(module key, resolved reference) of every enabled module's contribution to `point` ("<owner>.<name>"), in module
+    order. The owner of the point defines what the references resolve to."""
+    return [(m.key, load_ref(e.ref)) for m in enabled(paths) for e in m.extensions if e.point == point]
+
+
 def doctor_checks(paths: Paths) -> list[Any]:
     from sed.doctor import Check
 
@@ -348,6 +356,7 @@ def declared_refs(m: Module) -> list[str]:
     refs = [c.app for c in m.cli] + [r.builder for r in m.reports] + [r.markdown for r in m.reports if r.markdown]
     refs += [s.handler for s in m.skills if s.handler]
     refs += [x for x in (m.ingest_targets, m.ingest_hooks, m.metric_definitions, m.doctor_checks, m.rule_findings) if x]
+    refs += [e.ref for e in m.extensions]
     if m.api:
         refs.append(m.api.router)
     if m.synth:
@@ -410,6 +419,7 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
             claim("finding kind", k, m.key)
         if m.rule_findings and not m.finding_kinds:
             problems.append(f"{m.key}: rule_findings needs the finding kinds it computes in finding_kinds")
+        problems += _extension_problems(m, mods)
         if m.mappings_dir and not m.mappings_dir.startswith(f"{m.key}/"):
             problems.append(f"{m.key}: mappings_dir must live under config/{m.key}/")
         problems += [
@@ -425,6 +435,29 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
     return problems
 
 
+def _extension_problems(m: Module, mods: tuple[Module, ...]) -> list[str]:
+    problems = [
+        f"{m.key}: invalid extension point name '{p}'" for p in m.extension_points if not EXTENSION_POINT_RE.match(p)
+    ]
+    problems += [
+        f"{m.key}: extension point '{p}' is declared twice"
+        for p in sorted({p for p in m.extension_points if m.extension_points.count(p) > 1})
+    ]
+    owners = {x.key: x for x in mods}
+    seen: set[str] = set()
+    for e in m.extensions:
+        owner_key, _, name = e.point.partition(".")
+        owner = owners.get(owner_key)
+        if e.point in seen:
+            problems.append(f"{m.key}: extension point '{e.point}' is contributed to twice")
+        seen.add(e.point)
+        if owner is None or (owner_key != m.key and owner_key not in m.depends_on):
+            problems.append(f"{m.key}: extension '{e.point}' needs '{owner_key}' as this module or a dependency")
+        elif name not in owner.extension_points:
+            problems.append(f"{m.key}: module '{owner_key}' declares no extension point '{name}'")
+    return problems
+
+
 __all__ = [
     "BUILTIN",
     "CORE_CLI_NAMES",
@@ -433,6 +466,7 @@ __all__ = [
     "EXTRA_ENV",
     "PORTFOLIO_TABLES",
     "AliasKind",
+    "Extension",
     "Module",
     "alias_kinds",
     "declared_refs",
@@ -441,6 +475,7 @@ __all__ = [
     "enabled_keys",
     "entities",
     "entity_for_alias_kind",
+    "extensions",
     "finding_kinds",
     "get",
     "handler",

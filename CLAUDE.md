@@ -49,6 +49,8 @@ SED is a platform of modules; ops is module #1 and sap (SAP application support)
   (`uv run python scripts/codegen.py`; never hand-edit).
 - Report builders take a `SnapshotRequest` and return `SnapshotParts` (`sed/reports/snapshot.py`). Skills implement
   `SkillHandler` (`sed/ai/contract.py`). API routes use the models, deps and envelope in `sed/api/`.
+- A module adds to another module's feature only through a declared extension point (`extension_points` /
+  `Extension`, e.g. `ops.triage`; see `docs/modules.md`).
 
 ## Parallel builds
 Large changes can be built by parallel agents in manual worktrees, following `docs/playbooks/parallel-build.md`:
@@ -66,7 +68,7 @@ such a build, work in the main checkout as usual. Never put high-entropy literal
 - `config/` — synthetic defaults; any file can be overridden at the same relative path in `DATA_DIR\config`.
   Platform files (`settings`, `agent`, `pii`, `fx`) sit at the top; module files live in `config/<module>/`
   (ops: `config/ops/{taxonomy,sla,risk_rules,vendor_groups}.yaml`, `mappings/`, `reports/`; sap:
-  `config/sap/{scope,charm,idoc,risk_rules}.yaml`, `mappings/`, `reports/`).
+  `config/sap/{scope,charm,idoc,taxonomy,risk_rules}.yaml`, `mappings/`, `reports/`).
 - `.claude/skills/sed-*` — project skills (always `sed-` prefixed; a personal `/review` skill exists on this machine).
 - `.claude/workflows/` — `sed-analyze.js`, `sed-report.js` (schema blocks generated from Pydantic; do not hand-edit).
 - `scripts/` — `ci.py`, `guard_confidential.py`, `codegen.py`, `check_ownership.py`, `wt.sh`, `setup.ps1`.

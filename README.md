@@ -119,14 +119,27 @@ errors.
 
 Dashboard pages:
 - `#/sap`: KPIs, areas, landscapes and SAP risks.
-- `#/sap/tickets`: area and landscape filters, trend, aging, SLA, arrivals vs closures, attention list.
+- `#/sap/tickets`: area and landscape filters, trend, aging, SLA, arrivals vs closures, AI-assisted SAP
+  subcategories, attention list.
 - `#/sap/changes`: open changes by stage, urgent share by area, production imports, failed imports, SAP incidents
   after production imports, stuck changes, transports waiting for production, changes without a Jira story.
 - `#/sap/idocs`: IDoc errors by system, message type and partner, aging, new and persistent errors per week,
   reprocessing times, frequent error texts, error spikes after production imports.
 
-Metrics stay at group (area), system and partner level, never per person. SAP subcategories in AI triage follow in the
-next SAP phase.
+AI triage gives SAP tickets SAP subcategories under the portfolio categories (`config/sap/taxonomy.yaml`: IDoc error,
+interface, job failure, month-end close, authorisation, role request, master data, custom code dump, transport issue,
+Basis, performance, how-to). The packet line of a SAP ticket carries its SAP area and landscape. Run SAP tickets only
+with `--only sap`, then score a synthetic run against the ground truth (scores only):
+
+```bash
+uv run sed ai start-run sed-triage-batch --scope period:2026-08 --only sap --dry-run --profile synthetic --json
+uv run sed sap eval-triage <run_id> --profile synthetic --json     # thresholds in evals/thresholds.yaml
+```
+
+`#/sap/tickets` and `sap-weekly` show the breakdown of approved labels, marked AI-assisted with the run's sample
+accuracy; `--ai none` leaves it out.
+
+Metrics stay at group (area), system and partner level, never per person.
 
 ## AI analysis (Claude Code)
 

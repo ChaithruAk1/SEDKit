@@ -1,0 +1,56 @@
+# SAP subcategories for AI triage (sed-triage-batch). They sit under the portfolio categories of
+# config/ops/taxonomy.yaml and are allowed only on SAP tickets (config/sap/scope.yaml), whose packet lines carry a `sap`
+# field with the SAP area and landscape. Every code starts with sap_.
+# `subcategories` is a list, so a DATA_DIR override replaces it (or appends to it with `subcategories+`).
+version: 1
+subcategories:
+  - code: sap_idoc_error
+    category: integration
+    description: An IDoc in an error status (for example 51 or 56) or not processed
+  - code: sap_interface
+    category: integration
+    description: RFC destinations, qRFC or tRFC queues, web services or middleware between SAP and other systems
+  - code: sap_job_failure
+    category: batch_job
+    description: A background job (SM37) cancelled, failed or not started, other than the period-end close
+  - code: sap_month_end_close
+    category: batch_job
+    description: A period-end or month-end closing job or run
+  - code: sap_authorisation
+    category: access
+    description: A missing authorisation (SU53) or a locked or expired SAP user
+  - code: sap_role_request
+    category: access
+    description: A request for a new or changed SAP role; no fault
+  - code: sap_master_data
+    category: data_quality
+    description: Material, customer, supplier, GL account, pricing or other master data wrong or missing
+  - code: sap_custom_code_dump
+    category: defect
+    description: A short dump (ST22) or error in custom (Z) code, user exits or enhancements
+  - code: sap_transport_issue
+    category: defect
+    description: Broken behaviour right after a transport import, or a failed or missing transport
+  - code: sap_basis
+    category: infrastructure
+    description: Basis operations such as work processes, application servers, spool or system availability
+  - code: sap_performance
+    category: performance
+    description: Slow SAP transactions or reports in dialog use, or dialog time-outs
+  - code: sap_how_to
+    category: how_to
+    description: How to use an SAP transaction or process; no fault
+guide: |
+  How to use them:
+  - Choose the category first, exactly as for any other ticket. Then prefer the SAP subcategory of that category when
+    one fits; otherwise use a portfolio subcategory of the category, or null.
+  - Never use a `sap_` subcategory on a line without a `sap` field, and never under another category.
+  - An IDoc in error is `integration` / `sap_idoc_error`, even when a job created it.
+  - The period-end or month-end close is `batch_job` / `sap_month_end_close`; any other cancelled job is
+    `sap_job_failure`.
+  - A fault that started right after a transport import is `defect` / `sap_transport_issue`; a short dump in custom
+    code is `defect` / `sap_custom_code_dump`.
+  - A missing authorisation for a user who needs to work now is `access` / `sap_authorisation`; asking for a new role
+    is `access` / `sap_role_request` with `misfiled_as: request`. A how-to question is `how_to` / `sap_how_to` with
+    `misfiled_as: request`.
+  - `sap.area` and `sap.landscape` are context only: they never decide the category on their own.

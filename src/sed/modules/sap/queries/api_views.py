@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from sed import metrics
 from sed.api.findings import published_findings
 from sed.api.models import FindingOut, Kpi
@@ -10,6 +12,9 @@ from sed.errors import ValidationFailed
 from sed.modules.ops.queries.common import Context, last_full_period, series_end, trend_periods
 from sed.modules.sap.api_models import (
     SapAging,
+    SapAiRun,
+    SapAiSubcategories,
+    SapAiSubcategoryRow,
     SapAreaRow,
     SapAttentionRow,
     SapBacklogAreaRow,
@@ -41,8 +46,9 @@ from sed.modules.sap.api_models import (
 from sed.modules.sap.charm import load_charm
 from sed.modules.sap.definitions import DEFINITIONS
 from sed.modules.sap.idoc import load_idoc
-from sed.modules.sap.queries import changes, idocs, l3
+from sed.modules.sap.queries import ai_labels, changes, idocs, l3
 from sed.modules.sap.scope import Scope, load_scope
+from sed.modules.sap.taxonomy import load_sap_taxonomy
 
 FLOW_WEEKS = 8
 FINDING_LIMIT = 200
@@ -164,6 +170,27 @@ def l3_view(ctx: Context, area: str | None, landscape: str | None, weeks: int) -
         ],
         attention_count=attention["count"],
         attention=[SapAttentionRow(**{k: r.get(k) for k in SapAttentionRow.model_fields}) for r in attention["items"]],
+        ai_subcategories=_ai_subcategories(ctx, scope, periods, area, landscape),
+    )
+
+
+def _ai_subcategories(
+    ctx: Context, scope: Scope, periods: list[Any], area: str | None, landscape: str | None
+) -> SapAiSubcategories:
+    b = ai_labels.breakdown(
+        ctx.conn,
+        scope,
+        load_sap_taxonomy(ctx.paths),
+        periods[0].start_iso,
+        periods[-1].end_iso,
+        area=area,
+        landscape=landscape,
+        include_drafts=ctx.filters.include_drafts,
+    )
+    return SapAiSubcategories(
+        **{k: v for k, v in b.items() if k not in ("runs", "rows")},
+        runs=[SapAiRun(**{k: r[k] for k in SapAiRun.model_fields}) for r in b["runs"]],
+        rows=[SapAiSubcategoryRow(**r) for r in b["rows"]],
     )
 
 

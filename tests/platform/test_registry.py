@@ -94,6 +94,44 @@ def test_validate_flags_collisions_and_bad_names():
         assert fragment in problems, fragment
 
 
+def test_extension_points_are_declared_by_the_owner_and_contributions_follow_dependencies():
+    from sed.modules.contract import Extension
+
+    ops = modules.get("ops")
+    assert ops.extension_points == ("triage",)
+    good = Module(key="good", title="Good", depends_on=("ops",), extensions=(Extension("ops.triage", "x.y:ext"),))
+    assert modules.validate([ops, good]) == []
+    bad = Module(
+        key="bad",
+        title="Bad",
+        extension_points=("Bad Name", "dup", "dup"),
+        extensions=(
+            Extension("ops.triage", "x.y:ext"),  # ops is not a dependency
+            Extension("bad.nothing", "x.y:ext"),  # not declared by the owner
+            Extension("bad.nothing", "x.y:other"),
+            Extension("ghost.triage", "not a ref"),
+        ),
+    )
+    problems = "\n".join(modules.validate([ops, bad]))
+    for fragment in (
+        "bad: invalid extension point name 'Bad Name'",
+        "bad: extension point 'dup' is declared twice",
+        "bad: extension 'ops.triage' needs 'ops' as this module or a dependency",
+        "bad: module 'bad' declares no extension point 'nothing'",
+        "bad: extension point 'bad.nothing' is contributed to twice",
+        "bad: extension 'ghost.triage' needs 'ghost'",
+        "bad: invalid import reference 'not a ref'",
+    ):
+        assert fragment in problems, fragment
+
+
+def test_extensions_follow_enablement():
+    assert [key for key, _ in modules.extensions("ops.triage")] == ["sap"]
+    ops, sap = modules.get("ops"), modules.get("sap")
+    with modules.use_modules([ops, sap], {"ops"}):
+        assert modules.extensions("ops.triage") == []
+
+
 def test_duplicate_entity_keys_are_rejected():
     from sed.modules.contract import EntityRef
 

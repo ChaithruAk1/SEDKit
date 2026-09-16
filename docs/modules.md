@@ -6,7 +6,7 @@ knows nothing about any business domain. Each domain is a **module**:
 | Module | Key | Scope |
 |---|---|---|
 | #1 | `ops` | tickets, SLA, backlog, costs, licenses, vendors; weekly, monthly, quarterly and vendor reports |
-| #2 | `sap` | SAP L3 support by area and landscape on top of the ops tickets, ChaRM changes and transports, IDoc health, SAP risks, `sap-weekly` (`src/sed/modules/sap/CLAUDE.md`) |
+| #2 | `sap` | SAP L3 support by area and landscape on top of the ops tickets, ChaRM changes and transports, IDoc health, SAP risks, SAP subcategories in AI triage, `sap-weekly` (`src/sed/modules/sap/CLAUDE.md`) |
 
 Later modules (for example delivery management of new business apps) plug in the same way.
 
@@ -27,6 +27,7 @@ is a lazy import reference (`"package.module:attr"`), so the core imports module
 | Definitions | `metric_definitions` | Definitions sheet, deck notes, `/api/meta` |
 | Rule findings | `finding_kinds` + `rule_findings` | "System-detected" risks in `finding`, refreshed per module (`sed.rule_findings`) |
 | Health | `doctor_checks` | `sed doctor` as `<key>.<check>` |
+| Extension points | `extension_points` (owner) and `Extension(point="<owner>.<name>", ref)` (contributor) | whatever the owner does with the contributions (see below) |
 | Config | `config_files`, `data_subdirs` | `config/<key>/...`, overridable in `DATA_DIR\config\<key>\` |
 | Tables | `tables` | documentation and collision checks |
 
@@ -48,6 +49,19 @@ Rules enforced by tests (`tests/platform/test_registry.py`, `test_core_boundarie
 - Keys, report keys, skill names, nav ids, CLI names, alias kinds and finding kinds are unique; skills start with `sed-`;
   nav paths live under `/<key>`.
 - Module tables are disjoint from core tables.
+
+## Extension points
+
+A module can let other modules add to one of its features without importing them. The owner declares a name in
+`extension_points` and defines what a contribution's import reference resolves to; a contributor declares
+`Extension(point="<owner key>.<name>", ref)` and must depend on the owner. The owner reads the contributions of the
+enabled modules with `sed.modules.extensions("<owner key>.<name>", paths)`.
+
+| Point | Owner | A contribution is | Used by |
+|---|---|---|---|
+| `ops.triage` | ops | `(Paths) -> TriageExtension` (`src/sed/modules/ops/ai/extensions.py`): a packet field for the module's tickets, subcategories under the portfolio categories, field descriptions and a guide | `sed-triage-batch`: the field goes on the module's packet lines, the subcategories and guide into `in/context.md`, the configuration into the skill hash; ingest accepts the subcategories only on the module's tickets; `start-run --only <key>` keeps only those tickets |
+
+The SAP module contributes to `ops.triage` (`src/sed/modules/sap/triage.py`, `config/sap/taxonomy.yaml`).
 
 ## Rule findings
 

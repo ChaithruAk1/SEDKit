@@ -6,6 +6,9 @@ Work items are (ticket, stage) pairs of incidents and problems:
 An item is skipped when a label for its current hash exists in a running, completed or approved run, or when another
 run holds a live claim on it. Items are ordered by event_at DESC, ticket_id ASC. Packets carry scrubbed columns only
 and never the ticket id or number (refs map back through ai_batch_item).
+
+Triage extensions of other modules (sed.modules.ops.ai.extensions) add a context object and subcategories for their own
+tickets; `StartParams.only = <extension key>` restricts a run to those tickets.
 """
 
 from __future__ import annotations
@@ -18,7 +21,8 @@ from typing import Any, ClassVar
 from sed.ai.contract import IngestError, IngestResult, RunContext, SampleCandidate, WorkItem
 from sed.ai.runs import lease_until, scope_bounds
 from sed.calendar import iso_utc
-from sed.errors import Busy
+from sed.errors import Busy, ValidationFailed
+from sed.modules.ops.ai.extensions import TriageExtension, load_extensions
 from sed.modules.ops.ai.schemas import TriageBatchOutput
 from sed.modules.ops.ai.taxonomy import load_taxonomy, render_context, slugify_symptom
 from sed.modules.ops.ai.vocab import approved_keys, render_vocab
@@ -40,6 +44,25 @@ def _now_iso() -> str:
     return iso_utc(datetime.now(UTC))
 
 
+def _subcategory_error(
+    code: str, sub: str, category: Any, extensions: list[TriageExtension], keys: set[str]
+) -> str | None:
+    """None when `sub` is an extension subcategory of category `code` on a ticket of that extension (`keys`: the
+    extensions that claim the ticket), else the error message."""
+    for ext in extensions:
+        if sub in ext.by_category().get(code, ()):
+            if ext.key in keys:
+                return None
+            return f"'{sub}' is a {ext.title} subcategory: only for lines with a `{ext.key}` field"
+    for ext in extensions:
+        other = next((s.category for s in ext.subcategories if s.code == sub), None)
+        if other is not None:
+            return f"'{sub}' is a {ext.title} subcategory of '{other}', not of '{code}'"
+    allowed = list(category.subcategories)
+    allowed += [c for ext in extensions if ext.key in keys for c in ext.by_category().get(code, ())]
+    return f"'{sub}' is not a subcategory of '{code}' ({', '.join(allowed) or 'none: use null'})"
+
+
 class TriageBatchHandler:
     skill: ClassVar[str] = "sed-triage-batch"
     schema_version: ClassVar[int] = 1
@@ -48,11 +71,16 @@ class TriageBatchHandler:
     # -- configuration ---------------------------------------------------------------------------------------------
 
     def config_inputs(self, paths: Any) -> dict[str, Any]:
-        return {
+        taxonomy = load_taxonomy(paths)
+        inputs: dict[str, Any] = {
             "schema_version": self.schema_version,
-            "taxonomy": load_taxonomy(paths).as_config(),
+            "taxonomy": taxonomy.as_config(),
             "payload_limits": dict(LIMITS),
         }
+        extensions = load_extensions(paths, taxonomy)
+        if extensions:  # absent without extensions, so an ops-only install keeps its skill hash
+            inputs["extensions"] = {ext.key: ext.as_config() for ext in extensions}
+        return inputs
 
     # -- start-run -------------------------------------------------------------------------------------------------
 
@@ -88,10 +116,26 @@ class TriageBatchHandler:
                       AND k.run_id IS NOT :run_id)
             ORDER BY c.event_at DESC, c.ticket_id ASC
         """
+        extensions = load_extensions(ctx.paths, load_taxonomy(ctx.paths))
+        only = ctx.params.only
+        if only is not None and only not in {ext.key for ext in extensions}:
+            raise ValidationFailed(
+                f"--only '{only}' is not an enabled triage extension", {"extensions": [e.key for e in extensions]}
+            )
         rows = ctx.conn.execute(
             sql, {"start": bounds.start_iso, "end": bounds.end_iso, "now": _now_iso(), "run_id": ctx.run_id}
         ).fetchall()
-        return [WorkItem(r["ticket_id"], r["stage"], r["input_hash"], self._payload(r)) for r in rows]
+        items = [WorkItem(r["ticket_id"], r["stage"], r["input_hash"], self._payload(r)) for r in rows]
+        if extensions and items:
+            ids = sorted({item.item_id for item in items})
+            for ext in extensions:
+                found = ext.context(ctx.conn, ids)
+                for item in items:
+                    if item.item_id in found:
+                        item.payload[ext.key] = found[item.item_id]
+        if only is not None:
+            items = [item for item in items if only in item.payload]
+        return items
 
     @staticmethod
     def _payload(r: sqlite3.Row) -> dict[str, Any]:
@@ -128,7 +172,9 @@ class TriageBatchHandler:
             raise Busy(f"{len(lost)} items were claimed by another run meanwhile; retry start-run", lost[:20])
 
     def context_files(self, ctx: RunContext, items: list[WorkItem]) -> dict[str, str]:
-        return {"context.md": render_context(load_taxonomy(ctx.paths), run_id=ctx.run_id)}
+        taxonomy = load_taxonomy(ctx.paths)
+        used = [ext for ext in load_extensions(ctx.paths, taxonomy) if any(ext.key in i.payload for i in items)]
+        return {"context.md": render_context(taxonomy, run_id=ctx.run_id, extensions=used)}
 
     def batch_files(self, ctx: RunContext, batch: str, items: list[WorkItem]) -> dict[str, str]:
         ids = [i.item_id for i in items]
@@ -146,12 +192,34 @@ class TriageBatchHandler:
 
     # -- ingest ----------------------------------------------------------------------------------------------------
 
+    @staticmethod
+    def _claimed(ctx: RunContext, extensions: list[TriageExtension], refs: dict[str, WorkItem]) -> dict[str, set[str]]:
+        """Ticket id -> keys of the extensions that claim it, for the batch's tickets."""
+        ids = sorted({w.item_id for w in refs.values()})
+        out: dict[str, set[str]] = {}
+        for ext in extensions:
+            for ticket_id in ext.context(ctx.conn, ids):
+                out.setdefault(ticket_id, set()).add(ext.key)
+        return out
+
     def validate(self, ctx: RunContext, output: Any, refs: dict[str, WorkItem]) -> list[IngestError]:
         taxonomy = load_taxonomy(ctx.paths)
+        extensions = load_extensions(ctx.paths, taxonomy)
+        # refs carry no payload at ingest, so the extensions say again which tickets they claim (the packet line of such
+        # a ticket carried their field). Only asked when a label uses a subcategory outside the portfolio taxonomy.
+        claimed: dict[str, set[str]] | None = None
         errors: list[IngestError] = []
         for idx, item in enumerate(output.items):
             loc = f"items.{idx}"
             category = taxonomy.categories.get(item.am_category)
+            if (
+                claimed is None
+                and extensions
+                and category is not None
+                and item.am_subcategory is not None
+                and item.am_subcategory not in category.subcategories
+            ):
+                claimed = self._claimed(ctx, extensions, refs)
             if category is None:
                 errors.append(
                     IngestError(
@@ -161,14 +229,11 @@ class TriageBatchHandler:
                     )
                 )
             elif item.am_subcategory is not None and item.am_subcategory not in category.subcategories:
-                allowed = ", ".join(category.subcategories) or "none: use null"
-                errors.append(
-                    IngestError(
-                        f"{loc}.am_subcategory",
-                        f"'{item.am_subcategory}' is not a subcategory of '{item.am_category}' ({allowed})",
-                        item.ref,
-                    )
-                )
+                work = refs.get(item.ref)
+                keys = (claimed or {}).get(work.item_id, set()) if work is not None else set()
+                message = _subcategory_error(item.am_category, item.am_subcategory, category, extensions, keys)
+                if message:
+                    errors.append(IngestError(f"{loc}.am_subcategory", message, item.ref))
             if item.misfiled_as not in taxonomy.misfiled_as:
                 errors.append(
                     IngestError(

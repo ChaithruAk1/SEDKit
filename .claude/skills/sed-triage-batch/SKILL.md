@@ -13,6 +13,8 @@ stay drafts until a human approves the whole run (`sed review ...`); only approv
 ## Inputs
 - Scope: `new` (default: everything since the data as-of date minus the backfill window), `since:YYYY-MM-DD` or
   `period:<label>` (for example `period:2026-08`). Profile: `synthetic` unless the user names another one.
+- Optional subset: `--only <key>` keeps the tickets of one module extension, for example `--only sap` for SAP tickets
+  only. Add it to both start-run commands when the user asks for such a run.
 - `sed ai start-run` prints a RunPlan (one JSON line) with absolute forward-slash paths:
   - `context`: `in/context.md` (taxonomy, packet fields, output rules), read once per run.
   - `inputs[]`: one entry per batch with `packet` (`in/batch_NNNN.jsonl`, one ticket per line), `aux`
@@ -23,7 +25,7 @@ stay drafts until a human approves the whole run (`sed review ...`); only approv
 ## Procedure
 1. Plan: run the dry-run command below. If `plan.items` is 0, report that nothing needs triage and stop. If it is
    above 300, do not triage in-session: tell the user to run the `sed-analyze` workflow with
-   `{profile, steps: ['triage'], scope, limit, batchSize, claudeVersion}` and stop.
+   `{profile, steps: ['triage'], scope, limit, only, batchSize, claudeVersion}` and stop.
 2. Start: run the start-run command. Keep `run_id`, `context` and `inputs` from its JSON.
 3. Read `in/context.md` once. For each batch in `inputs`, in order:
    1. Read the batch vocabulary file (`aux`) and the packet. If the Read result is truncated, page through the
@@ -49,6 +51,8 @@ One JSON object per batch file (see `output_schema.json`):
 
 - Every ref of the packet exactly once; no other refs. Refs are the only identifiers: never guess ticket numbers.
 - `am_category` and `am_subcategory` only from the taxonomy in `in/context.md` (`am_subcategory` may be null).
+  Module subcategories (for example `sap_...`) are allowed only on lines that carry the module's field (`sap`), and
+  only under the category context.md lists them for.
 - `symptom_key`: lowercase snake_case (at most 60 characters) naming the concrete symptom; reuse a key from the
   vocabulary file when it names the same symptom.
 - `misfiled_as`: `none`, `request`, `change` or `problem`.
@@ -59,8 +63,8 @@ One JSON object per batch file (see `output_schema.json`):
 Replace `<profile>`, `<scope>`, `<run_id>` and `<out>`. Always run them through the Bash tool, exactly as shown.
 
 ```bash
-uv run sed ai start-run sed-triage-batch --scope <scope> --dry-run --profile <profile> --json
-uv run sed ai start-run sed-triage-batch --scope <scope> --invoked-via interactive --profile <profile> --json
+uv run sed ai start-run sed-triage-batch --scope <scope> [--only <key>] --dry-run --profile <profile> --json
+uv run sed ai start-run sed-triage-batch --scope <scope> [--only <key>] --invoked-via interactive --profile <profile> --json
 uv run sed ai ingest <run_id> "<out>" --profile <profile> --json
 uv run sed ai finish-run <run_id> --profile <profile> --json
 ```

@@ -3,20 +3,22 @@
 SAP tickets stay ops tickets. The SAP scope (config/sap/scope.yaml) selects them on read by assignment group, category
 or custom field and gives their SAP area and landscape; see scope.py. ChaRM change documents and transport imports are
 SAP tables read through config/sap/charm.yaml (charm.py); IDocs are read through config/sap/idoc.yaml (idoc.py).
+SAP tickets get SAP subcategories in AI triage through the ops triage extension point (triage.py, taxonomy.py).
 """
 
 from __future__ import annotations
 
-from sed.modules.contract import ApiMount, Module, NavItem, ReportDef, SynthDef
+from sed.modules.contract import ApiMount, CliMount, Extension, Module, NavItem, ReportDef, SynthDef
 
 MODULE = Module(
     key="sap",
     title="SAP application support",
     description=(
-        "SAP L3 support by area and landscape, ChaRM changes and transports, IDoc health, SAP risks and "
-        "the weekly review"
+        "SAP L3 support by area and landscape, ChaRM changes and transports, IDoc health, SAP risks, SAP "
+        "subcategories in AI triage and the weekly review"
     ),
     depends_on=("ops",),
+    cli=(CliMount("sap", "sed.modules.sap.cli:app"),),
     api=ApiMount("sed.modules.sap.api:router"),
     nav=(
         NavItem("sap.overview", "SAP", "/sap", 60, "building-factory"),
@@ -42,10 +44,12 @@ MODULE = Module(
     finding_kinds=("sap_backlog_risk", "sap_change_risk", "sap_idoc_risk"),
     rule_findings="sed.modules.sap.rules:compute",
     doctor_checks="sed.modules.sap.doctor:checks",
+    extensions=(Extension("ops.triage", "sed.modules.sap.triage:extension"),),
     config_files=(
         "sap/scope.yaml",
         "sap/charm.yaml",
         "sap/idoc.yaml",
+        "sap/taxonomy.yaml",
         "sap/risk_rules.yaml",
         "sap/reports/sap-weekly.yaml",
     ),

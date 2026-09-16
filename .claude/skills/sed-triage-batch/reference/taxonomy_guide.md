@@ -28,6 +28,14 @@ labels for synthetic tickets.
 When two rows fit, choose the one the resolution fixed (a restarted queue is `integration`; an added index for a
 slow report job is `batch_job/report_generation`).
 
+## Module fields and subcategories (for example SAP)
+Some lines carry an extra object from another module, such as `"sap": {"area": "FI/CO", "landscape": "S/4HANA"}` on
+SAP tickets. `in/context.md` then has a section for that module with its field descriptions, its subcategories (codes
+start with the module key, for example `sap_idoc_error`) and a short guide.
+- Choose the category exactly as for any other ticket; the module field is context, not evidence for a category.
+- Then prefer the module subcategory of that category when one fits; otherwise a portfolio subcategory, or null.
+- Never use a module subcategory on a line without the module's field, or under a category it is not listed for.
+
 ## misfiled_as
 - `none`: the record type is right (the default for most incidents).
 - `request`: no disruption; the user wants something (access, a how-to answer, a new item).

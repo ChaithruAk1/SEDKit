@@ -50,6 +50,15 @@ def render(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> str:
         f"(4-week avg {_fmt(F['sap.idocs.new_persistent.avg4w'])}); "
         f"reprocessing median {_fmt(F['sap.idocs.reprocess_median_h'])}."
     )
+    ai_rows = view.tables["sap_ai_subcategories"]["rows"] if "sap_ai_subcategories" in view.tables else []
+    if ai_rows:
+        accuracy = F["sap.ai.sample_accuracy_pct"]
+        lines.append(
+            "- **SAP subcategories (AI-assisted"
+            + (f", sample accuracy {_fmt(accuracy)}" if accuracy["value"] is not None else "")
+            + "):** "
+            + "; ".join(f"{r['label']} {r['tickets']}" for r in ai_rows[:3])
+        )
     serious = [f for f in findings if f.get("severity") in {"critical", "high"}]
     if serious:
         lines += ["", "**System-detected SAP risks (top):**"]
