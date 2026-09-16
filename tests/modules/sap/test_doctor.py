@@ -16,6 +16,7 @@ SCOPE = {
     "landscapes": [{"code": "s4", "label": "S/4", "apps": ["APM0990002"]}],
     "systems": [{"sid": "HP1", "landscape": "s4", "role": "prod"}],
 }
+IDOC = {"message_types": [{"type": "DESADV", "area": "ewm"}]}  # matches the reduced SCOPE
 CHARM = {"components": [{"prefix": "SCM-EWM", "area": "ewm"}], "cycles": [{"cycle": "S4 Release", "landscape": "s4"}]}
 
 
@@ -31,6 +32,7 @@ def test_all_ok_on_the_sap_profile(sap_profile):
         "sap.landscape_apps_known",
         "sap.transport_systems_known",
         "sap.charm_values_mapped",
+        "sap.idoc_values_known",
     ]
     assert {status for status, _ in result.values()} == {"ok"}
     assert result["sap.scope_groups_seen"][1] == "every configured SAP group appears on tickets"
@@ -50,6 +52,7 @@ def test_unseen_group_and_unknown_landscape_app_warn(sap_profile_rw):
         },
     )
     write_sap_config(paths, "charm.yaml", CHARM)
+    write_sap_config(paths, "idoc.yaml", IDOC)
     result = _by_name(paths)
     assert result["sap.scope_groups_seen"] == (
         "warn",
@@ -135,3 +138,20 @@ def test_unknown_transport_systems_and_unmapped_charm_values_warn(sap_profile_rw
     assert status == "warn"
     assert "transaction types: " in detail and "SMHF" in detail and "SMMJ" not in detail
     assert "components: " in detail and "SD-" in detail and "FI-" not in detail
+
+
+def test_unknown_idoc_values_warn(sap_profile_rw):
+    paths = sap_profile_rw.paths
+    write_sap_config(
+        paths,
+        "idoc.yaml",
+        {
+            "statuses": [{"code": "53", "group": "ok"}, {"code": "03", "group": "ok"}],
+            "message_types": [{"type": "ORDERS", "area": "sd"}],
+        },
+    )
+    write_sap_config(paths, "scope.yaml", {"systems": [{"sid": "HP1", "landscape": "s4", "role": "prod"}]})
+    status, detail = _by_name(paths)["sap.idoc_values_known"]
+    assert status == "warn"
+    assert "status codes: " in detail and "51" in detail and "message types: " in detail and "INVOIC" in detail
+    assert "systems: EP1" in detail

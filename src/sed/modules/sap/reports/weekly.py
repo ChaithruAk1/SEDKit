@@ -1,14 +1,16 @@
-"""Weekly SAP Operations Review snapshot builder (sap-weekly): SAP L3 support and ChaRM changes for one ISO week.
+"""Weekly SAP Operations Review snapshot builder (sap-weekly): SAP L3 support, ChaRM changes and IDoc health for one
+ISO week.
 
 Aggregates of the week use `req.window` (the week clamped to the data date, labelled "to date" when open); backlog,
-attention and change status are measured at the end of that window; rule findings use `req.as_of`.
+attention, change status and IDoc errors are measured at the end of that window; rule findings use `req.as_of`.
 """
 
 from __future__ import annotations
 
 from sed import metrics, rule_findings
 from sed.modules.sap.charm import load_charm
-from sed.modules.sap.queries import changes, l3
+from sed.modules.sap.idoc import load_idoc
+from sed.modules.sap.queries import changes, idocs, l3
 from sed.modules.sap.scope import Scope, load_scope
 from sed.reports.snapshot import SnapshotParts, SnapshotRequest, fact, table
 
@@ -64,6 +66,9 @@ def build(req: SnapshotRequest) -> SnapshotParts:
     all_changes = changes.select(cs)
     cs_summary = changes.summary(conn, cs, window)
     ratio, ratio_before = cs_summary["urgent_ratio_8w"], cs_summary["urgent_ratio_previous_8w"]
+
+    ids = idocs.load(conn, load_idoc(paths, scope), at)
+    ids_summary = idocs.summary(ids, window)
 
     facts = {
         "period.label": fact(period.label, "text", "Period"),
@@ -133,6 +138,34 @@ def build(req: SnapshotRequest) -> SnapshotParts:
         ),
         "sap.transports.waiting": fact(
             cs_summary["waiting"], "count", "Transports waiting for production", "sap.transports.waiting"
+        ),
+        "sap.idocs.errors_open": fact(ids_summary["errors_open"], "count", "IDocs in error", "sap.idocs.errors_open"),
+        "sap.idocs.errors_aged": fact(
+            ids_summary["errors_aged"], "count", "IDoc errors open for more than 48 hours", "sap.idocs.errors_aged"
+        ),
+        "sap.idocs.new_persistent": fact(
+            ids_summary["new_persistent_week"],
+            "count",
+            f"New persistent IDoc errors{suffix}",
+            "sap.idocs.new_persistent",
+        ),
+        "sap.idocs.new_persistent.avg4w": fact(
+            ids_summary["new_persistent_avg4w"],
+            "number",
+            "New persistent IDoc errors, 4-week average",
+            "sap.idocs.new_persistent",
+        ),
+        "sap.idocs.reprocess_median_h": fact(
+            ids_summary["reprocess_median_h"],
+            "hours",
+            f"IDoc reprocessing median{suffix}",
+            "sap.idocs.reprocess_median_h",
+        ),
+        "sap.idocs.reprocessed_in_grace_pct": fact(
+            ids_summary["reprocessed_within_grace_pct"],
+            "pct",
+            "IDocs reprocessed within the grace time",
+            "sap.idocs.reprocessed_in_grace_pct",
         ),
     }
 
@@ -316,6 +349,59 @@ def build(req: SnapshotRequest) -> SnapshotParts:
                 ("stage_label", "Stage", "text"),
             ],
             changes.without_jira(cs, all_changes),
+        ),
+        "sap_idoc_by_type": table(
+            "IDocs in error by system and message type",
+            [
+                ("system_id", "System", "text"),
+                ("message_type", "Message type", "text"),
+                ("direction", "Direction", "text"),
+                ("errors", "In error", "count"),
+                ("aged", "Aged", "count"),
+                ("partners", "Partners", "count"),
+                ("oldest_hours", "Oldest (hours)", "hours"),
+            ],
+            idocs.backlog_by_type(ids, ids.errors),
+        ),
+        "sap_idoc_partners": table(
+            "IDoc partners with most errors",
+            [
+                ("partner", "Partner", "text"),
+                ("system_id", "System", "text"),
+                ("message_type", "Message type", "text"),
+                ("errors", "In error", "count"),
+                ("oldest_hours", "Oldest (hours)", "hours"),
+            ],
+            idocs.partners(ids, ids.errors),
+        ),
+        "sap_idoc_weekly_12w": table(
+            "IDoc errors, last 12 weeks",
+            [
+                ("period", "Week", "text"),
+                ("idocs", "IDocs", "count"),
+                ("new_errors", "New errors", "count"),
+                ("persistent", "Persistent", "count"),
+                ("reprocessed", "Reprocessed", "count"),
+                ("reprocess_median_h", "Reprocessing median (h)", "hours"),
+            ],
+            idocs.weekly(conn, ids, ids.errors, change_weeks),
+        ),
+        "sap_idoc_texts": table(
+            "Most frequent IDoc error texts",
+            [("text", "Error text", "text"), ("errors", "In error", "count")],
+            idocs.top_texts(ids.errors),
+        ),
+        "sap_idoc_spikes": table(
+            "IDoc error spikes after production imports, last 12 weeks",
+            [
+                ("change_id", "Change", "text"),
+                ("system_id", "System", "text"),
+                ("imported_at", "Imported", "datetime"),
+                ("errors", "Errors after", "count"),
+                ("errors_before", "Before", "count"),
+                ("lift", "Lift", "count"),
+            ],
+            idocs.spikes_after_imports(ids, cs, since, window.end_iso),
         ),
     }
     return SnapshotParts(facts=facts, tables=tables, sla_source=src, freshness=metrics.freshness(conn))

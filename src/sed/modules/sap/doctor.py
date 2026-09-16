@@ -8,6 +8,7 @@ from typing import Any
 
 from sed.errors import SedError
 from sed.modules.sap.charm import OTHER_TYPE, UNKNOWN_STAGE
+from sed.modules.sap.idoc import UNKNOWN_GROUP
 from sed.modules.sap.scope import UNASSIGNED
 from sed.paths import Paths
 
@@ -17,6 +18,7 @@ def checks(paths: Paths) -> list[Any]:
     from sed.doctor import Check
     from sed.modules import get
     from sed.modules.sap.charm import load_charm
+    from sed.modules.sap.idoc import load_idoc
     from sed.modules.sap.rules import load_rules
     from sed.modules.sap.scope import load_scope
     from sed.reports.specs import load_report_spec
@@ -24,12 +26,13 @@ def checks(paths: Paths) -> list[Any]:
     try:
         scope = load_scope(paths)
         charm = load_charm(paths, scope)
+        idoc = load_idoc(paths, scope)
         load_rules(paths)
         for rdef in get("sap").reports:
             load_report_spec(rdef.key, paths)
     except SedError as exc:
         return [Check("sap.config_valid", "fail", f"{exc.message}: {exc.details}" if exc.details else exc.message)]
-    out = [Check("sap.config_valid", "ok", "sap scope, ChaRM settings, risk rules and report specs load")]
+    out = [Check("sap.config_valid", "ok", "sap scope, ChaRM and IDoc settings, risk rules and report specs load")]
     if not scope.configured:
         out.append(
             Check("sap.scope_configured", "warn", "config/sap/scope.yaml lists no SAP groups, categories or fields")
@@ -60,6 +63,13 @@ def checks(paths: Paths) -> list[Any]:
                 )
                 for column in ("transaction_type", "status_raw", "component_raw")
             }
+            idoc_systems = [r[0] for r in conn.execute("SELECT DISTINCT system_id FROM sap_idoc ORDER BY 1")]
+            idoc_codes = Counter(
+                dict(conn.execute("SELECT status_code, COUNT(*) FROM sap_idoc_status GROUP BY status_code").fetchall())
+            )
+            idoc_types = Counter(
+                dict(conn.execute("SELECT message_type, COUNT(*) FROM sap_idoc GROUP BY message_type").fetchall())
+            )
         finally:
             conn.close()
     except sqlite3.DatabaseError as exc:
@@ -118,6 +128,26 @@ def checks(paths: Paths) -> list[Any]:
             else "every ChaRM transaction type, status and component is mapped"
             if has_changes
             else "no ChaRM changes imported yet",
+        )
+    )
+    idoc_problems = [
+        f"{what}: {', '.join(values[:10])}"
+        for what, values in (
+            ("status codes", [c for c, _ in idoc_codes.most_common() if c and idoc.group(c) == UNKNOWN_GROUP]),
+            ("message types", [t for t, _ in idoc_types.most_common() if t and idoc.area(t) == UNASSIGNED]),
+            ("systems", [s for s in idoc_systems if charm.system(s) is None]),
+        )
+        if values
+    ]
+    out.append(
+        Check(
+            "sap.idoc_values_known",
+            "warn" if idoc_problems else "ok",
+            "IDoc values not in config/sap/idoc.yaml or scope.yaml (most frequent first): " + "; ".join(idoc_problems)
+            if idoc_problems
+            else "every IDoc status code, message type and system is configured"
+            if idoc_codes
+            else "no IDocs imported yet",
         )
     )
     return out

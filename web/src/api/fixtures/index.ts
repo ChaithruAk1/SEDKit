@@ -45,6 +45,7 @@ const GET_HANDLERS: GetHandlers = {
   '/api/sap/overview': () => sap.overview(),
   '/api/sap/l3': (_, query) => sap.l3(query),
   '/api/sap/changes': (_, query) => sap.changes(query),
+  '/api/sap/idocs': (_, query) => sap.idocs(query),
 };
 
 const POST_HANDLERS: PostHandlers = {

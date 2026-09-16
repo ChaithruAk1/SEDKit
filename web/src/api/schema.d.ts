@@ -446,6 +446,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sap/idocs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Idocs */
+        get: operations["sap_idocs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sap/l3": {
         parameters: {
             query?: never;
@@ -1340,6 +1357,159 @@ export interface components {
             net: number;
             /** Period */
             period: string;
+        };
+        /** SapIdocAging */
+        SapIdocAging: {
+            /** D1 2 */
+            d1_2: number;
+            /** D2 7 */
+            d2_7: number;
+            /** Gt7D */
+            gt7d: number;
+            /** H4 24 */
+            h4_24: number;
+            /** Lt4H */
+            lt4h: number;
+        };
+        /** SapIdocErrorRow */
+        SapIdocErrorRow: {
+            /** Age Hours */
+            age_hours: number;
+            /** Direction */
+            direction: string | null;
+            /** Docnum */
+            docnum: string;
+            /** First Error At */
+            first_error_at: string;
+            /** Message Type */
+            message_type: string | null;
+            /** Partner */
+            partner: string | null;
+            /** Status Code */
+            status_code: string;
+            /** System Id */
+            system_id: string;
+            /** Text */
+            text: string | null;
+        };
+        /** SapIdocPartnerRow */
+        SapIdocPartnerRow: {
+            /** Errors */
+            errors: number;
+            /** Message Type */
+            message_type: string | null;
+            /** Oldest Hours */
+            oldest_hours: number;
+            /** Partner */
+            partner: string | null;
+            /** System Id */
+            system_id: string;
+        };
+        /** SapIdocSpikeRow */
+        SapIdocSpikeRow: {
+            /** Change Id */
+            change_id: string | null;
+            /** Change Type */
+            change_type: string | null;
+            /** Errors */
+            errors: number;
+            /** Errors Before */
+            errors_before: number;
+            /** Imported At */
+            imported_at: string;
+            /** Lift */
+            lift: number;
+            /** Return Code */
+            return_code: number | null;
+            /** System Id */
+            system_id: string;
+            /** Title */
+            title: string | null;
+        };
+        /** SapIdocTextRow */
+        SapIdocTextRow: {
+            /** Errors */
+            errors: number;
+            /** Message Types */
+            message_types: string[];
+            /** Text */
+            text: string;
+        };
+        /** SapIdocTypeRow */
+        SapIdocTypeRow: {
+            /** Aged */
+            aged: number;
+            /** Area */
+            area: string;
+            /** Direction */
+            direction: string | null;
+            /** Errors */
+            errors: number;
+            /** Landscape */
+            landscape: string;
+            /** Message Type */
+            message_type: string | null;
+            /** Oldest Hours */
+            oldest_hours: number;
+            /** Partners */
+            partners: number;
+            /** System Id */
+            system_id: string;
+        };
+        /** SapIdocWeekRow */
+        SapIdocWeekRow: {
+            /** Idocs */
+            idocs: number;
+            /** New Errors */
+            new_errors: number;
+            /** Period */
+            period: string;
+            /** Persistent */
+            persistent: number;
+            /** Reprocess Median H */
+            reprocess_median_h: number | null;
+            /** Reprocessed */
+            reprocessed: number;
+        };
+        /** SapIdocsOut */
+        SapIdocsOut: {
+            aging: components["schemas"]["SapIdocAging"];
+            /** Area */
+            area: string | null;
+            /** Areas */
+            areas: components["schemas"]["SapOption"][];
+            /** As Of */
+            as_of: string;
+            /** At */
+            at: string;
+            /** By Type */
+            by_type: components["schemas"]["SapIdocTypeRow"][];
+            /** Direction */
+            direction: string | null;
+            /** Kpis */
+            kpis: components["schemas"]["Kpi"][];
+            /** Landscape */
+            landscape: string | null;
+            /** Landscapes */
+            landscapes: components["schemas"]["SapOption"][];
+            /** Open Errors */
+            open_errors: components["schemas"]["SapIdocErrorRow"][];
+            /** Open Errors Count */
+            open_errors_count: number;
+            /** Partners */
+            partners: components["schemas"]["SapIdocPartnerRow"][];
+            /** Period */
+            period: string;
+            /** Spikes */
+            spikes: components["schemas"]["SapIdocSpikeRow"][];
+            /** System */
+            system: string | null;
+            /** Systems */
+            systems: components["schemas"]["SapOption"][];
+            /** Top Texts */
+            top_texts: components["schemas"]["SapIdocTextRow"][];
+            /** Weekly */
+            weekly: components["schemas"]["SapIdocWeekRow"][];
         };
         /** SapImportIncidentsRow */
         SapImportIncidentsRow: {
@@ -3724,6 +3894,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SapChangesOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sap_idocs: {
+        parameters: {
+            query?: {
+                /** @description SAP system id */
+                system?: string | null;
+                /** @description Landscape code, or 'unknown' */
+                landscape?: string | null;
+                /** @description SAP area of the message type, or 'unassigned' */
+                area?: string | null;
+                /** @description inbound or outbound */
+                direction?: string | null;
+                weeks?: number;
+                /** @description app_id (repeatable) */
+                app?: string[];
+                family?: string | null;
+                /** @description vendor_id */
+                vendor?: string | null;
+                /** @description assignment group */
+                group?: string | null;
+                /** @description 2026-W35, 2026-08 or 2026-Q3 */
+                period?: string | null;
+                /** @description YYYY-MM-DD (default: data as-of) */
+                as_of?: string | null;
+                /** @description Include unapproved AI content */
+                include_drafts?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SapIdocsOut"];
                 };
             };
             /** @description Not found */

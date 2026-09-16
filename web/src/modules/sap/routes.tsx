@@ -20,4 +20,10 @@ export const SAP_ROUTES = [
     filters: ['period', 'as_of'],
     load: () => import('./pages/SapChangesPage'),
   },
+  {
+    path: 'sap/idocs',
+    title: 'SAP IDocs',
+    filters: ['period', 'as_of'],
+    load: () => import('./pages/SapIdocsPage'),
+  },
 ] as const satisfies readonly WebRoute<'sap'>[];

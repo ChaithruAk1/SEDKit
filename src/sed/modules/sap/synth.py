@@ -1,7 +1,8 @@
 """Synthetic SAP data (fictional; generic SAP terms only): SAP business applications, SAP L3 incidents with planted
 patterns, the "all open SAP incidents" snapshot, and ChaRM changes, transports and SAP Jira stories (synth_changes.py).
-Files go through the SAP mappings (sap_business_apps, sap_incidents, sap_incidents_active, sap_charm_changes,
-sap_charm_transports) and the ops Jira mapping; ground truth goes to ground_truth/sap/.
+IDoc monitor exports (synth_idocs.py). Files go through the SAP mappings (sap_business_apps, sap_incidents,
+sap_incidents_active, sap_charm_changes, sap_charm_transports, sap_idocs) and the ops Jira mapping; ground truth goes to
+ground_truth/sap/.
 
 Determinism: one RNG per (seed, stream, day). Planted patterns are anchored to the anchor date and generated at
 absolute counts whatever --scale is; a later --as-of with the same anchor gives a superset of tickets.
@@ -32,7 +33,7 @@ from sed.errors import PreconditionFailed
 from sed.ingest import manifest as inbox_manifest
 from sed.ingest.loader import file_sha256
 from sed.modules.contract import SynthRequest
-from sed.modules.sap import synth_changes
+from sed.modules.sap import synth_changes, synth_idocs
 from sed.paths import Paths
 from sed.synth import writers as W
 from sed.synth.catalog import build_catalog
@@ -421,6 +422,10 @@ def generate(paths: Paths, req: SynthRequest) -> dict[str, Any]:
     changes = [c for c in change_gen.background() + change_gen.patterns() if c.created < moment]
     written += synth_changes.write_exports(inbox, changes, moment, req.as_of)
     gen.pii += change_gen.pii
+    idoc_gen = synth_idocs.IdocGenerator(req.seed, anchor, moment, req.scale, gen.callers)
+    idocs = [i for i in idoc_gen.background() + idoc_gen.patterns() if i.created < moment]
+    written += synth_idocs.write_exports(inbox, idocs, moment)
+    gen.pii += idoc_gen.pii
 
     by_month: dict[str, list[list[Any]]] = defaultdict(list)
     active: list[list[Any]] = []
@@ -450,13 +455,14 @@ def generate(paths: Paths, req: SynthRequest) -> dict[str, Any]:
         "files": {name: file_sha256(inbox / name) for name in sorted(written)},
     }
     inbox_manifest.save_section(inbox, KEY, section)
-    truth_dir = _ground_truth(paths.ground_truth / KEY, gen, tickets, truth, moment, changes, anchor)
+    truth_dir = _ground_truth(paths.ground_truth / KEY, gen, tickets, truth, moment, changes, idocs, anchor)
     counts = {
         "application": 2,
         "incident": len(tickets),
         "open_incident": len(active),
         "change": len(changes),
         "transport_import": sum(1 for c in changes for *_, m, _rc in c.imports if m < moment),
+        "idoc": len(idocs),
     }
     return {"inbox": str(inbox), "files": len(written), "counts": counts, "ground_truth": truth_dir}
 
@@ -468,6 +474,7 @@ def _ground_truth(
     truth: list[list[Any]],
     moment: datetime,
     changes: list[synth_changes.SynthChange],
+    idocs: list[synth_idocs.SynthIdoc],
     anchor: date,
 ) -> str:
     folder.mkdir(parents=True, exist_ok=True)
@@ -500,7 +507,12 @@ def _ground_truth(
         "CP1_incidents": {"area": "sd", "landscape": "s4", "tickets": len(pattern("CP1"))},
         "controls": {"SN1": "SD surge with matching closures: no backlog-growth finding"},
         "changes": synth_changes.patterns_section(changes, anchor),
+        "idocs": synth_idocs.patterns_section(idocs, anchor, next(c.change_id for c in changes if c.pattern == "CP1")),
     }
+    with (folder / "idoc_truth.csv").open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["system_id", "docnum", "pattern", "message_type", "partner", "status_at_as_of"])
+        writer.writerows(synth_idocs.truth_rows(idocs, moment))
     with (folder / "change_truth.csv").open("w", encoding="utf-8", newline="") as fh:
         writer = csv.writer(fh)
         writer.writerow(["change_id", "pattern", "change_type", "area", "landscape", "stage_at_as_of", "jira"])

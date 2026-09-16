@@ -6,8 +6,12 @@
 * sap_change_risk:urgent_ratio:<area>: the urgent share of an area's new changes is high and rising.
 * sap_change_risk:failed_import:<transport>:<system>: a production import ended at or above the failure return code.
 * sap_change_risk:waiting:<landscape>: many tested transports imported into QA and not into production.
+* sap_idoc_risk:backlog:<system>:<message type>: many IDocs of one message type in error on one system.
+* sap_idoc_risk:growth:<system>:<message type>:<partner>: persistent IDoc errors of one partner rise.
+* sap_idoc_risk:aged:<system>: many IDoc errors open for longer than idoc.yaml allows.
+* sap_idoc_risk:spike:<system>:<change>: persistent IDoc errors jump after a production import into the system.
 
-Thresholds live in config/sap/risk_rules.yaml (change definitions in config/sap/charm.yaml).
+Thresholds live in config/sap/risk_rules.yaml (definitions in config/sap/charm.yaml and config/sap/idoc.yaml).
 """
 
 from __future__ import annotations
@@ -21,7 +25,8 @@ from pydantic import Field
 from sed.calendar import as_of_end_utc, iso_utc, parse_period, week_label
 from sed.errors import ValidationFailed
 from sed.modules.sap.charm import load_charm
-from sed.modules.sap.queries import changes, l3
+from sed.modules.sap.idoc import load_idoc
+from sed.modules.sap.queries import changes, idocs, l3
 from sed.modules.sap.scope import Scope, load_scope
 from sed.paths import Paths
 from sed.settings import StrictModel, load_layered, load_settings
@@ -62,6 +67,28 @@ class WaitingRule(StrictModel):
     min_transports: int = Field(5, ge=1)
 
 
+class IdocBacklogRule(StrictModel):
+    enabled: bool = True
+    min_errors: int = Field(25, ge=1)
+
+
+class IdocGrowthRule(StrictModel):
+    enabled: bool = True
+    min_errors_week: int = Field(20, ge=1)
+    min_growth_pct: float = Field(50, ge=0)
+
+
+class IdocAgedRule(StrictModel):
+    enabled: bool = True
+    min_errors: int = Field(10, ge=1)
+
+
+class IdocSpikeRule(StrictModel):
+    enabled: bool = True
+    min_lift: int = Field(20, ge=1)
+    lookback_days: int = Field(30, ge=1, le=365)
+
+
 class Rules(StrictModel):
     area_backlog_growth: GrowthRule = Field(default_factory=GrowthRule)
     area_aged_backlog: AgedRule = Field(default_factory=AgedRule)
@@ -69,6 +96,10 @@ class Rules(StrictModel):
     urgent_ratio: UrgentRatioRule = Field(default_factory=UrgentRatioRule)
     failed_production_import: FailedImportRule = Field(default_factory=FailedImportRule)
     waiting_for_production: WaitingRule = Field(default_factory=WaitingRule)
+    idoc_error_backlog: IdocBacklogRule = Field(default_factory=IdocBacklogRule)
+    idoc_error_growth: IdocGrowthRule = Field(default_factory=IdocGrowthRule)
+    idoc_aged_errors: IdocAgedRule = Field(default_factory=IdocAgedRule)
+    idoc_spike_after_import: IdocSpikeRule = Field(default_factory=IdocSpikeRule)
 
 
 def load_rules(paths: Paths | None) -> Rules:
@@ -88,8 +119,10 @@ def compute(conn: sqlite3.Connection, paths: Paths | None, as_of: date) -> list[
     scope = scope.resolve(conn)
     rules = load_rules(paths)
     settings = load_settings(paths)
-    return _backlog_findings(conn, as_of, scope, rules, settings) + _change_findings(
-        conn, paths, as_of, scope, rules, settings
+    return (
+        _backlog_findings(conn, as_of, scope, rules, settings)
+        + _change_findings(conn, paths, as_of, scope, rules, settings)
+        + _idoc_findings(conn, paths, as_of, scope, rules, settings)
     )
 
 
@@ -153,11 +186,17 @@ def _backlog_findings(
 
 
 def _finding(
-    stable_key: str, subject_type: str, subject_id: str, severity: str, title: str, evidence: dict[str, Any]
+    stable_key: str,
+    subject_type: str,
+    subject_id: str,
+    severity: str,
+    title: str,
+    evidence: dict[str, Any],
+    kind: str = "sap_change_risk",
 ) -> dict[str, Any]:
     return {
         "stable_key": stable_key,
-        "kind": "sap_change_risk",
+        "kind": kind,
         "subject_type": subject_type,
         "subject_id": subject_id,
         "severity": severity,
@@ -278,6 +317,116 @@ def _change_findings(
                     f"{label}: {len(rows)} tested transports waiting for production "
                     f"(oldest {oldest:.0f} days since the QA import)",
                     {f"sap.transports.{code}.waiting": len(rows), f"sap.transports.{code}.waiting_oldest_days": oldest},
+                )
+            )
+    return out
+
+
+def _idoc_findings(
+    conn: sqlite3.Connection, paths: Paths | None, as_of: date, scope: Scope, rules: Rules, settings: Any
+) -> list[dict[str, Any]]:
+    wanted = (rules.idoc_error_backlog, rules.idoc_error_growth, rules.idoc_aged_errors, rules.idoc_spike_after_import)
+    if not any(r.enabled for r in wanted):
+        return []
+    idoc = load_idoc(paths, scope)
+    at = as_of_end_utc(as_of, settings.reporting_tz)
+    ids = idocs.load(conn, idoc, at)
+    kind = "sap_idoc_risk"
+    out: list[dict[str, Any]] = []
+
+    if rules.idoc_error_backlog.enabled:
+        for row in idocs.backlog_by_type(ids, ids.errors):
+            if row["errors"] < rules.idoc_error_backlog.min_errors:
+                continue
+            key = f"{row['system_id']}:{row['message_type']}"
+            out.append(
+                _finding(
+                    f"sap_idoc_risk:backlog:{key}",
+                    "sap_idoc_type",
+                    key,
+                    "high" if row["errors"] >= 2 * rules.idoc_error_backlog.min_errors else "medium",
+                    f"{row['system_id']} {row['message_type']}: {row['errors']} IDocs in error "
+                    f"(oldest {row['oldest_hours'] / 24:.0f} days, {row['partners']} "
+                    f"{'partner' if row['partners'] == 1 else 'partners'})",
+                    {f"sap.idocs.{key}.errors": row["errors"], f"sap.idocs.{key}.aged": row["aged"]},
+                    kind,
+                )
+            )
+
+    growth = rules.idoc_error_growth
+    if growth.enabled:
+        last = parse_period(week_label(as_of - timedelta(days=7)), settings.reporting_tz, settings.fiscal_year_start)
+        previous = [last.previous(k) for k in range(4, 0, -1)]
+        counts: dict[tuple[str, str | None, str | None], list[int]] = {}
+        for e in ids.errors:
+            if not ids.persistent(e):
+                continue
+            slot = counts.setdefault((e.system_id, e.message_type, e.partner), [0] * 5)
+            for i, p in enumerate([*previous, last]):
+                if p.start_iso <= e.first_error_at < p.end_iso:
+                    slot[i] += 1
+        for (system_id, message_type, partner), weeks in sorted(counts.items(), key=lambda kv: str(kv[0])):
+            now, avg = weeks[-1], sum(weeks[:-1]) / 4
+            if now < growth.min_errors_week or now < avg * (1 + growth.min_growth_pct / 100):
+                continue
+            key = f"{system_id}:{message_type}:{partner}"
+            out.append(
+                _finding(
+                    f"sap_idoc_risk:growth:{key}",
+                    "sap_idoc_partner",
+                    key,
+                    "high" if now >= 2 * max(avg, 1) else "medium",
+                    f"{system_id} {message_type} from {partner}: {now} persistent IDoc errors in {last.label} "
+                    f"(4-week average {avg:.1f})",
+                    {f"sap.idocs.{key}.persistent_week": now, f"sap.idocs.{key}.persistent_avg4w": round(avg, 2)},
+                    kind,
+                )
+            )
+
+    if rules.idoc_aged_errors.enabled:
+        aged_h = idoc.config.thresholds.aged_error_hours
+        by_system: dict[str, list[float]] = {}
+        for e in ids.errors:
+            if e.is_open and ids.age_hours(e) > aged_h:
+                by_system.setdefault(e.system_id, []).append(ids.age_hours(e))
+        for system_id, ages in sorted(by_system.items()):
+            if len(ages) < rules.idoc_aged_errors.min_errors:
+                continue
+            out.append(
+                _finding(
+                    f"sap_idoc_risk:aged:{system_id}",
+                    "sap_system",
+                    system_id,
+                    "high" if len(ages) >= 2 * rules.idoc_aged_errors.min_errors else "medium",
+                    f"{system_id}: {len(ages)} IDoc errors open for more than {aged_h} hours "
+                    f"(oldest {max(ages) / 24:.0f} days)",
+                    {f"sap.idocs.{system_id}.aged": len(ages), f"sap.idocs.{system_id}.oldest_hours": max(ages)},
+                    kind,
+                )
+            )
+
+    spike = rules.idoc_spike_after_import
+    if spike.enabled:
+        cs = changes.load(conn, load_charm(paths, scope), at)
+        since = iso_utc(at - timedelta(days=spike.lookback_days))
+        hours = idoc.config.thresholds.spike_window_hours
+        for row in idocs.spikes_after_imports(ids, cs, since, iso_utc(at), min_lift=spike.min_lift):
+            ref = row["change_id"] or "unknown"
+            key = f"{row['system_id']}:{ref}"
+            change = f"change {row['change_id']}" if row["change_id"] else "a transport"
+            out.append(
+                _finding(
+                    f"sap_idoc_risk:spike:{key}",
+                    "sap_system",
+                    row["system_id"],
+                    "high",
+                    f"{row['system_id']}: {row['errors']} persistent IDoc errors within {hours} h after the production "
+                    f"import of {change} ({row['errors_before']} before)",
+                    {
+                        f"sap.idocs.{key}.errors_after": row["errors"],
+                        f"sap.idocs.{key}.errors_before": row["errors_before"],
+                    },
+                    kind,
                 )
             )
     return out

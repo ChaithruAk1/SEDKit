@@ -19,6 +19,10 @@ kpis:
   - {fact: sap.transports.failed_4w}
   - {fact: sap.transports.waiting}
   - {fact: sap.changes.without_jira}
+  - {fact: sap.idocs.errors_open}
+  - {fact: sap.idocs.errors_aged}
+  - {fact: sap.idocs.new_persistent, compare: sap.idocs.new_persistent.avg4w}
+  - {fact: sap.idocs.reprocess_median_h}
 sheets:
   - table: sap_l3_trend_12w
     sheet: Volume trend
@@ -48,6 +52,13 @@ sheets:
   - {table: sap_changes_stuck, sheet: Stuck changes}
   - {table: sap_transports_waiting, sheet: Waiting for production}
   - {table: sap_changes_without_jira, sheet: Changes without Jira}
+  - {table: sap_idoc_by_type, sheet: IDoc errors}
+  - {table: sap_idoc_partners, sheet: IDoc partners}
+  - table: sap_idoc_weekly_12w
+    sheet: IDoc trend
+    chart: {type: column, categories: period, series: [new_errors, persistent], title: IDoc errors per week}
+  - {table: sap_idoc_texts, sheet: IDoc error texts}
+  - {table: sap_idoc_spikes, sheet: IDoc spikes}
 markdown:
   max_words: 250
 slides:
@@ -115,6 +126,26 @@ slides:
     title: Transports waiting for production
     table: sap_transports_waiting
     columns: [transport, change_id, landscape, qa_system, days_waiting]
+  - kind: kpis
+    title: SAP IDoc health
+    kpis:
+      - {fact: sap.idocs.errors_open}
+      - {fact: sap.idocs.errors_aged}
+      - {fact: sap.idocs.new_persistent, compare: sap.idocs.new_persistent.avg4w}
+      - {fact: sap.idocs.reprocess_median_h}
+      - {fact: sap.idocs.reprocessed_in_grace_pct}
+  - kind: bar_chart
+    title: IDoc errors, last 12 weeks
+    table: sap_idoc_weekly_12w
+    chart: {type: column, categories: period, series: [new_errors, persistent], title: New and persistent IDoc errors}
+  - kind: table
+    title: IDocs in error by system and message type
+    table: sap_idoc_by_type
+    columns: [system_id, message_type, direction, errors, aged, partners]
+  - kind: table
+    title: IDoc error spikes after production imports
+    table: sap_idoc_spikes
+    columns: [change_id, system_id, imported_at, errors, errors_before, lift]
   - kind: findings
     title: System-detected SAP risks
     table: sap_findings

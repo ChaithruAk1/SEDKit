@@ -28,6 +28,10 @@ const LOWER_IS_BETTER = new Set([
   'sap.changes.without_jira',
   'sap.transports.failed_4w',
   'sap.transports.waiting',
+  'sap.idocs.errors_open',
+  'sap.idocs.errors_aged',
+  'sap.idocs.new_persistent',
+  'sap.idocs.reprocess_median_h',
 ]);
 
 export interface KpiTileProps {

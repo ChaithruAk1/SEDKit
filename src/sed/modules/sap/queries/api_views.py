@@ -6,6 +6,7 @@ from sed import metrics
 from sed.api.findings import published_findings
 from sed.api.models import FindingOut, Kpi
 from sed.calendar import parse_utc
+from sed.errors import ValidationFailed
 from sed.modules.ops.queries.common import Context, last_full_period, series_end, trend_periods
 from sed.modules.sap.api_models import (
     SapAging,
@@ -16,6 +17,14 @@ from sed.modules.sap.api_models import (
     SapChangesOut,
     SapFailedImportRow,
     SapFlowRow,
+    SapIdocAging,
+    SapIdocErrorRow,
+    SapIdocPartnerRow,
+    SapIdocsOut,
+    SapIdocSpikeRow,
+    SapIdocTextRow,
+    SapIdocTypeRow,
+    SapIdocWeekRow,
     SapImportIncidentsRow,
     SapImportWeekRow,
     SapL3Out,
@@ -31,7 +40,8 @@ from sed.modules.sap.api_models import (
 )
 from sed.modules.sap.charm import load_charm
 from sed.modules.sap.definitions import DEFINITIONS
-from sed.modules.sap.queries import changes, l3
+from sed.modules.sap.idoc import load_idoc
+from sed.modules.sap.queries import changes, idocs, l3
 from sed.modules.sap.scope import Scope, load_scope
 
 FLOW_WEEKS = 8
@@ -71,6 +81,7 @@ def overview(ctx: Context) -> SapOverview:
     findings = sap_findings(ctx)
     cs = changes.load(ctx.conn, load_charm(ctx.paths, scope), at)
     change_summary = changes.summary(ctx.conn, cs, week)
+    idoc_summary = idocs.summary(idocs.load(ctx.conn, load_idoc(ctx.paths, scope), at), week)
     kpis = [
         _kpi("sap.l3.backlog", "Open SAP incidents", backlog["total"], "count"),
         _kpi(
@@ -100,6 +111,14 @@ def overview(ctx: Context) -> SapOverview:
             change_summary["urgent_ratio_previous_8w"],
         ),
         _kpi("sap.transports.failed_4w", "Failed transport imports (28 days)", change_summary["failed_4w"], "count"),
+        _kpi("sap.idocs.errors_open", "IDocs in error", idoc_summary["errors_open"], "count"),
+        _kpi(
+            "sap.idocs.new_persistent",
+            f"New persistent IDoc errors ({week.label})",
+            idoc_summary["new_persistent_week"],
+            "count",
+            idoc_summary["new_persistent_avg4w"],
+        ),
     ]
     return SapOverview(
         as_of=ctx.as_of.isoformat(),
@@ -220,4 +239,78 @@ def changes_view(ctx: Context, area: str | None, landscape: str | None, weeks: i
         ],
         without_jira_count=len(without),
         without_jira=[SapChangeRow(**r) for r in without[:LIST_LIMIT]],
+    )
+
+
+def idocs_view(
+    ctx: Context, system: str | None, landscape: str | None, area: str | None, direction: str | None, weeks: int
+) -> SapIdocsOut:
+    scope: Scope = load_scope(ctx.paths)
+    scope.check_area(area)
+    scope.check_landscape(landscape)
+    sids = [s.sid for s in scope.config.systems]
+    seen = [r[0] for r in ctx.conn.execute("SELECT DISTINCT system_id FROM sap_idoc ORDER BY 1")]
+    systems = list(dict.fromkeys([*sids, *seen]))
+    if system is not None and system not in systems:
+        raise ValidationFailed(f"Unknown SAP system '{system}'", {"systems": systems})
+    if direction not in (None, "inbound", "outbound"):
+        raise ValidationFailed(f"Unknown IDoc direction '{direction}'", {"directions": ["inbound", "outbound"]})
+    scope = scope.resolve(ctx.conn)
+    at_iso = _at(ctx)
+    at = parse_utc(at_iso)
+    ids = idocs.load(ctx.conn, load_idoc(ctx.paths, scope), at)
+    week = series_end(ctx, "week")
+    periods = trend_periods(week, weeks)
+    kw = {"system": system, "landscape": landscape, "area": area, "direction": direction}
+    selected = idocs.select(ids, **kw)
+    s = idocs.summary(ids, week, **kw)
+    kpis = [
+        _kpi("sap.idocs.errors_open", "IDocs in error", s["errors_open"], "count"),
+        _kpi("sap.idocs.errors_aged", "Errors open > 48 h", s["errors_aged"], "count"),
+        _kpi(
+            "sap.idocs.new_persistent",
+            f"New persistent errors ({week.label})",
+            s["new_persistent_week"],
+            "count",
+            s["new_persistent_avg4w"],
+        ),
+        _kpi("sap.idocs.reprocess_median_h", f"Reprocessing median ({week.label})", s["reprocess_median_h"], "hours"),
+        _kpi(
+            "sap.idocs.reprocessed_in_grace_pct",
+            f"Reprocessed within grace ({week.label})",
+            s["reprocessed_within_grace_pct"],
+            "pct",
+        ),
+    ]
+    cs = changes.load(ctx.conn, load_charm(ctx.paths, scope), at)
+    open_rows = idocs.open_errors(ids, selected, limit=LIST_LIMIT)
+    labels = {
+        x.sid: f"{x.sid} ({scope.landscape_labels.get(x.landscape, x.landscape)}, {x.role})"
+        for x in scope.config.systems
+    }
+    return SapIdocsOut(
+        as_of=ctx.as_of.isoformat(),
+        at=at_iso,
+        period=week.label,
+        system=system,
+        landscape=landscape,
+        area=area,
+        direction=direction,
+        systems=[SapOption(value=sid, label=labels.get(sid, sid)) for sid in systems],
+        areas=_options(scope.area_labels, l3.area_order(scope)),
+        landscapes=_options(scope.landscape_labels, l3.landscape_order(scope)),
+        kpis=kpis,
+        aging=SapIdocAging(**idocs.aging(ids, selected)),
+        by_type=[SapIdocTypeRow(**r) for r in idocs.backlog_by_type(ids, selected)[:LIST_LIMIT]],
+        partners=[SapIdocPartnerRow(**r) for r in idocs.partners(ids, selected)],
+        weekly=[SapIdocWeekRow(**r) for r in idocs.weekly(ctx.conn, ids, selected, periods, **kw)],
+        top_texts=[SapIdocTextRow(**r) for r in idocs.top_texts(selected)],
+        spikes=[
+            SapIdocSpikeRow(**r)
+            for r in idocs.spikes_after_imports(
+                ids, cs, periods[0].start_iso, at_iso, system=system, landscape=landscape
+            )[:LIST_LIMIT]
+        ],
+        open_errors_count=sum(1 for e in selected if e.is_open),
+        open_errors=[SapIdocErrorRow(**r) for r in open_rows],
     )

@@ -29,8 +29,15 @@ OVERVIEW_KPIS = [
     "sap.changes.open",
     "sap.changes.urgent_ratio_8w",
     "sap.transports.failed_4w",
+    "sap.idocs.errors_open",
+    "sap.idocs.new_persistent",
 ]
 EXPECTED_FINDINGS = {
+    ("sap_idoc_risk", "sap_idoc_type", "HP1:INVOIC"),
+    ("sap_idoc_risk", "sap_idoc_type", "EP1:ORDERS"),
+    ("sap_idoc_risk", "sap_idoc_partner", "EP1:ORDERS:PARTNER_0007"),
+    ("sap_idoc_risk", "sap_system", "HP1"),
+    ("sap_idoc_risk", "sap_system", "EP1"),
     ("sap_backlog_risk", "sap_area", "ewm"),
     ("sap_change_risk", "sap_area", "pp_qm"),
     ("sap_change_risk", "sap_area", "mm"),
@@ -72,7 +79,7 @@ def test_overview_kpis_areas_landscapes_and_findings(client, sap_profile, ro_con
     weekly = l3.week_kpis(ro_conn, scope, week, [week.previous(k) for k in range(4, 0, -1)], "made_sla")
     assert kpis["sap.l3.opened"]["value"] == weekly["opened"]
     assert kpis["sap.l3.opened"]["compare"] == weekly["opened_avg"]
-    assert kpis["sap.findings.count"]["value"] == len(body["findings"]) == 6
+    assert kpis["sap.findings.count"]["value"] == len(body["findings"]) == 12
 
     assert [a["area"] for a in body["areas"]][:9] == [a.code for a in scope.config.areas]
     assert sum(a["open"] for a in body["areas"]) == backlog["total"]
@@ -164,6 +171,7 @@ def test_nav_lists_the_sap_pages(client):
         ("sap.overview", "/sap"),
         ("sap.tickets", "/sap/tickets"),
         ("sap.changes", "/sap/changes"),
+        ("sap.idocs", "/sap/idocs"),
     ]
     modules = {mod["key"]: mod for mod in client.get("/api/modules").json()["modules"]}
     assert modules["sap"]["enabled"] is True
@@ -174,6 +182,8 @@ def test_responses_carry_no_people_or_injected_pii(client, sap_truth, ro_conn):
         client.get("/api/sap/overview").text,
         client.get("/api/sap/l3").text,
         client.get("/api/sap/l3", params={"area": "unassigned"}).text,
+        client.get("/api/sap/changes").text,
+        client.get("/api/sap/idocs").text,
     ]
     for text in texts:
         assert "_pid" not in text and "caller" not in text
@@ -257,3 +267,51 @@ def test_changes_view_filters_narrow(client):
     assert sum(parts) + {k["key"]: k["value"] for k in unknown["kpis"]}["sap.changes.open"] == opened
     for params in ({"area": "hr"}, {"landscape": "bw"}, {"weeks": 7}, {"weeks": 53}):
         assert client.get("/api/sap/changes", params=params).status_code == 422, params
+
+
+def test_idocs_view_agrees_with_the_read_models(client, sap_profile, ro_conn, sap_truth):
+    from sed.modules.sap.idoc import load_idoc
+    from sed.modules.sap.queries import idocs
+
+    body = get_ok(client, "/api/sap/idocs", m.SapIdocsOut)
+    kpis = {k["key"]: k for k in body["kpis"]}
+    assert list(kpis) == [
+        "sap.idocs.errors_open",
+        "sap.idocs.errors_aged",
+        "sap.idocs.new_persistent",
+        "sap.idocs.reprocess_median_h",
+        "sap.idocs.reprocessed_in_grace_pct",
+    ]
+    assert all(k["definition"] for k in body["kpis"])
+    scope, settings, at = _env(sap_profile)
+    ids = idocs.load(ro_conn, load_idoc(sap_profile.paths, scope), at)
+    week = parse_period("2026-W35", settings.reporting_tz, settings.fiscal_year_start)
+    summary = idocs.summary(ids, week)
+    assert kpis["sap.idocs.errors_open"]["value"] == summary["errors_open"] == body["open_errors_count"]
+    assert sum(body["aging"].values()) == summary["errors_open"] == sum(r["errors"] for r in body["by_type"])
+    assert kpis["sap.idocs.new_persistent"]["value"] == summary["new_persistent_week"]
+    assert kpis["sap.idocs.new_persistent"]["compare"] == summary["new_persistent_avg4w"]
+    assert len(body["weekly"]) == 12 and body["weekly"][-1]["period"] == "2026-W35"
+    cp1 = sap_truth["patterns"]["changes"]["CP1"]["change_id"]
+    assert [(s["change_id"], s["system_id"]) for s in body["spikes"]] == [(cp1, "HP1")]
+    assert body["partners"][0]["partner"] == "PARTNER_0007"
+    assert [o["value"] for o in body["systems"]][:6] == ["ED1", "EQ1", "EP1", "HD1", "HQ1", "HP1"]
+    overview = {k["key"]: k["value"] for k in client.get("/api/sap/overview").json()["kpis"]}
+    assert overview["sap.idocs.errors_open"] == summary["errors_open"]
+
+
+def test_idocs_view_filters_and_validation(client):
+    full = get_ok(client, "/api/sap/idocs", m.SapIdocsOut)
+    ep1 = get_ok(client, "/api/sap/idocs", m.SapIdocsOut, system="EP1")
+    hp1 = get_ok(client, "/api/sap/idocs", m.SapIdocsOut, system="HP1")
+    assert ep1["open_errors_count"] + hp1["open_errors_count"] == full["open_errors_count"]
+    assert {r["system_id"] for r in ep1["by_type"]} == {"EP1"} and ep1["spikes"] == []
+    ecc = get_ok(client, "/api/sap/idocs", m.SapIdocsOut, landscape="ecc")
+    assert ecc["open_errors_count"] == ep1["open_errors_count"]
+    inbound = get_ok(client, "/api/sap/idocs", m.SapIdocsOut, direction="inbound")
+    assert {r["direction"] for r in inbound["by_type"]} == {"inbound"}
+    fi = get_ok(client, "/api/sap/idocs", m.SapIdocsOut, area="fi_co")
+    assert {r["message_type"] for r in fi["by_type"]} <= {"INVOIC"}
+    for params in ({"system": "ZZ1"}, {"direction": "both"}, {"area": "hr"}, {"weeks": 3}):
+        r = client.get("/api/sap/idocs", params=params)
+        assert r.status_code == 422 and r.json()["error"]["kind"] == "validation", params

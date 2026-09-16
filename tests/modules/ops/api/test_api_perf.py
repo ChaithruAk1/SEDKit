@@ -77,6 +77,7 @@ PERF_PARAMS: dict[str, dict[str, Any]] = {
     "/api/sap/overview": {},
     "/api/sap/l3": {},
     "/api/sap/changes": {},
+    "/api/sap/idocs": {},
 }
 # Full-text searches held to the 300 ms budget: planted multi-word text, a common word, a very broad word, a prefix.
 SEARCH_QUERIES = ("interface timeout", "timeout", "error", "time*")

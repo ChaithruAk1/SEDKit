@@ -1,0 +1,46 @@
+# SAP IDoc monitoring: how exported IDocs are read (module: sap).
+# Synthetic defaults with the standard SAP status codes. Real message types, status codes and partner conventions belong
+# in DATA_DIR\config\sap\idoc.yaml. Each list there replaces the default list; name it with a trailing "+" (for example
+# `statuses+:`) to add entries to the default list instead.
+version: 1
+
+# IDoc status code -> group: ok (processed), in_process (waiting), error, closed (no further processing on purpose).
+statuses:
+  - {code: "01", group: in_process}   # IDoc created
+  - {code: "30", group: in_process}   # IDoc ready for dispatch
+  - {code: "03", group: ok}           # Data passed to port OK
+  - {code: "12", group: ok}           # Dispatch OK
+  - {code: "16", group: ok}           # Functional acknowledgement positive
+  - {code: "02", group: error}        # Error passing data to port
+  - {code: "04", group: error}        # Error within control information of EDI subsystem
+  - {code: "05", group: error}        # Error during translation
+  - {code: "26", group: error}        # Error during syntax check of outbound IDoc
+  - {code: "29", group: error}        # Error in ALE service (outbound)
+  - {code: "31", group: closed}       # Error, no further processing (outbound)
+  - {code: "64", group: in_process}   # IDoc ready to be transferred to application
+  - {code: "50", group: in_process}   # IDoc added
+  - {code: "53", group: ok}           # Application document posted
+  - {code: "51", group: error}        # Application document not posted
+  - {code: "56", group: error}        # IDoc with errors added
+  - {code: "60", group: error}        # Error during syntax check of inbound IDoc
+  - {code: "65", group: error}        # Error in ALE service (inbound)
+  - {code: "68", group: closed}       # Error, no further processing (inbound)
+
+# Message type -> SAP area (codes from scope.yaml). Unlisted message types count as area "unassigned".
+message_types:
+  - {type: ORDERS, area: sd}
+  - {type: ORDRSP, area: sd}
+  - {type: DEBMAS, area: sd}
+  - {type: INVOIC, area: fi_co}
+  - {type: DESADV, area: ewm}
+  - {type: SHPCON, area: ewm}
+  - {type: WMMBXY, area: ewm}
+  - {type: MATMAS, area: mm}
+  - {type: CREMAS, area: mm}
+
+thresholds:
+  reprocess_grace_hours: 24       # an error reprocessed within this time does not count as a persistent error
+  aged_error_hours: 48            # an open error older than this is aged
+  spike_window_hours: 48          # persistent errors after a production import into the same system
+  spike_min_lift: 10              # list imports followed by at least this many more persistent errors than before
+  history_days: 120               # IDocs older than this (by creation) are left out of IDoc health

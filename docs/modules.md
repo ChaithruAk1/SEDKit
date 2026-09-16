@@ -6,7 +6,7 @@ knows nothing about any business domain. Each domain is a **module**:
 | Module | Key | Scope |
 |---|---|---|
 | #1 | `ops` | tickets, SLA, backlog, costs, licenses, vendors; weekly, monthly, quarterly and vendor reports |
-| #2 | `sap` | SAP L3 support by area and landscape on top of the ops tickets, ChaRM changes and transports, SAP risks, `sap-weekly` (`src/sed/modules/sap/CLAUDE.md`) |
+| #2 | `sap` | SAP L3 support by area and landscape on top of the ops tickets, ChaRM changes and transports, IDoc health, SAP risks, `sap-weekly` (`src/sed/modules/sap/CLAUDE.md`) |
 
 Later modules (for example delivery management of new business apps) plug in the same way.
 

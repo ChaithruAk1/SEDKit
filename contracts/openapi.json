@@ -3143,6 +3143,554 @@
         "title": "SapFlowRow",
         "type": "object"
       },
+      "SapIdocAging": {
+        "additionalProperties": false,
+        "properties": {
+          "d1_2": {
+            "title": "D1 2",
+            "type": "integer"
+          },
+          "d2_7": {
+            "title": "D2 7",
+            "type": "integer"
+          },
+          "gt7d": {
+            "title": "Gt7D",
+            "type": "integer"
+          },
+          "h4_24": {
+            "title": "H4 24",
+            "type": "integer"
+          },
+          "lt4h": {
+            "title": "Lt4H",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lt4h",
+          "h4_24",
+          "d1_2",
+          "d2_7",
+          "gt7d"
+        ],
+        "title": "SapIdocAging",
+        "type": "object"
+      },
+      "SapIdocErrorRow": {
+        "additionalProperties": false,
+        "properties": {
+          "age_hours": {
+            "title": "Age Hours",
+            "type": "number"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "docnum": {
+            "title": "Docnum",
+            "type": "string"
+          },
+          "first_error_at": {
+            "title": "First Error At",
+            "type": "string"
+          },
+          "message_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Type"
+          },
+          "partner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner"
+          },
+          "status_code": {
+            "title": "Status Code",
+            "type": "string"
+          },
+          "system_id": {
+            "title": "System Id",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "system_id",
+          "docnum",
+          "direction",
+          "message_type",
+          "partner",
+          "status_code",
+          "text",
+          "first_error_at",
+          "age_hours"
+        ],
+        "title": "SapIdocErrorRow",
+        "type": "object"
+      },
+      "SapIdocPartnerRow": {
+        "additionalProperties": false,
+        "properties": {
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "message_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Type"
+          },
+          "oldest_hours": {
+            "title": "Oldest Hours",
+            "type": "number"
+          },
+          "partner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner"
+          },
+          "system_id": {
+            "title": "System Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system_id",
+          "message_type",
+          "partner",
+          "errors",
+          "oldest_hours"
+        ],
+        "title": "SapIdocPartnerRow",
+        "type": "object"
+      },
+      "SapIdocSpikeRow": {
+        "additionalProperties": false,
+        "properties": {
+          "change_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Id"
+          },
+          "change_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Type"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "errors_before": {
+            "title": "Errors Before",
+            "type": "integer"
+          },
+          "imported_at": {
+            "title": "Imported At",
+            "type": "string"
+          },
+          "lift": {
+            "title": "Lift",
+            "type": "integer"
+          },
+          "return_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Code"
+          },
+          "system_id": {
+            "title": "System Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "change_id",
+          "title",
+          "change_type",
+          "system_id",
+          "imported_at",
+          "return_code",
+          "errors",
+          "errors_before",
+          "lift"
+        ],
+        "title": "SapIdocSpikeRow",
+        "type": "object"
+      },
+      "SapIdocTextRow": {
+        "additionalProperties": false,
+        "properties": {
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "message_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Message Types",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "errors",
+          "message_types"
+        ],
+        "title": "SapIdocTextRow",
+        "type": "object"
+      },
+      "SapIdocTypeRow": {
+        "additionalProperties": false,
+        "properties": {
+          "aged": {
+            "title": "Aged",
+            "type": "integer"
+          },
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "landscape": {
+            "title": "Landscape",
+            "type": "string"
+          },
+          "message_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Type"
+          },
+          "oldest_hours": {
+            "title": "Oldest Hours",
+            "type": "number"
+          },
+          "partners": {
+            "title": "Partners",
+            "type": "integer"
+          },
+          "system_id": {
+            "title": "System Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system_id",
+          "landscape",
+          "message_type",
+          "direction",
+          "area",
+          "errors",
+          "aged",
+          "partners",
+          "oldest_hours"
+        ],
+        "title": "SapIdocTypeRow",
+        "type": "object"
+      },
+      "SapIdocWeekRow": {
+        "additionalProperties": false,
+        "properties": {
+          "idocs": {
+            "title": "Idocs",
+            "type": "integer"
+          },
+          "new_errors": {
+            "title": "New Errors",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "persistent": {
+            "title": "Persistent",
+            "type": "integer"
+          },
+          "reprocess_median_h": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reprocess Median H"
+          },
+          "reprocessed": {
+            "title": "Reprocessed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period",
+          "idocs",
+          "new_errors",
+          "persistent",
+          "reprocessed",
+          "reprocess_median_h"
+        ],
+        "title": "SapIdocWeekRow",
+        "type": "object"
+      },
+      "SapIdocsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "aging": {
+            "$ref": "#/components/schemas/SapIdocAging"
+          },
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "areas": {
+            "items": {
+              "$ref": "#/components/schemas/SapOption"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "by_type": {
+            "items": {
+              "$ref": "#/components/schemas/SapIdocTypeRow"
+            },
+            "title": "By Type",
+            "type": "array"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/Kpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "landscape": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landscape"
+          },
+          "landscapes": {
+            "items": {
+              "$ref": "#/components/schemas/SapOption"
+            },
+            "title": "Landscapes",
+            "type": "array"
+          },
+          "open_errors": {
+            "items": {
+              "$ref": "#/components/schemas/SapIdocErrorRow"
+            },
+            "title": "Open Errors",
+            "type": "array"
+          },
+          "open_errors_count": {
+            "title": "Open Errors Count",
+            "type": "integer"
+          },
+          "partners": {
+            "items": {
+              "$ref": "#/components/schemas/SapIdocPartnerRow"
+            },
+            "title": "Partners",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "spikes": {
+            "items": {
+              "$ref": "#/components/schemas/SapIdocSpikeRow"
+            },
+            "title": "Spikes",
+            "type": "array"
+          },
+          "system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System"
+          },
+          "systems": {
+            "items": {
+              "$ref": "#/components/schemas/SapOption"
+            },
+            "title": "Systems",
+            "type": "array"
+          },
+          "top_texts": {
+            "items": {
+              "$ref": "#/components/schemas/SapIdocTextRow"
+            },
+            "title": "Top Texts",
+            "type": "array"
+          },
+          "weekly": {
+            "items": {
+              "$ref": "#/components/schemas/SapIdocWeekRow"
+            },
+            "title": "Weekly",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "at",
+          "period",
+          "system",
+          "landscape",
+          "area",
+          "direction",
+          "systems",
+          "areas",
+          "landscapes",
+          "kpis",
+          "aging",
+          "by_type",
+          "partners",
+          "weekly",
+          "top_texts",
+          "spikes",
+          "open_errors_count",
+          "open_errors"
+        ],
+        "title": "SapIdocsOut",
+        "type": "object"
+      },
       "SapImportIncidentsRow": {
         "additionalProperties": false,
         "properties": {
@@ -9055,6 +9603,282 @@
           }
         },
         "summary": "Changes",
+        "tags": [
+          "sap"
+        ]
+      }
+    },
+    "/api/sap/idocs": {
+      "get": {
+        "operationId": "sap_idocs",
+        "parameters": [
+          {
+            "description": "SAP system id",
+            "in": "query",
+            "name": "system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "SAP system id",
+              "title": "System"
+            }
+          },
+          {
+            "description": "Landscape code, or 'unknown'",
+            "in": "query",
+            "name": "landscape",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Landscape code, or 'unknown'",
+              "title": "Landscape"
+            }
+          },
+          {
+            "description": "SAP area of the message type, or 'unassigned'",
+            "in": "query",
+            "name": "area",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "SAP area of the message type, or 'unassigned'",
+              "title": "Area"
+            }
+          },
+          {
+            "description": "inbound or outbound",
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "inbound or outbound",
+              "title": "Direction"
+            }
+          },
+          {
+            "in": "query",
+            "name": "weeks",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 52,
+              "minimum": 4,
+              "title": "Weeks",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "app_id (repeatable)",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "schema": {
+              "description": "app_id (repeatable)",
+              "items": {
+                "type": "string"
+              },
+              "title": "App",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          },
+          {
+            "description": "vendor_id",
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "vendor_id",
+              "title": "Vendor"
+            }
+          },
+          {
+            "description": "assignment group",
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "assignment group",
+              "title": "Group"
+            }
+          },
+          {
+            "description": "2026-W35, 2026-08 or 2026-Q3",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2026-W35, 2026-08 or 2026-Q3",
+              "title": "Period"
+            }
+          },
+          {
+            "description": "YYYY-MM-DD (default: data as-of)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "YYYY-MM-DD (default: data as-of)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Include unapproved AI content",
+            "in": "query",
+            "name": "include_drafts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include unapproved AI content",
+              "title": "Include Drafts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SapIdocsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Idocs",
         "tags": [
           "sap"
         ]

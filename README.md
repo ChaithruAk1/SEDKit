@@ -112,14 +112,21 @@ as history) and transport imports per system. `config/sap/charm.yaml` maps trans
 change cycles, and names the Jira projects whose stories reference ChaRM changes (either way round);
 `config/sap/scope.yaml` lists the SAP systems with their landscape and role.
 
+IDoc health comes from the IDoc monitor export: one row per IDoc with its current status (daily files); each new status
+is kept as history. `config/sap/idoc.yaml` groups the status codes (ok, in process, error, closed), maps message types to
+SAP areas and sets the reprocessing grace time: errors fixed within it are normal operation, the rest are persistent
+errors.
+
 Dashboard pages:
 - `#/sap`: KPIs, areas, landscapes and SAP risks.
 - `#/sap/tickets`: area and landscape filters, trend, aging, SLA, arrivals vs closures, attention list.
 - `#/sap/changes`: open changes by stage, urgent share by area, production imports, failed imports, SAP incidents
   after production imports, stuck changes, transports waiting for production, changes without a Jira story.
+- `#/sap/idocs`: IDoc errors by system, message type and partner, aging, new and persistent errors per week,
+  reprocessing times, frequent error texts, error spikes after production imports.
 
-Metrics stay at group (area) level, never per person. IDoc health and SAP subcategories in AI triage follow in the next
-SAP phases.
+Metrics stay at group (area), system and partner level, never per person. SAP subcategories in AI triage follow in the
+next SAP phase.
 
 ## AI analysis (Claude Code)
 

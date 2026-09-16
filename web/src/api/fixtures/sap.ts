@@ -1,7 +1,7 @@
 /** SAP module API fixtures (SAP overview and L3 tickets). Fictional SAP groups, applications and ticket numbers. */
 import { ApiError } from '../client';
 import type { GetQuery, Schema } from '../types';
-import { AS_OF, addDays, int, isoAt, lastWeeks, pick, rng, round } from './random';
+import { AS_OF, addDays, int, isoAt, lastWeeks, pad, pick, rng, round } from './random';
 
 const AREAS = [
   { value: 'fi_co', label: 'FI/CO' },
@@ -140,10 +140,12 @@ export function overview(): Schema<'SapOverview'> {
       kpi('sap.l3.sla.pct', 'SLA met (2026-W35)', 84.2, 'pct', 88.1),
       kpi('sap.l3.mttr.median_h', 'MTTR median (2026-W35)', 31.4, 'hours', 27.9),
       kpi('sap.l3.p1p2.open', 'Open P1/P2', 3, 'count'),
-      kpi('sap.findings.count', 'System-detected SAP risks', 6, 'count'),
+      kpi('sap.findings.count', 'System-detected SAP risks', 12, 'count'),
       kpi('sap.changes.open', 'Open SAP changes', 15, 'count'),
       kpi('sap.changes.urgent_ratio_8w', 'Urgent changes (8 weeks)', 33.3, 'pct', 4.8),
       kpi('sap.transports.failed_4w', 'Failed transport imports (28 days)', 1, 'count'),
+      kpi('sap.idocs.errors_open', 'IDocs in error', 89, 'count'),
+      kpi('sap.idocs.new_persistent', `New persistent IDoc errors (${weeks[0] ?? '2026-W35'})`, 85, 'count', 9.75),
     ],
     areas: counts.map((a) => {
       const opened = int(r, 1, 12);
@@ -399,5 +401,123 @@ export function changes(query: GetQuery<'/api/sap/changes'> | undefined): Schema
     ]),
     without_jira_count: keep(without).length,
     without_jira: keep(without),
+  };
+}
+
+const SYSTEMS = [
+  { value: 'ED1', label: 'ED1 (SAP ECC, dev)' },
+  { value: 'EQ1', label: 'EQ1 (SAP ECC, qa)' },
+  { value: 'EP1', label: 'EP1 (SAP ECC, prod)' },
+  { value: 'HD1', label: 'HD1 (SAP S/4HANA, dev)' },
+  { value: 'HQ1', label: 'HQ1 (SAP S/4HANA, qa)' },
+  { value: 'HP1', label: 'HP1 (SAP S/4HANA, prod)' },
+];
+
+export function idocs(query: GetQuery<'/api/sap/idocs'> | undefined): Schema<'SapIdocsOut'> {
+  const q = query ?? {};
+  const system = q.system ?? null;
+  const area = q.area ?? null;
+  const direction = q.direction ?? null;
+  if (system && !SYSTEMS.some((s) => s.value === system)) throw new ApiError(422, 'validation', `Unknown SAP system '${system}'`);
+  if (area && !AREAS.some((a) => a.value === area)) throw new ApiError(422, 'validation', `Unknown SAP area '${area}'`);
+  if (direction && direction !== 'inbound' && direction !== 'outbound') {
+    throw new ApiError(422, 'validation', `Unknown IDoc direction '${direction}'`);
+  }
+  const r = rng(733 + (system ?? '').length + (area ?? '').length * 3 + (direction ?? '').length * 5);
+  const weeks = lastWeeks(AS_OF, q.weeks ?? 12);
+  const kpi = (key: string, label: string, value: number | null, unit: string, compare: number | null = null) => ({
+    key,
+    label,
+    value,
+    unit,
+    compare,
+    delta: value !== null && compare !== null ? round(value - compare) : null,
+    definition: null,
+  });
+  const types = [
+    { system_id: 'EP1', landscape: 'ecc', message_type: 'ORDERS', direction: 'inbound', area: 'sd', errors: 64, aged: 64, partners: 1, oldest_hours: 1047.9 },
+    { system_id: 'HP1', landscape: 's4', message_type: 'INVOIC', direction: 'outbound', area: 'fi_co', errors: 25, aged: 25, partners: 20, oldest_hours: 176.6 },
+  ].filter(
+    (t) => (!system || t.system_id === system) && (!area || t.area === area) && (!direction || t.direction === direction),
+  );
+  const open = types.reduce((sum, t) => sum + t.errors, 0);
+  return {
+    as_of: AS_OF,
+    at: `${AS_OF}T22:00:00Z`,
+    period: weeks.at(-1) ?? '2026-W35',
+    system,
+    landscape: q.landscape ?? null,
+    area,
+    direction,
+    systems: SYSTEMS,
+    areas: AREAS,
+    landscapes: LANDSCAPES,
+    kpis: [
+      kpi('sap.idocs.errors_open', 'IDocs in error', open, 'count'),
+      kpi('sap.idocs.errors_aged', 'Errors open > 48 h', open, 'count'),
+      kpi('sap.idocs.new_persistent', `New persistent errors (${weeks.at(-1) ?? '2026-W35'})`, 85, 'count', 9.75),
+      kpi('sap.idocs.reprocess_median_h', `Reprocessing median (${weeks.at(-1) ?? '2026-W35'})`, 8.5, 'hours'),
+      kpi('sap.idocs.reprocessed_in_grace_pct', `Reprocessed within grace (${weeks.at(-1) ?? '2026-W35'})`, 69.6, 'pct'),
+    ],
+    aging: { lt4h: 0, h4_24: 0, d1_2: 0, d2_7: Math.min(open, 24), gt7d: Math.max(0, open - 24) },
+    by_type: types,
+    partners: types.map((t) => ({
+      system_id: t.system_id,
+      message_type: t.message_type,
+      partner: t.message_type === 'ORDERS' ? 'PARTNER_0007' : 'PARTNER_0002',
+      errors: t.message_type === 'ORDERS' ? 64 : 2,
+      oldest_hours: t.oldest_hours,
+    })),
+    weekly: weeks.map((period, i) => {
+      const last = i === weeks.length - 1;
+      const growing = [2, 4, 7, 11, 16, 24][i - (weeks.length - 6)] ?? 0;
+      return {
+        period,
+        idocs: int(r, 2300, 2700) + (i === weeks.length - 6 ? 600 : 0),
+        new_errors: growing + int(r, 10, 30) + (last ? 140 : 0),
+        persistent: growing + int(r, 0, 4) + (last ? 60 : 0),
+        reprocessed: int(r, 10, 30) + (last ? 80 : 0),
+        reprocess_median_h: round(4 + r() * 8, 1),
+      };
+    }),
+    top_texts: types.map((t) => ({
+      text:
+        t.message_type === 'ORDERS'
+          ? 'Sold-to party # not maintained for sales area S100/01/00'
+          : 'EDI: Syntax error in IDoc (mandatory segment E1EDP01 missing) for billing document #',
+      errors: t.errors,
+      message_types: [t.message_type],
+    })),
+    spikes:
+      !system || system === 'HP1'
+        ? [
+            {
+              change_id: '8000009001',
+              title: 'Urgent correction of billing document output for sales organisation S100',
+              change_type: 'urgent',
+              system_id: 'HP1',
+              imported_at: isoAt(addDays(AS_OF, -8), 16, 25),
+              return_code: 8,
+              errors: 60,
+              errors_before: 0,
+              lift: 60,
+            },
+          ]
+        : [],
+    open_errors_count: open,
+    open_errors: Array.from({ length: Math.min(open, 30) }, (_, i) => {
+      const t = types[i % Math.max(types.length, 1)] ?? { system_id: 'EP1', message_type: 'ORDERS', direction: 'inbound' };
+      return {
+        system_id: t.system_id,
+        docnum: String((t.system_id === 'EP1' ? 3000000000 : 7000000000) + 5000 + i).padStart(16, '0'),
+        direction: t.direction,
+        message_type: t.message_type,
+        partner: t.message_type === 'ORDERS' ? 'PARTNER_0007' : `PARTNER_${pad(int(r, 1, 40), 4)}`,
+        status_code: t.message_type === 'ORDERS' ? '51' : '26',
+        text: t.message_type === 'ORDERS' ? 'Sold-to party 100023 not maintained for sales area S100/01/00' : 'EDI: Syntax error in IDoc (mandatory segment E1EDP01 missing) for billing document 912345',
+        first_error_at: isoAt(addDays(AS_OF, -(30 - i)), 9),
+        age_hours: round((30 - i) * 24, 1),
+      };
+    }),
   };
 }

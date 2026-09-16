@@ -79,6 +79,34 @@ DEFINITIONS: dict[str, tuple[str, str]] = {
         "Transports of tested changes (ready for or in production) imported into QA without errors and not into "
         "production longer than thresholds.waiting_for_production_days after the QA import.",
     ),
+    "sap.idocs.errors_open": (
+        "count",
+        "IDocs whose latest status (by the as-of date) is in an error group of config/sap/idoc.yaml, among IDocs "
+        "created within thresholds.history_days.",
+    ),
+    "sap.idocs.errors_aged": (
+        "count",
+        "Open IDoc errors whose first error status is older than thresholds.aged_error_hours (config/sap/idoc.yaml).",
+    ),
+    "sap.idocs.new_persistent": (
+        "count",
+        "IDocs whose first error falls in the week and that were not processed within "
+        "thresholds.reprocess_grace_hours (reprocessed later, closed, or still open); compared with the 4-week "
+        "average.",
+    ),
+    "sap.idocs.reprocess_median_h": (
+        "hours",
+        "Median hours from an IDoc's first error to its next processed status, for IDocs reprocessed in the week.",
+    ),
+    "sap.idocs.reprocessed_in_grace_pct": (
+        "pct",
+        "Share of the IDocs reprocessed in the week that were processed within thresholds.reprocess_grace_hours.",
+    ),
+    "sap.idocs.spike_after_import": (
+        "count",
+        "Persistent IDoc errors on a system within thresholds.spike_window_hours after a production import into it, "
+        "against the same window before (lift). A correlation signal, not causation.",
+    ),
     "sap.changes.incidents_after_import": (
         "count",
         "SAP incidents of the same landscape (and the change's area, when known) opened within "

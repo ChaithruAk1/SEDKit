@@ -203,3 +203,45 @@ def test_change_rule_thresholds_and_switches(sap_profile_rw):
     found = set(_published(paths, CHANGE_KINDS))
     assert "sap_change_risk:stuck:pp_qm" not in found  # 45 days in test is within a 60-day limit
     assert {"sap_change_risk:urgent_ratio:mm", "sap_change_risk:waiting:ecc"} <= found
+
+
+IDOC_KINDS = ("sap_idoc_risk",)
+
+
+def test_planted_idoc_risks_fire_and_the_controls_stay_silent(sap_profile, sap_truth):
+    found = _published(sap_profile.paths, IDOC_KINDS)
+    assert set(found) == set(sap_truth["patterns"]["idocs"]["expected_findings"])
+    growth = found["sap_idoc_risk:growth:EP1:ORDERS:PARTNER_0007"]
+    assert _evidence(growth) == {
+        "sap.idocs.EP1:ORDERS:PARTNER_0007.persistent_week": 24,
+        "sap.idocs.EP1:ORDERS:PARTNER_0007.persistent_avg4w": 9.5,
+    }
+    cp1 = sap_truth["patterns"]["changes"]["CP1"]["change_id"]
+    spike = found[f"sap_idoc_risk:spike:HP1:{cp1}"]
+    assert spike["severity"] == "high" and "(0 before)" in spike["title"]
+    assert not any("MATMAS" in key for key in found)  # IN1: reprocessed within the grace time
+    assert found["sap_idoc_risk:backlog:EP1:ORDERS"]["severity"] == "high"  # 64 errors: twice the threshold
+
+
+def test_idoc_rule_thresholds_and_grace(sap_profile_rw):
+    paths = sap_profile_rw.paths
+    write_sap_config(
+        paths,
+        "risk_rules.yaml",
+        {
+            "rules": {
+                "idoc_error_backlog": {"min_errors": 100},
+                "idoc_error_growth": {"enabled": False},
+                "idoc_aged_errors": {"min_errors": 100},
+                "idoc_spike_after_import": {"min_lift": 100},
+            }
+        },
+    )
+    _refresh(paths)
+    assert _published(paths, IDOC_KINDS) == {}
+    # A grace time longer than the IN1 reprocessing still leaves it quiet; a short one turns it into persistent errors.
+    write_sap_config(paths, "risk_rules.yaml", {"rules": {"idoc_error_growth": {"min_errors_week": 70}}})
+    write_sap_config(paths, "idoc.yaml", {"thresholds": {"reprocess_grace_hours": 2}})
+    _refresh(paths)
+    found = set(_published(paths, IDOC_KINDS))
+    assert "sap_idoc_risk:growth:EP1:MATMAS:EP1CLNT100" in found

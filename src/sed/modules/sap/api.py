@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from sed.api.deps import CommonFilters, common_filters, read_conn
 from sed.modules.ops.queries.common import build_context
-from sed.modules.sap.api_models import SapChangesOut, SapL3Out, SapOverview
+from sed.modules.sap.api_models import SapChangesOut, SapIdocsOut, SapL3Out, SapOverview
 from sed.modules.sap.queries import api_views
 
 router = APIRouter()
@@ -43,3 +43,18 @@ def changes(
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> SapChangesOut:
     return api_views.changes_view(build_context(conn, request.app.state.paths, f), area, landscape, weeks)
+
+
+@router.get("/idocs", response_model=SapIdocsOut)
+def idocs(
+    request: Request,
+    system: str | None = Query(None, max_length=16, description="SAP system id"),
+    landscape: str | None = Query(None, max_length=32, description="Landscape code, or 'unknown'"),
+    area: str | None = Query(None, max_length=32, description="SAP area of the message type, or 'unassigned'"),
+    direction: str | None = Query(None, max_length=16, description="inbound or outbound"),
+    weeks: int = Query(12, ge=4, le=52),
+    f: CommonFilters = Depends(common_filters),
+    conn: sqlite3.Connection = Depends(read_conn),
+) -> SapIdocsOut:
+    ctx = build_context(conn, request.app.state.paths, f)
+    return api_views.idocs_view(ctx, system, landscape, area, direction, weeks)

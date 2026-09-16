@@ -69,6 +69,9 @@ def test_file_set_and_counts(tmp_path):
         "open_incident": len(active),
         "change": len(changes),
         "transport_import": imports,
+        "idoc": len(
+            {(r["system_id"], r["docnum"]) for f in files if f.startswith("sap_idocs_") for r in _rows(paths.inbox / f)}
+        ),
     }
     assert all(not r["resolved_at"] for r in active)
     truth = _rows(paths.ground_truth / "sap" / "ticket_truth.csv")
@@ -166,6 +169,7 @@ def test_ground_truth_stays_outside_the_inbox(tmp_path):
     assert {p.name for p in truth.iterdir()} == {
         "ticket_truth.csv",
         "change_truth.csv",
+        "idoc_truth.csv",
         "patterns.json",
         "pii_injections.json",
     }
@@ -217,3 +221,30 @@ def test_change_exports_and_patterns(tmp_path):
     for key in ("CP1", "CP2", "CP3", "CP4", "CP5", "CN1"):
         assert small[key].keys() == large[key].keys(), key
     assert small["CP2"] == large["CP2"] and small["CP1"]["incidents"] == large["CP1"]["incidents"]
+
+
+def test_idoc_exports_and_patterns(tmp_path):
+    paths, result = _gen(tmp_path)
+    files = sorted(inbox_manifest.load(paths.inbox)["sap"]["files"])
+    daily = [f for f in files if f.startswith("sap_idocs_")]
+    days = [date.fromisoformat(f[10:20]) for f in daily]
+    assert days == sorted(days) and max(days) == AS_OF and (max(days) - min(days)).days == 90
+    rows = [r for f in daily for r in _rows(paths.inbox / f)]
+    assert {r["system_id"] for r in rows} == {"EP1", "HP1"} and {r["direction"] for r in rows} == {"1", "2"}
+    assert all(len(r["docnum"]) == 16 for r in rows)
+    last: dict[tuple[str, str], dict[str, str]] = {}
+    for r in rows:
+        last[(r["system_id"], r["docnum"])] = r
+    truth = {(r["system_id"], r["docnum"]): r for r in _rows(paths.ground_truth / "sap" / "idoc_truth.csv")}
+    assert result["counts"]["idoc"] == len(last)
+    for key, row in truth.items():
+        assert last[key]["status_code"] == row["status_at_as_of"], key
+    patterns = _patterns(paths)["idocs"]
+    by_pattern: dict[str, int] = {}
+    for row in truth.values():
+        by_pattern[row["pattern"]] = by_pattern.get(row["pattern"], 0) + 1
+    assert by_pattern == {"IP1": 60, "IP2": 64, "IN1": 80, "IN2": 600}
+    assert sum(1 for r in truth.values() if r["pattern"] == "IP1" and r["status_at_as_of"] == "26") == 25
+    assert patterns["IP2"]["weekly_errors"] == [2, 4, 7, 11, 16, 24]
+    other, _ = _gen(tmp_path / "large", scale=0.3)
+    assert _patterns(other)["idocs"] == patterns

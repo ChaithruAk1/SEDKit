@@ -92,7 +92,7 @@ def test_facts_agree_with_the_read_models_and_the_api(sap_profile_rw):
     assert rows == [{k: r[k] for k in rows[0]} for r in areas]
     assert sum(r["total"] for r in snap.tables["sap_backlog_aging_by_area"]["rows"]) == backlog["total"]
     assert len(snap.tables["sap_l3_trend_12w"]["rows"]) == 12
-    assert _value(snap, "sap.findings.count") == len(snap.tables["sap_findings"]["rows"]) == 6
+    assert _value(snap, "sap.findings.count") == len(snap.tables["sap_findings"]["rows"]) == 12
     assert (
         _value(snap, "sap.scope.note")
         == "SAP scope: 9 SAP groups, 1 category name, 1 custom field (config/sap/scope.yaml)"
@@ -131,7 +131,7 @@ def test_provenance_lists_only_sap_suppressions(sap_profile_rw):
         conn.close()
     sap = _snapshot(sap_profile_rw)
     assert [f["stable_key"] for f in sap.suppressed_findings] == ["sap_backlog_risk:aged:ewm"]
-    assert _value(sap, "sap.findings.count") == 5
+    assert _value(sap, "sap.findings.count") == 11
     ops = _snapshot(sap_profile_rw, report="weekly")
     assert ops_key in {f["stable_key"] for f in ops.suppressed_findings}
     assert not any(f["kind"] == "sap_backlog_risk" for f in ops.suppressed_findings)
@@ -188,3 +188,38 @@ def test_change_facts_and_tables(sap_profile_rw, sap_truth):
             "Stuck changes", "Waiting for production", "Changes without Jira"} <= sheets  # fmt: skip
     md = files["md"].read_text(encoding="utf-8")
     assert "- **Changes:** " in md and "transports waiting for production" in md
+
+
+def test_idoc_facts_and_tables(sap_profile_rw, sap_truth):
+    from sed.modules.sap.idoc import load_idoc
+    from sed.modules.sap.queries import idocs
+
+    paths = sap_profile_rw.paths
+    snap = _snapshot(sap_profile_rw)
+    settings = load_settings(paths)
+    week = parse_period(PERIOD, settings.reporting_tz, settings.fiscal_year_start)
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        ids = idocs.load(conn, load_idoc(paths, load_scope(paths)), week.end_utc)
+        summary = idocs.summary(ids, week)
+    finally:
+        conn.close()
+    assert _value(snap, "sap.idocs.errors_open") == summary["errors_open"]
+    assert _value(snap, "sap.idocs.new_persistent") == summary["new_persistent_week"]
+    assert _value(snap, "sap.idocs.new_persistent.avg4w") == summary["new_persistent_avg4w"]
+    assert sum(r["errors"] for r in snap.tables["sap_idoc_by_type"]["rows"]) == summary["errors_open"]
+    assert len(snap.tables["sap_idoc_weekly_12w"]["rows"]) == 12
+    cp1 = sap_truth["patterns"]["changes"]["CP1"]["change_id"]
+    assert [r["change_id"] for r in snap.tables["sap_idoc_spikes"]["rows"]] == [cp1]
+    assert snap.tables["sap_idoc_partners"]["rows"][0]["partner"] == "PARTNER_0007"
+
+    result = build_report(paths, "sap-weekly", PERIOD, ["xlsx", "md", "pptx"], "none")
+    files = {a["format"]: Path(a["path"]) for a in result["artifacts"]}
+    from python_calamine import CalamineWorkbook
+
+    sheets = set(CalamineWorkbook.from_path(str(files["xlsx"])).sheet_names)
+    assert {"IDoc errors", "IDoc partners", "IDoc trend", "IDoc error texts", "IDoc spikes"} <= sheets
+    assert "- **IDocs:** " in files["md"].read_text(encoding="utf-8")
+    assert deck_problems(files["pptx"]) == []
+    deck_text = "\n".join(slide_text(s) for s in open_deck(files["pptx"]).slides)
+    assert "SAP IDoc health" in deck_text

@@ -43,6 +43,13 @@ def render(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> str:
         f"{_fmt(F['sap.transports.waiting'])} transports waiting for production, {_fmt(F['sap.changes.stuck'])} stuck "
         f"changes."
     )
+    lines.append(
+        f"- **IDocs:** {_fmt(F['sap.idocs.errors_open'])} in error "
+        f"({_fmt(F['sap.idocs.errors_aged'])} older than 48 h); "
+        f"{_fmt(F['sap.idocs.new_persistent'])} new persistent errors "
+        f"(4-week avg {_fmt(F['sap.idocs.new_persistent.avg4w'])}); "
+        f"reprocessing median {_fmt(F['sap.idocs.reprocess_median_h'])}."
+    )
     serious = [f for f in findings if f.get("severity") in {"critical", "high"}]
     if serious:
         lines += ["", "**System-detected SAP risks (top):**"]

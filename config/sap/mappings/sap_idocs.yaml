@@ -1,0 +1,22 @@
+# SAP IDoc monitor export (for example WE02/WE05 list or a BD87 selection saved as a spreadsheet): one row per IDoc with
+# its current status, daily files of the IDocs created or changed that day. Each import that shows an IDoc with a new
+# status code adds a row to the status history (sap_idoc_status).
+name: sap_idocs
+target: sap_idoc
+load_mode: delta
+description: IDocs with their current status (daily exports of IDocs created or changed that day)
+match:
+  glob: ["sap_idocs_*.csv", "sap_idocs_*.xlsx"]
+source_tz: Europe/Paris
+fields:
+  system_id:      {from: [system_id, System, Logical System], pii: none, required: true}
+  docnum:         {from: [docnum, IDoc number, IDoc Number, DOCNUM], pii: none, required: true}
+  direction:      {from: [direction, Direction], pii: none}
+  message_type:   {from: [message_type, Message Type, Message type], pii: none}
+  basic_type:     {from: [basic_type, Basic Type, Basic type], pii: none}
+  partner_type:   {from: [partner_type, Partner Type, Partner type], pii: none}
+  partner_number: {from: [partner_number, Partner Number, Partner number], pii: none}
+  status_code:    {from: [status_code, Status], pii: none, required: true}
+  status_text:    {from: [status_text, Status Text, Status text], pii: free_text}
+  created_at:     {from: [created_at, Created On, Created on], transform: datetime, pii: none}
+  status_at:      {from: [status_at, Changed On, Status Date, Last Changed], transform: datetime, pii: none}

@@ -29,3 +29,22 @@ rules:
   waiting_for_production:
     enabled: true
     min_transports: 5
+  # Many IDocs of one message type in error on one system.
+  idoc_error_backlog:
+    enabled: true
+    min_errors: 25
+  # Persistent IDoc errors (not reprocessed within the grace time of idoc.yaml) of one message type and partner rise in
+  # the last complete week against the 4 weeks before.
+  idoc_error_growth:
+    enabled: true
+    min_errors_week: 20
+    min_growth_pct: 50
+  # IDoc errors open for longer than thresholds.aged_error_hours (idoc.yaml), per system.
+  idoc_aged_errors:
+    enabled: true
+    min_errors: 10
+  # Persistent IDoc errors after a production import into the same system, against the same window before it.
+  idoc_spike_after_import:
+    enabled: true
+    min_lift: 20
+    lookback_days: 30

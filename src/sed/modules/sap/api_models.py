@@ -220,3 +220,92 @@ class SapChangesOut(ApiModel):
     incidents_after_imports: list[SapImportIncidentsRow]
     without_jira_count: int
     without_jira: list[SapChangeRow]
+
+
+class SapIdocAging(ApiModel):
+    lt4h: int
+    h4_24: int
+    d1_2: int
+    d2_7: int
+    gt7d: int
+
+
+class SapIdocTypeRow(ApiModel):
+    system_id: str
+    landscape: str
+    message_type: str | None
+    direction: str | None
+    area: str
+    errors: int
+    aged: int
+    partners: int
+    oldest_hours: float
+
+
+class SapIdocPartnerRow(ApiModel):
+    system_id: str
+    message_type: str | None
+    partner: str | None
+    errors: int
+    oldest_hours: float
+
+
+class SapIdocWeekRow(ApiModel):
+    period: str
+    idocs: int
+    new_errors: int
+    persistent: int
+    reprocessed: int
+    reprocess_median_h: float | None
+
+
+class SapIdocTextRow(ApiModel):
+    text: str
+    errors: int
+    message_types: list[str]
+
+
+class SapIdocSpikeRow(ApiModel):
+    change_id: str | None
+    title: str | None
+    change_type: str | None
+    system_id: str
+    imported_at: str
+    return_code: int | None
+    errors: int
+    errors_before: int
+    lift: int
+
+
+class SapIdocErrorRow(ApiModel):
+    system_id: str
+    docnum: str
+    direction: str | None
+    message_type: str | None
+    partner: str | None
+    status_code: str
+    text: str | None
+    first_error_at: str
+    age_hours: float
+
+
+class SapIdocsOut(ApiModel):
+    as_of: str
+    at: str
+    period: str  # the last full week: weekly figures end with it
+    system: str | None
+    landscape: str | None
+    area: str | None
+    direction: str | None
+    systems: list[SapOption]
+    areas: list[SapOption]
+    landscapes: list[SapOption]
+    kpis: list[Kpi]
+    aging: SapIdocAging
+    by_type: list[SapIdocTypeRow]
+    partners: list[SapIdocPartnerRow]
+    weekly: list[SapIdocWeekRow]
+    top_texts: list[SapIdocTextRow]
+    spikes: list[SapIdocSpikeRow]
+    open_errors_count: int
+    open_errors: list[SapIdocErrorRow]
