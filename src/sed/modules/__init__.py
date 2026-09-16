@@ -78,19 +78,6 @@ PORTFOLIO_TABLES = (
     "work_item",
     "doc_page",
 )  # core-owned schema; any module may write via ingest
-SCHEMA_CHECKS: dict[str, set[str]] = {
-    "report_key": {"weekly", "monthly", "quarterly", "vendor", "data-pack"},
-    "alias_kind": {"app", "vendor", "group", "ci", "jira_project", "jira_component", "confluence_space"},
-    "finding_kind": {
-        "issue_cluster",
-        "renewal_risk",
-        "license_risk",
-        "vendor_risk",
-        "cost_risk",
-        "rationalization",
-        "report_section",
-    },
-}
 
 _override: tuple[tuple[Module, ...], frozenset[str] | None] | None = None
 _cache: dict[tuple[str, ...], tuple[Module, ...]] = {}
@@ -243,19 +230,32 @@ def mapping_dirs(paths: Paths | None = None) -> list[tuple[str, str]]:
     return [(m.key, m.mappings_dir) for m in enabled(paths) if m.mappings_dir]
 
 
+def _mapping_names(rel: str, paths: Paths | None) -> set[str]:
+    roots = [repo_config_dir() / rel]
+    if paths is not None:
+        roots.append(paths.config / rel)
+    return {p.stem for root in roots if root.is_dir() for p in root.glob("*.yaml")}
+
+
 def mapping_index(paths: Paths | None = None) -> dict[str, tuple[str, str]]:
     """Mapping name -> (module key, config-relative dir), from repo defaults and DATA_DIR overrides."""
     index: dict[str, tuple[str, str]] = {}
     for key, rel in mapping_dirs(paths):
-        roots = [repo_config_dir() / rel]
-        if paths is not None:
-            roots.append(paths.config / rel)
-        names = {p.stem for root in roots if root.is_dir() for p in root.glob("*.yaml")}
-        for name in sorted(names):
+        for name in sorted(_mapping_names(rel, paths)):
             if name in index and index[name][0] != key:
                 raise ValidationFailed(f"Mapping '{name}' is declared by modules {index[name][0]} and {key}")
             index[name] = (key, rel)
     return index
+
+
+def mapping_owners(paths: Paths | None = None) -> dict[str, set[str]]:
+    """Mapping name -> keys of the installed modules, enabled or not, whose mapping folders hold it (never raises)."""
+    owners: dict[str, set[str]] = {}
+    for m in installed():
+        if m.mappings_dir:
+            for name in _mapping_names(m.mappings_dir, paths):
+                owners.setdefault(name, set()).add(m.key)
+    return owners
 
 
 def ingest_targets(paths: Paths | None = None) -> dict[str, Any]:
@@ -295,6 +295,11 @@ def entities() -> dict[str, EntityRef]:
 
 def alias_kinds() -> tuple[str, ...]:
     return tuple(a.key for m in installed() for a in m.alias_kinds)
+
+
+def finding_kinds() -> tuple[str, ...]:
+    """Finding kinds over the installed modules. The finding table no longer checks them; each module owns its own."""
+    return tuple(k for m in installed() for k in m.finding_kinds)
 
 
 def entity_for_alias_kind(kind: str) -> EntityRef:
@@ -342,7 +347,7 @@ def mapping_glob_overlaps(paths: Paths | None = None) -> list[str]:
 def declared_refs(m: Module) -> list[str]:
     refs = [c.app for c in m.cli] + [r.builder for r in m.reports] + [r.markdown for r in m.reports if r.markdown]
     refs += [s.handler for s in m.skills if s.handler]
-    refs += [x for x in (m.ingest_targets, m.ingest_hooks, m.metric_definitions, m.doctor_checks) if x]
+    refs += [x for x in (m.ingest_targets, m.ingest_hooks, m.metric_definitions, m.doctor_checks, m.rule_findings) if x]
     if m.api:
         refs.append(m.api.router)
     if m.synth:
@@ -354,7 +359,7 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
     """Static checks of module declarations (no imports). Returns a list of problems; empty means valid."""
     mods = tuple(installed() if mods is None else mods)
     problems: list[str] = []
-    spaces = ("module", "report", "skill", "nav", "cli", "table", "alias", "entity")
+    spaces = ("module", "report", "skill", "nav", "cli", "table", "alias", "entity", "finding kind")
     seen: dict[str, dict[str, str]] = {k: {} for k in spaces}
 
     def claim(space: str, name: str, owner: str) -> None:
@@ -372,8 +377,6 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
         problems += [f"{m.key}: invalid import reference '{r}'" for r in declared_refs(m) if not IMPORT_REF_RE.match(r)]
         for r in m.reports:
             claim("report", r.key, m.key)
-            if r.key not in SCHEMA_CHECKS["report_key"]:
-                problems.append(f"{m.key}: report key '{r.key}' is not allowed by the report_snapshot CHECK constraint")
             if ("md" in r.formats) != bool(r.markdown):
                 problems.append(f"{m.key}: report '{r.key}' must declare markdown iff 'md' is a format")
             if not r.spec.startswith(f"{m.key}/"):
@@ -401,15 +404,12 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
         entity_keys = {e.key for e in m.entities} | {e.key for other in mods for e in other.entities}
         for a in m.alias_kinds:
             claim("alias", a.key, m.key)
-            if a.key not in SCHEMA_CHECKS["alias_kind"]:
-                problems.append(f"{m.key}: alias kind '{a.key}' is not allowed by the alias CHECK constraint")
             if a.entity not in entity_keys:
                 problems.append(f"{m.key}: alias kind '{a.key}' points at unknown entity '{a.entity}'")
-        problems += [
-            f"{m.key}: finding kind '{k}' is not allowed by the finding CHECK constraint"
-            for k in m.finding_kinds
-            if k not in SCHEMA_CHECKS["finding_kind"]
-        ]
+        for k in m.finding_kinds:
+            claim("finding kind", k, m.key)
+        if m.rule_findings and not m.finding_kinds:
+            problems.append(f"{m.key}: rule_findings needs the finding kinds it computes in finding_kinds")
         if m.mappings_dir and not m.mappings_dir.startswith(f"{m.key}/"):
             problems.append(f"{m.key}: mappings_dir must live under config/{m.key}/")
         problems += [
@@ -432,7 +432,6 @@ __all__ = [
     "CORE_TABLES",
     "EXTRA_ENV",
     "PORTFOLIO_TABLES",
-    "SCHEMA_CHECKS",
     "AliasKind",
     "Module",
     "alias_kinds",
@@ -442,6 +441,7 @@ __all__ = [
     "enabled_keys",
     "entities",
     "entity_for_alias_kind",
+    "finding_kinds",
     "get",
     "handler",
     "ingest_hooks",
@@ -451,6 +451,7 @@ __all__ = [
     "mapping_dirs",
     "mapping_glob_overlaps",
     "mapping_index",
+    "mapping_owners",
     "metric_definitions",
     "nav",
     "report",

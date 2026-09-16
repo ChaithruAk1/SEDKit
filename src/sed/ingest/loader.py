@@ -471,7 +471,7 @@ def _import_entry(
             hook.before_target(session, target, spec)
         ctx = Ctx(conn, resolver, pii, salt, None, as_of, base_currency, fx, dict(spec.constants), state=session.state)
         mapped = map_table(spec, table, target, ctx, pii, display_names, opts.sample_rows)
-        soft_delete_keys = _soft_delete_keys(conn, entry, spec, target, mapped.rows, opts.force)
+        soft_delete_keys = _soft_delete_keys(conn, paths, entry, spec, target, mapped.rows, opts.force)
     except SedError:
         _restore(session, checkpoint)
         raise
@@ -605,14 +605,31 @@ def _import_entry(
 
 
 def _soft_delete_keys(
-    conn, entry: Entry, spec: MappingSpec, target: Target, rows: list[dict[str, Any]], force: bool
+    conn, paths: Paths, entry: Entry, spec: MappingSpec, target: Target, rows: list[dict[str, Any]], force: bool
 ) -> list[tuple[Any, ...]]:
-    """Keys a full_snapshot file would soft-delete; refuses (exit 4) above SOFT_DELETE_GUARD unless forced."""
+    """Keys a full_snapshot file would soft-delete; refuses (exit 4) above SOFT_DELETE_GUARD unless forced.
+
+    Rows another module's mapping wrote last are not candidates, so a shared table keeps what other modules loaded when
+    this file omits it. Rows from any mapping of this module (including one renamed or replaced since) still are:
+    unchanged rows keep the batch that last changed them.
+    """
     if spec.load_mode != "full_snapshot" or not target.soft_delete:
         return []
+    owners = registry.mapping_owners(paths)
+    mine = owners.get(spec.name, set())
+    foreign = sorted(name for name, keys in owners.items() if name != spec.name and not keys & mine)
+    batch = target.batch_column
+    scope = (
+        f" AND ({batch} IS NULL OR {batch} NOT IN (SELECT batch_id FROM import_batch WHERE mapping_name IN "
+        f"({', '.join('?' for _ in foreign)})))"
+        if foreign
+        else ""
+    )
     active = {
         tuple(r)
-        for r in conn.execute(f"SELECT {', '.join(target.key)} FROM {target.table} WHERE is_deleted = 0").fetchall()
+        for r in conn.execute(
+            f"SELECT {', '.join(target.key)} FROM {target.table} WHERE is_deleted = 0{scope}", foreign
+        ).fetchall()
     }
     file_keys = {tuple(r[k] for k in target.key) for r in rows}
     keys = sorted(active - file_keys, key=str)

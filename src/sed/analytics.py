@@ -1,31 +1,29 @@
-"""Rule-origin findings ("system-detected"): deterministic risks that never depend on the AI.
+"""Ops rule findings ("system-detected"): notice deadlines, renewals, license use, vendor SLA decline, cost variance and
+quiet apps, from config/ops/risk_rules.yaml.
 
-`refresh_rule_findings` recomputes every enabled rule from config/ops/risk_rules.yaml for an as-of date and upserts
-`finding` rows (origin='rule'):
-* same stable_key and still firing -> evidence/severity refreshed in place;
-* acknowledged or suppressed rows stay hidden unless their evidence changed materially (then they re-activate);
-* active rows whose condition no longer holds -> status 'superseded'.
+`compute_rule_findings` is the ops module's rule provider (`Module.rule_findings`). Upserting, suppression and
+supersede live in the core engine `sed.rule_findings`; the wrappers below keep the ops call sites unchanged.
 """
 
 from __future__ import annotations
 
-import json
 import sqlite3
-import uuid
 from datetime import date, timedelta
 from typing import Any
 
-from sed import db, metrics
+from sed import metrics, modules, rule_findings
 from sed.paths import Paths
+from sed.rule_findings import SEVERITY_ORDER
 from sed.settings import load_layered, load_settings
 
-SEVERITY_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
-STATE_KEY = "rule_findings_as_of"
-
-
-def _finding_id() -> str:
-    # Random, not derived from (stable_key, timestamp): a finding can be superseded and re-inserted within one second.
-    return "rule-" + uuid.uuid4().hex[:20]
+__all__ = [
+    "SEVERITY_ORDER",
+    "compute_rule_findings",
+    "findings_as_of",
+    "published_rule_findings",
+    "refresh_rule_findings",
+]
+MODULE_KEY = "ops"
 
 
 def _eu(amount: float | None) -> str:
@@ -190,141 +188,15 @@ def compute_rule_findings(conn: sqlite3.Connection, paths: Paths | None, as_of: 
     return out
 
 
-def _material_change(old: dict[str, Any], new: dict[str, Any]) -> bool:
-    if SEVERITY_ORDER.get(new["severity"], 0) > SEVERITY_ORDER.get(old.get("severity") or "low", 0):
-        return True
-    old_ev = {e["fact_key"]: e["value"] for e in json.loads(old.get("payload_json") or "{}").get("evidence", [])}
-    for e in new["evidence"]:
-        before = old_ev.get(e["fact_key"])
-        after = e["value"]
-        numeric = isinstance(before, int | float) and isinstance(after, int | float)
-        if numeric and before and abs(after - before) / abs(before) > 0.25:
-            return True
-    return False
-
-
 def refresh_rule_findings(
     conn: sqlite3.Connection, paths: Paths | None, as_of: date, *, force: bool = False
 ) -> dict[str, Any]:
-    """Upsert persisted rule findings. The persisted state tracks the newest as-of: an older as-of is skipped unless
-    `force`, so a report for a past period never supersedes findings that are still current (see `findings_as_of`)."""
-    state_as_of = db.get_meta(conn, STATE_KEY)
-    if state_as_of and as_of.isoformat() < state_as_of and not force:
-        return {"skipped": True, "state_as_of": state_as_of}
-    computed = {f["stable_key"]: f for f in compute_rule_findings(conn, paths, as_of)}
-    now = db.utc_now()
-    stats: dict[str, Any] = {"inserted": 0, "updated": 0, "reactivated": 0, "superseded": 0, "hidden": 0}
-    with db.write_tx(conn):
-        db.set_meta(conn, STATE_KEY, as_of.isoformat())
-        existing = {
-            r["stable_key"]: dict(r)
-            for r in conn.execute(
-                "SELECT * FROM finding WHERE origin = 'rule' AND status IN ('active', 'acknowledged') ORDER BY "
-                "created_at"
-            )
-        }
-        for key, f in computed.items():
-            payload = json.dumps(
-                {"evidence": f["evidence"], "as_of": as_of.isoformat()}, ensure_ascii=False, default=str
-            )
-            old = existing.get(key)
-            if old is None:
-                conn.execute(
-                    "INSERT INTO finding (finding_id, run_id, origin, stable_key, kind, subject_type, subject_id, "
-                    "period, "
-                    "title, body_md, severity, payload_json, status, created_at) "
-                    "VALUES (?, NULL, 'rule', ?, ?, ?, ?, ?, ?, NULL, ?, ?, 'active', ?)",
-                    (
-                        _finding_id(),
-                        key,
-                        f["kind"],
-                        f["subject_type"],
-                        f["subject_id"],
-                        as_of.isoformat(),
-                        f["title"],
-                        f["severity"],
-                        payload,
-                        now,
-                    ),
-                )
-                stats["inserted"] += 1
-                continue
-            suppressed = old["status"] == "acknowledged" or (old["suppress_until"] or "") > as_of.isoformat()
-            if suppressed and not _material_change(old, f):
-                stats["hidden"] += 1
-                conn.execute(
-                    "UPDATE finding SET payload_json = ?, title = ? WHERE finding_id = ?",
-                    (payload, f["title"], old["finding_id"]),
-                )
-                continue
-            new_status = "active"
-            if suppressed:
-                stats["reactivated"] += 1
-            else:
-                stats["updated"] += 1
-            conn.execute(
-                "UPDATE finding SET title = ?, severity = ?, payload_json = ?, status = ?, suppress_until = NULL, "
-                "period = ? WHERE finding_id = ?",
-                (f["title"], f["severity"], payload, new_status, as_of.isoformat(), old["finding_id"]),
-            )
-        for key, old in existing.items():
-            if key not in computed and old["status"] == "active":
-                conn.execute("UPDATE finding SET status = 'superseded' WHERE finding_id = ?", (old["finding_id"],))
-                stats["superseded"] += 1
-    return stats
+    return rule_findings.refresh(conn, paths, as_of, MODULE_KEY, force=force)
 
 
 def published_rule_findings(conn: sqlite3.Connection, as_of: date) -> list[dict[str, Any]]:
-    rows = conn.execute(
-        "SELECT finding_id, stable_key, kind, subject_type, subject_id, severity, title, payload_json, status, "
-        "suppress_until FROM finding WHERE origin = 'rule' AND status = 'active' "
-        "AND (suppress_until IS NULL OR suppress_until <= ?)",
-        (as_of.isoformat(),),
-    ).fetchall()
-    out = [dict(r) for r in rows]
-    out.sort(key=lambda r: (-SEVERITY_ORDER.get(r["severity"] or "low", 0), r["kind"], r["title"]))
-    return out
+    return rule_findings.published(conn, as_of, modules.get(MODULE_KEY).finding_kinds)
 
 
 def findings_as_of(conn: sqlite3.Connection, paths: Paths | None, as_of: date) -> list[dict[str, Any]]:
-    """Rule findings as they stood at `as_of`, for report snapshots.
-
-    At or after the persisted state's as-of this refreshes and returns the published rows. For an older as-of the rules
-    are computed read-only; human acknowledgements/suppressions still apply, and finding ids are reused by stable_key
-    (None when the finding no longer exists in the current state).
-    """
-    state_as_of = db.get_meta(conn, STATE_KEY)
-    if not state_as_of or as_of.isoformat() >= state_as_of:
-        refresh_rule_findings(conn, paths, as_of)
-        return published_rule_findings(conn, as_of)
-    persisted = {
-        r["stable_key"]: dict(r)
-        for r in conn.execute(
-            "SELECT * FROM finding WHERE origin = 'rule' AND status IN ('active', 'acknowledged', 'superseded') "
-            "ORDER BY created_at"
-        )
-    }
-    out = []
-    for f in compute_rule_findings(conn, paths, as_of):
-        old = persisted.get(f["stable_key"])
-        if old and old["status"] != "superseded":
-            suppressed = old["status"] == "acknowledged" or (old["suppress_until"] or "") > as_of.isoformat()
-            if suppressed and not _material_change(old, f):
-                continue
-        payload = json.dumps({"evidence": f["evidence"], "as_of": as_of.isoformat()}, ensure_ascii=False, default=str)
-        out.append(
-            {
-                "finding_id": old["finding_id"] if old else None,
-                "stable_key": f["stable_key"],
-                "kind": f["kind"],
-                "subject_type": f["subject_type"],
-                "subject_id": f["subject_id"],
-                "severity": f["severity"],
-                "title": f["title"],
-                "payload_json": payload,
-                "status": "active",
-                "suppress_until": None,
-            }
-        )
-    out.sort(key=lambda r: (-SEVERITY_ORDER.get(r["severity"] or "low", 0), r["kind"], r["title"]))
-    return out
+    return rule_findings.as_of_findings(conn, paths, as_of, MODULE_KEY)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import random
-import shutil
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -12,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from sed.errors import PreconditionFailed
+from sed.ingest import manifest as inbox_manifest
 from sed.ingest.loader import MANIFEST, file_sha256
 from sed.paths import Paths
 from sed.synth import writers as W
@@ -195,7 +195,7 @@ def generate(paths: Paths, opts: SynthOptions) -> dict[str, Any]:
     inbox = paths.inbox
     inbox.mkdir(parents=True, exist_ok=True)
     if opts.clean:
-        _clean_previous(inbox)
+        inbox_manifest.clean(inbox, "ops", inbox_manifest.LEGACY)  # a pre-sections manifest was always ours
 
     cat = build_catalog(opts.seed)
     ctx = PlanContext(opts.seed, anchor, window_start, opts.as_of, opts.scale, cat)
@@ -317,8 +317,7 @@ def generate(paths: Paths, opts: SynthOptions) -> dict[str, Any]:
         W.write_confluence_space(inbox / f"confluence_space_{key}", key, CONFLUENCE_SPACES[key][0], pages)
         written.append(f"confluence_space_{key}")
 
-    manifest = {
-        "data_class": "synthetic",
+    section = {
         "generator_version": GENERATOR_VERSION,
         "seed": opts.seed,
         "as_of": opts.as_of.isoformat(),
@@ -327,7 +326,7 @@ def generate(paths: Paths, opts: SynthOptions) -> dict[str, Any]:
         "scale": opts.scale,
         "files": {name: file_sha256(inbox / name) for name in sorted(written)},
     }
-    (inbox / MANIFEST).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    inbox_manifest.save_section(inbox, "ops", section)
 
     counts = {k: len(v) for k, v in tickets.items()}
     truth = _ground_truth(paths, ctx, gen, commercial, truth_rows, missed, counts, opts, anchor)
@@ -336,23 +335,6 @@ def generate(paths: Paths, opts: SynthOptions) -> dict[str, Any]:
 
 def _relabel_dt(value: str) -> str:
     return datetime.strptime(value, W.CSV_DT).strftime(W.LABEL_DT) if value else ""
-
-
-def _clean_previous(inbox: Path) -> None:
-    manifest = inbox / MANIFEST
-    if not manifest.is_file():
-        return
-    try:
-        listed = json.loads(manifest.read_text(encoding="utf-8")).get("files", {})
-    except json.JSONDecodeError:
-        listed = {}
-    for name in listed:
-        target = inbox / name
-        if target.is_dir():
-            shutil.rmtree(target)
-        elif target.exists():
-            target.unlink()
-    manifest.unlink()
 
 
 def _write_requests(inbox: Path, tickets: list[Ticket], moment: datetime) -> list[str]:

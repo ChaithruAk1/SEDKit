@@ -186,7 +186,7 @@ def test_monthly_tables(ops_profile_rw):
     conn = db.connect(ops_profile_rw.paths.db, readonly=True)
     try:
         published = published_rule_findings(conn, date(2026, 9, 1))
-        state = db.get_meta(conn, "rule_findings_as_of")
+        state = db.get_meta(conn, "ops.rule_findings_as_of")
     finally:
         conn.close()
     assert [r["title"] for r in t["findings"]["rows"]] == [r["title"] for r in published]
@@ -224,7 +224,7 @@ def test_monthly_uses_window_and_as_of_when_data_date_is_mid_month(ops_profile_r
     ]
     assert [r["number"] for r in snap.tables["upcoming_changes"]["rows"]] == upcoming
     # An older as-of computes findings read-only: the persisted rule state never moves.
-    assert _one(ops_profile_rw, "SELECT value FROM meta WHERE key = 'rule_findings_as_of'")[0] == "2026-09-01"
+    assert _one(ops_profile_rw, "SELECT value FROM meta WHERE key = 'ops.rule_findings_as_of'")[0] == "2026-09-01"
 
 
 def test_monthly_rejects_a_week_period_with_exit_2(ops_profile_rw):

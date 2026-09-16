@@ -27,12 +27,11 @@ def test_ops_is_enabled_by_default_and_nav_is_namespaced():
     assert [item.id for _, item in modules.nav()][:1] == ["ops.overview"]
 
 
-def test_alias_kinds_match_resolver_and_schema():
+def test_alias_and_finding_kinds_come_from_the_modules():
     assert set(modules.alias_kinds()) == set(ALIAS_KINDS)
-    assert set(modules.alias_kinds()) <= modules.SCHEMA_CHECKS["alias_kind"]
-    for m in modules.installed():
-        assert set(m.finding_kinds) <= modules.SCHEMA_CHECKS["finding_kind"]
-        assert {r.key for r in m.reports} <= modules.SCHEMA_CHECKS["report_key"]
+    kinds = modules.finding_kinds()
+    assert len(kinds) == len(set(kinds)) and {"renewal_risk", "report_section"} <= set(kinds)
+    assert modules.get("ops").rule_findings == "sed.analytics:compute_rule_findings"
 
 
 def test_module_tables_are_disjoint_from_core_tables():
@@ -76,8 +75,10 @@ def test_validate_flags_collisions_and_bad_names():
         nav=(NavItem("other.page", "Page", "/elsewhere"),),
         legacy_cli=("report",),
         tables=("ticket", "meta"),
+        finding_kinds=("renewal_risk",),
     )
-    problems = "\n".join(modules.validate([ops, bad]))
+    rules_without_kinds = Module(key="norules", title="No kinds", rule_findings="x.y:compute")
+    problems = "\n".join(modules.validate([ops, bad, rules_without_kinds]))
     for fragment in (
         "module key 'Bad-Key'",
         "duplicate report 'weekly'",
@@ -87,6 +88,8 @@ def test_validate_flags_collisions_and_bad_names():
         "reserved by the core",
         "duplicate table 'ticket'",
         "table 'meta' is core-owned",
+        "duplicate finding kind 'renewal_risk'",
+        "norules: rule_findings needs the finding kinds",
     ):
         assert fragment in problems, fragment
 

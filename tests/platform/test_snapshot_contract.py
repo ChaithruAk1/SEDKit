@@ -96,7 +96,7 @@ def test_open_period_is_clamped_to_the_data_date(ops_profile_rw):
     try:
         snap = create_snapshot(conn, paths, "weekly", "2026-W36")
         assert snap.as_of == "2026-09-01" and snap.period_end == "2026-09-07" and snap.data_as_of == "2026-09-01"
-        assert db.get_meta(conn, "rule_findings_as_of") == "2026-09-01"
+        assert db.get_meta(conn, "ops.rule_findings_as_of") == "2026-09-01"
         row = conn.execute("SELECT provenance_json FROM report_snapshot WHERE snapshot_id = ?", (snap.snapshot_id,))
         provenance = json.loads(row.fetchone()[0])
         assert provenance["period_end"] == "2026-09-07" and provenance["ai_derived_tables"] == ["category_breakdown"]

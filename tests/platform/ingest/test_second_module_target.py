@@ -185,6 +185,46 @@ def test_demo_csv_imports_through_the_same_loader(demo_profile, tmp_path, write_
     assert _rows(demo_profile, "SELECT label FROM demo_widget WHERE widget_id = 'W-2'") == [("unlabelled",)]
 
 
+APPS_MAPPING = """\
+name: demo_apps
+target: application
+load_mode: full_snapshot
+match:
+  glob: ["demo_apps*.csv"]
+fields:
+  app_id: {from: [App ID], pii: none, required: true}
+  name:   {from: [App name], pii: none, required: true}
+"""
+
+
+def test_full_snapshots_of_a_shared_table_retire_only_rows_their_module_loaded(demo_profile, tmp_path, write_csv):
+    folder = demo_profile.config / "demo" / "mappings"
+    (folder / "demo_apps.yaml").write_text(APPS_MAPPING, encoding="utf-8")
+    header = ["number", "name"]
+    portfolio = [[f"APM000{i}", f"Portfolio app {i}"] for i in range(1, 6)]
+    first = write_csv(tmp_path / "cmdb_ci_business_app.csv", header, portfolio)
+    demo = write_csv(tmp_path / "demo_apps_1.csv", ["App ID", "App name"], [["APM0100", "Demo system"]])
+    opts = {"allow_unmanifested": True, "move_files": False}
+    result = run_import(demo_profile, ImportOptions(files=[first, demo], **opts))
+    assert result["summary"]["errors"] == 0, result["files"]
+    assert [f["dq"].get("soft_deleted", 0) for f in result["files"]] == [0, 0]
+
+    newer = write_csv(tmp_path / "cmdb_ci_business_app_2.csv", header, [*portfolio[:4], ["APM0006", "Portfolio app 6"]])
+    result = run_import(demo_profile, ImportOptions(files=[newer], **opts))
+    assert result["files"][0]["dq"]["soft_deleted"] == 1  # APM0005 left the portfolio export; the demo app stays
+    active = _rows(demo_profile, "SELECT app_id FROM application WHERE is_deleted = 0 ORDER BY 1")
+    assert [a for (a,) in active] == ["APM0001", "APM0002", "APM0003", "APM0004", "APM0006", "APM0100"]
+
+    # The module replaces its mapping with a renamed one: rows the old name loaded (unchanged since) are still its own.
+    renamed = APPS_MAPPING.replace("name: demo_apps", "name: demo_portfolio").replace("demo_apps*", "demo_portfolio*")
+    (folder / "demo_portfolio.yaml").write_text(renamed, encoding="utf-8")
+    replaced = write_csv(tmp_path / "demo_portfolio_2.csv", ["App ID", "App name"], [["APM0101", "Demo system 2"]])
+    result = run_import(demo_profile, ImportOptions(files=[replaced], force=True, **opts))
+    assert (result["files"][0]["mapping"], result["files"][0]["dq"]["soft_deleted"]) == ("demo_portfolio", 1)
+    deleted = _rows(demo_profile, "SELECT app_id FROM application WHERE is_deleted = 1 ORDER BY 1")
+    assert [a for (a,) in deleted] == ["APM0005", "APM0100"]
+
+
 def test_duplicate_mapping_name_across_modules_is_rejected(demo_profile, tmp_path, write_csv):
     clash = demo_profile.config / "demo" / "mappings" / "servicenow_incident.yaml"
     clash.write_text(MAPPING.replace("name: demo_widgets", "name: servicenow_incident"), encoding="utf-8")

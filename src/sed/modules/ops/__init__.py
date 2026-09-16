@@ -92,6 +92,7 @@ MODULE = Module(
         "rationalization",
         "report_section",
     ),
+    rule_findings="sed.analytics:compute_rule_findings",
     doctor_checks="sed.modules.ops.doctor:checks",
     config_files=(
         "ops/taxonomy.yaml",

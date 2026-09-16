@@ -135,7 +135,7 @@ Filtered lists (`app`, `kind`, `group`) already had matching `(x, opened_at)` in
 - `(app_id, resolved_at)`: App 360's resolved-side volume buckets for the largest app read 40 ms through
   `ix_ticket_kind_resolved` plus an app filter; not worth a fourth index at the current headroom.
 - `(app_id, is_open, stale_open)` for App 360 open tickets: 3 ms today via `ix_ticket_open`.
-- TTL cache keyed by (endpoint, params, `MAX(import_batch.batch_id)`, `meta.rule_findings_as_of`): not implemented. The
+- TTL cache keyed by (endpoint, params, `MAX(import_batch.batch_id)`, `meta.ops.rule_findings_as_of`): not implemented. The
   budget is met by the queries themselves, and a cache would hide the cold path this gate is meant to measure.
 - FTS: the broad-word search cost (`q=error`, 11k hits) is the external-content join plus sorting all matches by
   `opened_at` for the page and a separate `COUNT(*)`; 62 ms p50, so no FTS-specific structure was added.

@@ -160,7 +160,7 @@ def test_quarterly_tables_carry_the_planted_patterns(ops_profile_rw):
     order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
     keys = [(-order[r["severity"]], -(r["exposure_eur"] or 0.0)) for r in risks]
     assert keys == sorted(keys)
-    assert _one(ops_profile_rw, "SELECT value FROM meta WHERE key = 'rule_findings_as_of'")[0] == "2026-09-01"
+    assert _one(ops_profile_rw, "SELECT value FROM meta WHERE key = 'ops.rule_findings_as_of'")[0] == "2026-09-01"
 
 
 def test_quarterly_mid_quarter_data_date_limits_cost_months_and_windows(ops_profile_rw):
@@ -177,7 +177,7 @@ def test_quarterly_mid_quarter_data_date_limits_cost_months_and_windows(ops_prof
     assert facts["renewals.2q.count"] == _contract_count(ops_profile_rw, "end_date", as_of, 182)
     assert facts["notice.2q.count"] == _contract_count(ops_profile_rw, "notice_deadline", as_of, 182)
     assert snap.facts["cost.actual.qtd"]["label"].endswith("(to date)")
-    assert _one(ops_profile_rw, "SELECT value FROM meta WHERE key = 'rule_findings_as_of'")[0] == "2026-09-01"
+    assert _one(ops_profile_rw, "SELECT value FROM meta WHERE key = 'ops.rule_findings_as_of'")[0] == "2026-09-01"
 
 
 def test_quarterly_cost_skips_months_without_imported_actuals(ops_profile_rw):

@@ -366,6 +366,95 @@ def test_task_sla_without_start_time_is_unique(conn: sqlite3.Connection):
     assert conn.execute("SELECT COUNT(*) FROM task_sla").fetchone()[0] == 1
 
 
+def test_module_kinds_migration_keeps_rows_children_indexes_and_views(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """005 drops the kind/key CHECKs of alias, finding and report_snapshot without losing anything around them."""
+    path = tmp_path / "sed.db"
+    c = db.connect(path)
+    real = db.migrations()
+    monkeypatch.setattr(db, "migrations", lambda: [m for m in real if m[0] < 5])
+    db.migrate(c, path, None)
+    _add_ticket(c, "INC0000042")
+    now = db.utc_now()
+    with db.write_tx(c):
+        db.set_meta(c, "rule_findings_as_of", "2026-09-01")
+        c.execute("INSERT INTO alias VALUES ('app', 'orion erp', 'APM0001', 'seed', ?)", (now,))
+        c.execute(
+            "INSERT INTO ai_run (run_id, skill, skill_hash, schema_version, invoked_via, profile, status, started_at) "
+            "VALUES ('r1', 'sed-triage-batch', 'h', 1, 'workflow', 't', 'approved', ?)",
+            (now,),
+        )
+        insert = (
+            "INSERT INTO finding (finding_id, run_id, origin, stable_key, kind, title, status, created_at) "
+            "VALUES (?, ?, ?, ?, ?, 't', ?, ?)"
+        )
+        c.execute(insert, ("f-rule", None, "rule", "renewal_risk:notice:C1", "renewal_risk", "active", now))
+        c.execute(insert, ("f-ai", "r1", "ai", "issue_cluster:x", "issue_cluster", "approved", now))
+        c.execute("INSERT INTO ai_cluster_member VALUES ('f-ai', 'incident:INC0000042')")
+        c.execute(
+            "INSERT INTO report_snapshot (snapshot_id, report_key, period, as_of, created_at, facts_json, tables_json, "
+            "reporting_tz, data_class, sha256, provenance_json) VALUES ('s1', 'weekly', '2026-W35', '2026-09-01', ?, "
+            "'{}', '{}', 'Europe/Paris', 'synthetic', 'sha', '{\"ai_runs\": []}')",
+            (now,),
+        )
+        c.execute(
+            "INSERT INTO report_artifact (artifact_id, snapshot_id, format, path, sha256, ai_mode, built_at) "
+            "VALUES ('a1', 's1', 'xlsx', 'out.xlsx', 'sha', 'none', ?)",
+            (now,),
+        )
+    monkeypatch.setattr(db, "migrations", lambda: real)
+
+    assert "005_module_kinds.sql" in db.migrate(c, path, None)["applied"]
+
+    assert c.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert [r[0] for r in c.execute("SELECT target_id FROM alias")] == ["APM0001"]
+    assert c.execute("SELECT provenance_json FROM report_snapshot").fetchone()[0] == '{"ai_runs": []}'
+    assert [r[0] for r in c.execute("SELECT snapshot_id FROM report_artifact")] == ["s1"]
+    assert [r[0] for r in c.execute("SELECT finding_id FROM v_findings_published ORDER BY 1")] == ["f-ai", "f-rule"]
+    assert (db.get_meta(c, "rule_findings_as_of"), db.get_meta(c, "ops.rule_findings_as_of")) == (None, "2026-09-01")
+    indexes = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
+    assert {"ix_finding_stable", "ix_finding_kind_status", "ix_finding_run", "ux_finding_run_stable",
+            "ux_finding_rule_active", "ix_snapshot_report_period"} <= indexes  # fmt: skip
+    with db.write_tx(c):  # module-declared values are free now
+        c.execute("INSERT INTO alias VALUES ('sap_system', 'pe1', 'PE1', 'manual', ?)", (now,))
+        c.execute(insert, ("f-sap", None, "rule", "sap_change_risk:stuck:1", "sap_change_risk", "active", now))
+        c.execute(
+            "INSERT INTO report_snapshot (snapshot_id, report_key, period, as_of, created_at, facts_json, tables_json, "
+            "reporting_tz, data_class, sha256) VALUES ('s2', 'sap-weekly', '2026-W35', '2026-09-01', ?, '{}', '{}', "
+            "'Europe/Paris', 'synthetic', 'sha')",
+            (now,),
+        )
+    with pytest.raises(sqlite3.IntegrityError), db.write_tx(c):  # the other checks and unique indexes stay
+        c.execute("INSERT INTO alias VALUES ('app', 'other', 'APM0002', 'guessed', ?)", (now,))
+    with pytest.raises(sqlite3.IntegrityError), db.write_tx(c):
+        c.execute(insert, ("f-dup", None, "rule", "renewal_risk:notice:C1", "renewal_risk", "active", now))
+    with db.write_tx(c):  # the cascade from finding to its cluster members still works
+        c.execute("DELETE FROM finding WHERE finding_id = 'f-ai'")
+    assert c.execute("SELECT COUNT(*) FROM ai_cluster_member").fetchone()[0] == 0
+    c.close()
+
+
+@pytest.mark.parametrize(
+    ("written_early", "expected"), [(None, "2026-09-01"), ("2026-09-05", "2026-09-05"), ("2026-08-01", "2026-09-01")]
+)
+def test_module_kinds_migration_merges_the_rule_findings_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, written_early: str | None, expected: str
+):
+    """Code that already wrote the per-module key before 005 ran must not make the migration fail."""
+    path = tmp_path / "sed.db"
+    c = db.connect(path)
+    real = db.migrations()
+    monkeypatch.setattr(db, "migrations", lambda: [m for m in real if m[0] < 5])
+    db.migrate(c, path, None)
+    with db.write_tx(c):
+        db.set_meta(c, "rule_findings_as_of", "2026-09-01")
+        if written_early:
+            db.set_meta(c, "ops.rule_findings_as_of", written_early)
+    monkeypatch.setattr(db, "migrations", lambda: real)
+    assert "005_module_kinds.sql" in db.migrate(c, path, None)["applied"]
+    assert (db.get_meta(c, "rule_findings_as_of"), db.get_meta(c, "ops.rule_findings_as_of")) == (None, expected)
+    c.close()
+
+
 def test_finding_unique_keys(conn: sqlite3.Connection):
     insert = (
         "INSERT INTO finding (finding_id, run_id, origin, stable_key, kind, title, status, created_at) "

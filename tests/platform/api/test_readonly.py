@@ -14,7 +14,7 @@ from tests.platform.api.conftest import SECURITY_HEADERS, assert_envelope
 def _state(paths):
     conn = db.connect(paths.db, readonly=True)
     try:
-        return state_digest(conn), db.get_meta(conn, "rule_findings_as_of")
+        return state_digest(conn), db.get_meta(conn, "ops.rule_findings_as_of")
     finally:
         conn.close()
 
@@ -53,7 +53,7 @@ def test_every_get_uses_query_only_connections(ops_profile, core_gets, connectio
         assert all(flag == (True, 1) for flag in connections), (path, connections)
         if not path.startswith(("/api/health", "/api/nav", "/api/modules")):
             assert connections, f"{path} should read through deps.read_conn"
-    assert _state(paths) == before  # includes meta.rule_findings_as_of: no refresh from a GET
+    assert _state(paths) == before  # includes meta.ops.rule_findings_as_of: no refresh from a GET
 
 
 def test_a_write_inside_a_get_is_a_500_envelope_without_traceback(ops_profile, monkeypatch):

@@ -19,6 +19,7 @@ is a lazy import reference (`"package.module:attr"`), so the core imports module
 | Import | `mappings_dir`, `ingest_targets`, `ingest_hooks`, `entities`, `alias_kinds` | `sed import`; mappings in `config/<key>/mappings/` |
 | Synthetic data | `SynthDef(generate)` | `sed synth [--module <key>]`; ground truth under `ground_truth/<key>/` |
 | Definitions | `metric_definitions` | Definitions sheet, deck notes, `/api/meta` |
+| Rule findings | `finding_kinds` + `rule_findings` | "System-detected" risks in `finding`, refreshed per module (`sed.rule_findings`) |
 | Health | `doctor_checks` | `sed doctor` as `<key>.<check>` |
 | Config | `config_files`, `data_subdirs` | `config/<key>/...`, overridable in `DATA_DIR\config\<key>\` |
 | Tables | `tables` | documentation and collision checks |
@@ -38,9 +39,18 @@ its API routes are not mounted and its pages are hidden.
 
 Rules enforced by tests (`tests/platform/test_registry.py`, `test_core_boundaries.py`):
 - Core code never imports `sed.modules.<key>` (only through the registry). Modules may import the core.
-- Keys, report keys, skill names, nav ids and CLI names are unique; skills start with `sed-`; nav paths live under
-  `/<key>`.
+- Keys, report keys, skill names, nav ids, CLI names, alias kinds and finding kinds are unique; skills start with `sed-`;
+  nav paths live under `/<key>`.
 - Module tables are disjoint from core tables.
+
+## Rule findings
+
+A module that computes deterministic risks declares the `finding_kinds` it owns and `rule_findings`, a function
+`(conn, paths, as_of) -> list[dict]`. Each finding has `stable_key` (starting with `<kind>:`), `kind`, `subject_type`,
+`subject_id`, `severity`, `title` and `evidence` (`[{fact_key, value}]`). The core engine (`src/sed/rule_findings.py`)
+upserts them, keeps human acknowledgements and suppressions, and supersedes only rows of that module's kinds, so two
+modules never undo each other's findings. Each module keeps its own refresh state in `meta`
+(`<key>.rule_findings_as_of`).
 
 ## Import targets and hooks
 
@@ -61,11 +71,19 @@ Rules enforced by tests (`tests/platform/test_registry.py`, `test_core_boundarie
 ## Shared ("portfolio") tables
 
 `vendor`, `application`, `work_item` and `doc_page` are core-owned schema shared by all modules. Any module may write
-them through its own ingest targets (with distinct mapping names). Module-specific tables belong to one module.
+them through its own mappings. A `full_snapshot` file only soft-deletes rows its own mapping (by name) last loaded, so
+one module's snapshot never retires rows another module's files loaded. Module-specific tables belong to one module.
 
-## Known schema debt (relax before adding module #2)
+## Synthetic inbox manifest
 
-Migration 001 has CHECK constraints listing ops values: `alias.kind`, `finding.kind`, `report_snapshot.report_key`,
-`review_decision.target_type/decision`, and `ai_claim` references `ticket`. The registry validates declarations against
-`SCHEMA_CHECKS` so a module cannot silently violate them; a migration relaxing these constraints (and module-owned
-migration streams) is planned before the delivery-management module.
+`sed synth` generators list the files they write in `inbox\_manifest.json`, one section per module
+(`src/sed/ingest/manifest.py`: `clean(inbox, key)` before generating, `save_section(inbox, key, ...)` after). The
+loader imports on the synthetic profile only files in the union of all sections, so regenerating one module never
+unlists or deletes another module's files.
+
+## Remaining schema debt
+
+Migration 005 removed the ops-only CHECK constraints on `alias.kind`, `finding.kind` and `report_snapshot.report_key`;
+the registry now owns those values. Still ops-shaped: `review_decision.target_type/decision`, and the AI claim and label
+tables (`ai_claim`, `ai_ticket_label`) reference `ticket`. Migrations remain one global numbered stream; a module's
+schema files start with `-- owner: <key>`.

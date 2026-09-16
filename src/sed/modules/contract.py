@@ -116,7 +116,8 @@ class Module:
     alias_kinds: tuple[AliasKind, ...] = ()
     synth: SynthDef | None = None
     metric_definitions: ImportRef | None = None  # dict[str, tuple[unit, definition]]
-    finding_kinds: tuple[str, ...] = ()
+    finding_kinds: tuple[str, ...] = ()  # owned by this module alone
+    rule_findings: ImportRef | None = None  # (conn, paths, as_of) -> list[dict] of finding_kinds (sed.rule_findings)
     doctor_checks: ImportRef | None = None  # (Paths) -> list[Check]
     config_files: tuple[str, ...] = ()
     data_subdirs: tuple[str, ...] = ()
