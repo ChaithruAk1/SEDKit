@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass, replace
+from functools import cached_property
 from typing import Any, Literal
 
 from pydantic import Field, ValidationError, model_validator
@@ -101,19 +102,19 @@ class Scope:
         c = self.config
         return bool(c.groups or c.categories or c.custom_fields)
 
-    @property
+    @cached_property
     def area_labels(self) -> dict[str, str]:
         return {**{a.code: a.label for a in self.config.areas}, UNASSIGNED: "Unassigned"}
 
-    @property
+    @cached_property
     def landscape_labels(self) -> dict[str, str]:
         return {**{x.code: x.label for x in self.config.landscapes}, UNKNOWN: "Unknown landscape"}
 
-    @property
+    @cached_property
     def group_area(self) -> dict[str, str]:
         return {g.name: g.area for g in self.config.groups}
 
-    @property
+    @cached_property
     def app_landscape(self) -> dict[str, str]:
         return {app: x.code for x in self.config.landscapes for app in x.apps}
 

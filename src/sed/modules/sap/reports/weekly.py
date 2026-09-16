@@ -313,7 +313,9 @@ def build(req: SnapshotRequest) -> SnapshotParts:
                 ("incidents_before", "Before", "count"),
                 ("lift", "Lift", "count"),
             ],
-            changes.incidents_after_imports(conn, cs, since, window.end_iso),
+            changes.incidents_after_imports(
+                conn, cs, since, window.end_iso, min_lift=cs.charm.config.thresholds.incident_min_lift
+            ),
         ),
         "sap_changes_stuck": table(
             "Stuck SAP changes",
@@ -401,7 +403,9 @@ def build(req: SnapshotRequest) -> SnapshotParts:
                 ("errors_before", "Before", "count"),
                 ("lift", "Lift", "count"),
             ],
-            idocs.spikes_after_imports(ids, cs, since, window.end_iso),
+            idocs.spikes_after_imports(
+                ids, cs, since, window.end_iso, min_lift=ids.idoc.config.thresholds.spike_min_lift
+            ),
         ),
     }
     return SnapshotParts(facts=facts, tables=tables, sla_source=src, freshness=metrics.freshness(conn))

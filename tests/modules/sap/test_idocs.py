@@ -79,7 +79,8 @@ def test_ip1_invoic_errors_after_the_failed_import(env, truth, sap_truth):
     assert sum(e.is_open for e in ip1) == 25 and all(ids.persistent(e) for e in ip1)
     assert {e.area for e in ip1} == {"fi_co"} and {e.landscape for e in ip1} == {"s4"}
     cp1 = sap_truth["patterns"]["changes"]["CP1"]
-    spikes = idocs.spikes_after_imports(ids, cs, WEEK.previous(1).start_iso, iso_utc(ids.at))
+    min_lift = ids.idoc.config.thresholds.spike_min_lift
+    spikes = idocs.spikes_after_imports(ids, cs, WEEK.previous(1).start_iso, iso_utc(ids.at), min_lift=min_lift)
     assert [(s["change_id"], s["system_id"]) for s in spikes] == [(cp1["change_id"], "HP1")]
     assert spikes[0]["errors"] >= 60 and spikes[0]["lift"] >= 50
     # 30 hours after the import the IP1 errors seen so far were all still open (reprocessing starts 30 h after each).
@@ -231,3 +232,29 @@ def test_late_exports_keep_idoc_history_consistent(sap_profile_rw, truth, tmp_pa
         conn.close()
     fixed = next(e for e in ids.errors if (e.system_id, e.docnum) == (system_id, docnum))
     assert fixed.reprocessed_at == "2026-09-02T08:00:00Z" and not fixed.is_open and ids.persistent(fixed)
+
+
+def test_a_reprocessed_idoc_that_fails_again_starts_a_new_episode(sap_profile_rw, truth, tmp_path):
+    from sed.modules.sap.synth_idocs import HEADER
+
+    paths = sap_profile_rw.paths
+    system_id, docnum = sorted(truth["by_pattern"]["IN1"])[0]  # errored late on a Wednesday, reprocessed within hours
+    row = [system_id, docnum, "1", "MATMAS", "MATMAS05", "LS", "EP1CLNT100", "29", "no receiver", "2026-08-26 21:00:00"]
+    file = _write(tmp_path / "sap_idocs_2026-08-28.csv", HEADER, [[*row, "2026-08-28 09:00:00"]])
+    assert (
+        run_import(paths, ImportOptions(files=[file], allow_unmanifested=True, move_files=False))["summary"]["errors"]
+        == 0
+    )
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        ids = idocs.load(conn, load_idoc(paths, load_scope(paths)), as_of_end_utc(AS_OF, TZ))
+    finally:
+        conn.close()
+    episodes = sorted(
+        (e for e in ids.errors if (e.system_id, e.docnum) == (system_id, docnum)), key=lambda e: e.first_error_at
+    )
+    assert len(episodes) == 2
+    first, second = episodes
+    assert first.reprocessed_at is not None and not first.is_open and not ids.persistent(first)
+    assert second.first_error_at == "2026-08-28T07:00:00Z" and second.reprocessed_at is None
+    assert second.is_open and ids.persistent(second) and ids.age_hours(second) > 48

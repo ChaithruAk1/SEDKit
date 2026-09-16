@@ -1,8 +1,9 @@
 """SAP IDoc health read models, derived on read from sap_idoc, its status history and config/sap/idoc.yaml.
 
-IDoc health works on error episodes: an IDoc's first error status (from the history) up to its next processed (ok)
-status. A persistent error is one not processed within thresholds.reprocess_grace_hours: quick reprocessing is normal
-operation and does not count towards growth or spikes. Status at a past moment comes from the history, so exports only
+IDoc health works on error episodes: from an error status (from the history) to the next processed (ok) or closed
+status. An IDoc that is reprocessed and fails again has one episode per failure; only its last episode can be open.
+A persistent error is one not processed within thresholds.reprocess_grace_hours: quick reprocessing is normal operation
+and does not count towards growth or spikes. Status at a past moment comes from the history, so exports only
 show the status each IDoc had when the export ran.
 """
 
@@ -18,7 +19,7 @@ from typing import Any
 
 from sed.calendar import Period, iso_utc, parse_utc
 from sed.modules.sap.idoc import UNKNOWN_GROUP, Idoc, normalise_text
-from sed.modules.sap.queries.changes import ChangeSet, select_imports
+from sed.modules.sap.queries.changes import ChangeSet, production_import_groups
 from sed.modules.sap.scope import UNKNOWN
 
 AGING = (("lt4h", 4), ("h4_24", 24), ("d1_2", 48), ("d2_7", 168), ("gt7d", None))
@@ -36,7 +37,7 @@ class ErrorIdoc:
     first_error_at: str
     first_error_code: str
     error_text: str | None
-    reprocessed_at: str | None  # first processed (ok) status after the first error, by `at`
+    reprocessed_at: str | None  # the processed (ok) status that ended the episode, by `at`
     status_code: str
     group: str
     area: str
@@ -69,7 +70,7 @@ class IdocSet:
 
 
 def load(conn: sqlite3.Connection, idoc: Idoc, at: datetime) -> IdocSet:
-    """Every IDoc (created within thresholds.history_days) that had an error status by `at`, with its episode."""
+    """The error episodes, by `at`, of every IDoc created within thresholds.history_days."""
     at_iso = iso_utc(at)
     since = iso_utc(at - timedelta(days=idoc.config.thresholds.history_days))
     error_codes = idoc.codes("error")
@@ -92,32 +93,50 @@ def load(conn: sqlite3.Connection, idoc: Idoc, at: datetime) -> IdocSet:
     landscapes = {s.sid: s.landscape for s in idoc.scope.config.systems}
     errors = []
     for (system_id, docnum), history in episodes.items():
-        first = next(r for r in history if idoc.group(r[3]) == "error")
-        after = [r for r in history if r[2] > first[2]]
-        reprocessed = next((r[2] for r in after if idoc.group(r[3]) == "ok"), None)
-        last = history[-1]
-        texts = [r[4] for r in history if idoc.group(r[3]) == "error" and r[4]]
-        _, _, _, _, _, direction, message_type, basic_type, partner, created = first
-        errors.append(
-            ErrorIdoc(
-                system_id=system_id,
-                docnum=docnum,
-                direction=direction,
-                message_type=message_type,
-                basic_type=basic_type,
-                partner=partner,
-                created_at=created,
-                first_error_at=first[2],
-                first_error_code=first[3],
-                error_text=texts[-1] if texts else None,
-                reprocessed_at=reprocessed,
-                status_code=last[3],
-                group=idoc.group(last[3]),
-                area=idoc.area(message_type),
-                landscape=landscapes.get(system_id, UNKNOWN),
+        for first, texts, end in _episodes(idoc, history):
+            last = end or history[-1]
+            _, _, _, _, _, direction, message_type, basic_type, partner, created = first
+            errors.append(
+                ErrorIdoc(
+                    system_id=system_id,
+                    docnum=docnum,
+                    direction=direction,
+                    message_type=message_type,
+                    basic_type=basic_type,
+                    partner=partner,
+                    created_at=created,
+                    first_error_at=first[2],
+                    first_error_code=first[3],
+                    error_text=texts[-1] if texts else None,
+                    reprocessed_at=end[2] if end is not None and idoc.group(end[3]) == "ok" else None,
+                    status_code=last[3],
+                    group=idoc.group(last[3]),
+                    area=idoc.area(message_type),
+                    landscape=landscapes.get(system_id, UNKNOWN),
+                )
             )
-        )
     return IdocSet(idoc, at, errors)
+
+
+def _episodes(idoc: Idoc, history: list[Any]) -> list[tuple[Any, list[str], Any]]:
+    """(first error row, error texts, ending row or None) per error episode of one IDoc's ordered history. An episode
+    ends at a processed (ok) or closed status; waiting statuses in between (a retry) keep it running."""
+    out: list[tuple[Any, list[str], Any]] = []
+    first: Any = None
+    texts: list[str] = []
+    for row in history:
+        group = idoc.group(row[3])
+        if group == "error":
+            if first is None:
+                first, texts = row, []
+            if row[4]:
+                texts.append(row[4])
+        elif first is not None and group in ("ok", "closed"):
+            out.append((first, texts, row))
+            first = None
+    if first is not None:
+        out.append((first, texts, None))
+    return out
 
 
 def select(
@@ -305,42 +324,38 @@ def spikes_after_imports(
     start: str,
     end: str,
     *,
+    errors: list[ErrorIdoc] | None = None,
     system: str | None = None,
     landscape: str | None = None,
-    min_lift: int | None = -1,
+    min_lift: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Production imports in [start, end) with the persistent IDoc errors of the same system in the spike window after
-    the import against the same window before it. Rows below `min_lift` are left out (default thresholds.spike_min_lift;
-    None keeps every import followed by errors); highest lift first."""
-    if min_lift == -1:
-        min_lift = ids.idoc.config.thresholds.spike_min_lift
+    """Production imports in [start, end) with the persistent IDoc errors (of `errors`, default all) on the same system
+    in the spike window after the import, against the same window before it. Rows with a lift below `min_lift` are left
+    out (None keeps every import followed by errors; the dashboard and report pass thresholds.spike_min_lift); highest
+    lift first."""
     window = timedelta(hours=ids.idoc.config.thresholds.spike_window_hours)
     by_system: dict[str, list[str]] = {}
-    for e in ids.errors:
+    for e in ids.errors if errors is None else errors:
         if ids.persistent(e):
             by_system.setdefault(e.system_id, []).append(e.first_error_at)
     for times in by_system.values():
         times.sort()
-    grouped: dict[tuple[str, str], list[Any]] = {}
-    for imp in select_imports(cs, landscape=landscape):
-        if imp.role == "prod" and start <= imp.imported_at < end and (system is None or imp.system_id == system):
-            grouped.setdefault((imp.change_id or imp.transport, imp.system_id), []).append(imp)
     out = []
-    for (_ref, system_id), rows in grouped.items():
-        first = min(i.imported_at for i in rows)
-        moment = parse_utc(first)
-        times = by_system.get(system_id, [])
-        after = bisect_left(times, iso_utc(moment + window)) - bisect_left(times, first)
-        before = bisect_left(times, first) - bisect_left(times, iso_utc(moment - window))
-        change = cs.changes.get(rows[0].change_id or "")
+    for g in production_import_groups(cs, start, end, landscape=landscape, system=system):
+        moment = parse_utc(g.imported_at)
+        times = by_system.get(g.system_id, [])
+        after = bisect_left(times, iso_utc(moment + window)) - bisect_left(times, g.imported_at)
+        before = bisect_left(times, g.imported_at) - bisect_left(times, iso_utc(moment - window))
+        change = cs.changes.get(g.change_id or "")
         out.append(
             {
-                "change_id": rows[0].change_id,
+                "change_id": g.change_id,
+                "transport": g.transport,
                 "title": change.title if change else None,
                 "change_type": change.change_type if change else None,
-                "system_id": system_id,
-                "imported_at": first,
-                "return_code": max((i.return_code for i in rows if i.return_code is not None), default=None),
+                "system_id": g.system_id,
+                "imported_at": g.imported_at,
+                "return_code": g.return_code,
                 "errors": after,
                 "errors_before": before,
                 "lift": after - before,

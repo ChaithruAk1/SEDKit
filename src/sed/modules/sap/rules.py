@@ -113,14 +113,13 @@ def load_rules(paths: Paths | None) -> Rules:
 
 
 def compute(conn: sqlite3.Connection, paths: Paths | None, as_of: date) -> list[dict[str, Any]]:
-    scope = load_scope(paths)
-    if not scope.configured:
-        return []
-    scope = scope.resolve(conn)
+    scope = load_scope(paths).resolve(conn)
     rules = load_rules(paths)
     settings = load_settings(paths)
+    # Ticket risks need the SAP ticket scope; change and IDoc risks come from their own exports and config.
+    backlog = _backlog_findings(conn, as_of, scope, rules, settings) if scope.configured else []
     return (
-        _backlog_findings(conn, as_of, scope, rules, settings)
+        backlog
         + _change_findings(conn, paths, as_of, scope, rules, settings)
         + _idoc_findings(conn, paths, as_of, scope, rules, settings)
     )
@@ -270,7 +269,7 @@ def _change_findings(
         hours = charm.config.thresholds.incident_window_hours
         after = {
             (r["change_id"], r["system_id"]): r["incidents"]
-            for r in changes.incidents_after_imports(conn, cs, since, iso_utc(at), limit=100_000, min_lift=None)
+            for r in changes.incidents_after_imports(conn, cs, since, iso_utc(at), limit=100_000)
         }
         for row in changes.failed_imports(cs, since):
             if row["role"] != "prod":
@@ -411,7 +410,7 @@ def _idoc_findings(
         since = iso_utc(at - timedelta(days=spike.lookback_days))
         hours = idoc.config.thresholds.spike_window_hours
         for row in idocs.spikes_after_imports(ids, cs, since, iso_utc(at), min_lift=spike.min_lift):
-            ref = row["change_id"] or "unknown"
+            ref = row["change_id"] or row["transport"]
             key = f"{row['system_id']}:{ref}"
             change = f"change {row['change_id']}" if row["change_id"] else "a transport"
             out.append(

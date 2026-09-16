@@ -34,10 +34,10 @@ def checks(paths: Paths) -> list[Any]:
         return [Check("sap.config_valid", "fail", f"{exc.message}: {exc.details}" if exc.details else exc.message)]
     out = [Check("sap.config_valid", "ok", "sap scope, ChaRM and IDoc settings, risk rules and report specs load")]
     if not scope.configured:
+        # Ticket checks need a scope; the ChaRM and IDoc checks below still run.
         out.append(
             Check("sap.scope_configured", "warn", "config/sap/scope.yaml lists no SAP groups, categories or fields")
         )
-        return out
     if not paths.db.is_file():
         return out
     groups = [g.name for g in scope.config.groups]
@@ -75,17 +75,18 @@ def checks(paths: Paths) -> list[Any]:
     except sqlite3.DatabaseError as exc:
         return [*out, Check("sap.scope_matches_data", "warn", f"cannot read the database: {exc}")]
     unseen = [g for g in groups if g not in seen]
-    out.append(
-        Check(
-            "sap.scope_groups_seen",
-            "warn" if has_tickets and unseen else "ok",
-            f"SAP groups never seen on a ticket (check exact names): {', '.join(unseen)}"
-            if has_tickets and unseen
-            else "every configured SAP group appears on tickets"
-            if has_tickets
-            else "no tickets imported yet",
+    if scope.configured:
+        out.append(
+            Check(
+                "sap.scope_groups_seen",
+                "warn" if has_tickets and unseen else "ok",
+                f"SAP groups never seen on a ticket (check exact names): {', '.join(unseen)}"
+                if has_tickets and unseen
+                else "every configured SAP group appears on tickets"
+                if has_tickets
+                else "no tickets imported yet",
+            )
         )
-    )
     missing = [a for a in apps if a not in known]
     out.append(
         Check(

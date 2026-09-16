@@ -124,10 +124,11 @@ def test_acknowledged_finding_stays_hidden_until_evidence_changes(sap_profile_rw
     assert set(_published(paths)) == {GROWTH}
 
 
-def test_unconfigured_scope_computes_nothing(sap_profile_rw, ro_conn):
+def test_unconfigured_ticket_scope_still_computes_change_and_idoc_risks(sap_profile_rw, ro_conn):
     paths = sap_profile_rw.paths
     write_sap_config(paths, "scope.yaml", {"groups": [], "categories": [], "custom_fields": []})
-    assert rules.compute(ro_conn, paths, AS_OF) == []
+    kinds = {f["kind"] for f in rules.compute(ro_conn, paths, AS_OF)}
+    assert kinds == {"sap_change_risk", "sap_idoc_risk"}  # ticket risks need the scope; the others do not
 
 
 def test_invalid_rules_file_is_a_validation_error(sap_profile_rw, ro_conn):
@@ -245,3 +246,24 @@ def test_idoc_rule_thresholds_and_grace(sap_profile_rw):
     _refresh(paths)
     found = set(_published(paths, IDOC_KINDS))
     assert "sap_idoc_risk:growth:EP1:MATMAS:EP1CLNT100" in found
+
+
+def test_import_groups_without_a_change_keep_their_transport(sap_profile, ro_conn):
+    from sed.calendar import as_of_end_utc
+    from sed.modules.sap.charm import load_charm
+    from sed.modules.sap.queries import changes
+    from sed.modules.sap.scope import load_scope
+
+    charm = load_charm(sap_profile.paths, load_scope(sap_profile.paths))
+    at = as_of_end_utc(AS_OF, "Europe/Paris")
+    imports = [
+        changes.Import("HD1K999001", "HP1", None, "prod", "s4", 0, "2026-08-20T10:00:00Z"),
+        changes.Import("HD1K999002", "HP1", None, "prod", "s4", 4, "2026-08-21T10:00:00Z"),
+        changes.Import("HD1K999002", "HQ1", None, "qa", "s4", 0, "2026-08-19T10:00:00Z"),
+    ]
+    cs = changes.ChangeSet(charm, at, {}, imports)
+    groups = changes.production_import_groups(cs, "2026-08-01T00:00:00Z", "2026-09-01T00:00:00Z")
+    assert [(g.transport, g.system_id, g.change_id) for g in groups] == [
+        ("HD1K999001", "HP1", None),
+        ("HD1K999002", "HP1", None),
+    ]

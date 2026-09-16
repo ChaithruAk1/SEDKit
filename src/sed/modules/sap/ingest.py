@@ -81,7 +81,8 @@ def record_status_history(ctx: Ctx, rows: list[dict[str, Any]]) -> None:
     """Add a sap_change_status row whenever a file shows a change with another status than the last one recorded.
 
     A row older than the last recorded status (a late export) adds nothing, so importing files out of order never
-    rewrites history.
+    rewrites history. A different status with the same changed_at is recorded (exports with date-only or coarse times
+    show several status changes at one moment); the later row wins in reads.
     """
     ids = sorted({r["change_id"] for r in rows})
     last: dict[str, tuple[str, str]] = {}
@@ -100,7 +101,7 @@ def record_status_history(ctx: Ctx, rows: list[dict[str, Any]]) -> None:
         if not status or not changed_at:
             continue
         previous = last.get(row["change_id"])
-        if previous and (changed_at <= previous[0] or _same_status(previous[1], status)):
+        if previous and (changed_at < previous[0] or _same_status(previous[1], status)):
             continue
         last[row["change_id"]] = (changed_at, status)
         new.append((row["change_id"], changed_at, status, ctx.batch_id))
@@ -172,7 +173,7 @@ def build_idoc(rec: dict[str, Any], raw: dict[str, Any], ctx: Ctx) -> dict[str, 
 
 def record_idoc_history(ctx: Ctx, rows: list[dict[str, Any]]) -> None:
     """Add a sap_idoc_status row whenever a file shows an IDoc with another status code than the last one recorded
-    (a row older than the last recorded status adds nothing)."""
+    (a row older than the last recorded status adds nothing; one with the same status_at is recorded)."""
     keys = sorted({(r["system_id"], r["docnum"]) for r in rows})
     last: dict[tuple[str, str], tuple[str, str]] = {}
     for start in range(0, len(keys), 400):
@@ -191,7 +192,7 @@ def record_idoc_history(ctx: Ctx, rows: list[dict[str, Any]]) -> None:
         if not row["status_at"]:
             continue
         previous = last.get(key)
-        if previous and (row["status_at"] <= previous[0] or previous[1] == row["status_code"]):
+        if previous and (row["status_at"] < previous[0] or previous[1] == row["status_code"]):
             continue
         last[key] = (row["status_at"], row["status_code"])
         new.append((*key, row["status_at"], row["status_code"], row["status_text"], ctx.batch_id))

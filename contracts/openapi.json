@@ -3373,10 +3373,15 @@
               }
             ],
             "title": "Title"
+          },
+          "transport": {
+            "title": "Transport",
+            "type": "string"
           }
         },
         "required": [
           "change_id",
+          "transport",
           "title",
           "change_type",
           "system_id",
@@ -3777,6 +3782,10 @@
             ],
             "title": "Title"
           },
+          "transport": {
+            "title": "Transport",
+            "type": "string"
+          },
           "transports": {
             "title": "Transports",
             "type": "integer"
@@ -3784,6 +3793,7 @@
         },
         "required": [
           "change_id",
+          "transport",
           "transports",
           "title",
           "change_type",

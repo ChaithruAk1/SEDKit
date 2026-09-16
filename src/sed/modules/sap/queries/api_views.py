@@ -137,9 +137,7 @@ def l3_view(ctx: Context, area: str | None, landscape: str | None, weeks: int) -
     scope.check_area(area)
     scope.check_landscape(landscape)
     scope = scope.resolve(ctx.conn)
-    at_iso = ctx.as_of_end_iso
-    if ctx.filters.period:
-        at_iso = min(ctx.parse(ctx.filters.period).end_iso, at_iso)
+    at_iso = _at(ctx)
     at = parse_utc(at_iso)
     source = metrics.sla_source(ctx.conn)
     periods = trend_periods(series_end(ctx, "week"), weeks)
@@ -234,7 +232,14 @@ def changes_view(ctx: Context, area: str | None, landscape: str | None, weeks: i
         incidents_after_imports=[
             SapImportIncidentsRow(**r)
             for r in changes.incidents_after_imports(
-                ctx.conn, cs, since, at_iso, area=area, landscape=landscape, limit=LIST_LIMIT
+                ctx.conn,
+                cs,
+                since,
+                at_iso,
+                area=area,
+                landscape=landscape,
+                limit=LIST_LIMIT,
+                min_lift=cs.charm.config.thresholds.incident_min_lift,
             )
         ],
         without_jira_count=len(without),
@@ -308,7 +313,14 @@ def idocs_view(
         spikes=[
             SapIdocSpikeRow(**r)
             for r in idocs.spikes_after_imports(
-                ids, cs, periods[0].start_iso, at_iso, system=system, landscape=landscape
+                ids,
+                cs,
+                periods[0].start_iso,
+                at_iso,
+                errors=selected,
+                system=system,
+                landscape=landscape,
+                min_lift=ids.idoc.config.thresholds.spike_min_lift,
             )[:LIST_LIMIT]
         ],
         open_errors_count=sum(1 for e in selected if e.is_open),

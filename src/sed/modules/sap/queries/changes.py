@@ -363,6 +363,50 @@ def production_imports(
     return out
 
 
+@dataclass(frozen=True)
+class ImportGroup:
+    """The production imports of one change (or one transport without a change) into one system."""
+
+    change_id: str | None
+    transport: str  # the first transport of the group
+    system_id: str
+    landscape: str
+    imported_at: str  # the first import
+    return_code: int | None  # the highest return code
+    transports: int
+
+
+def production_import_groups(
+    cs: ChangeSet,
+    start: str,
+    end: str,
+    *,
+    area: str | None = None,
+    landscape: str | None = None,
+    system: str | None = None,
+) -> list[ImportGroup]:
+    """Imports into production systems in [start, end), one group per change (or transport) and system."""
+    grouped: dict[tuple[str, str], list[Import]] = {}
+    for imp in select_imports(cs, area=area, landscape=landscape):
+        if imp.role == "prod" and start <= imp.imported_at < end and (system is None or imp.system_id == system):
+            grouped.setdefault((imp.change_id or imp.transport, imp.system_id), []).append(imp)
+    out = []
+    for (_ref, system_id), rows in grouped.items():
+        first = min(rows, key=lambda i: (i.imported_at, i.transport))
+        out.append(
+            ImportGroup(
+                change_id=first.change_id,
+                transport=first.transport,
+                system_id=system_id,
+                landscape=first.landscape,
+                imported_at=first.imported_at,
+                return_code=max((i.return_code for i in rows if i.return_code is not None), default=None),
+                transports=len(rows),
+            )
+        )
+    return sorted(out, key=lambda g: (g.imported_at, g.system_id, g.transport))
+
+
 def incidents_after_imports(
     conn: sqlite3.Connection,
     cs: ChangeSet,
@@ -372,29 +416,24 @@ def incidents_after_imports(
     area: str | None = None,
     landscape: str | None = None,
     limit: int = 50,
-    min_lift: int | None = -1,
+    min_lift: int | None = None,
 ) -> list[dict[str, Any]]:
     """Production imports in [start, end) with the SAP incidents of the same landscape (and the change's area, when
     known) opened within the incident window after the import, against the same window before it (`lift` = after -
-    before). A correlation signal, not causation. Rows with a lift below `min_lift` are left out (default: the
-    thresholds.incident_min_lift of charm.yaml; None keeps every import with incidents after it); highest lift first."""
-    if min_lift == -1:
-        min_lift = cs.charm.config.thresholds.incident_min_lift
+    before). A correlation signal, not causation. Rows with a lift below `min_lift` are left out (None keeps every
+    import with incidents after it; the dashboard and report pass thresholds.incident_min_lift); highest lift first."""
     scope = cs.charm.scope
     if scope.tickets is None:
         scope = scope.resolve(conn)
-    hours = cs.charm.config.thresholds.incident_window_hours
-    grouped: dict[tuple[str, str], list[Import]] = {}
-    for imp in select_imports(cs, area=area, landscape=landscape):
-        if imp.role == "prod" and start <= imp.imported_at < end:
-            grouped.setdefault((imp.change_id or imp.transport, imp.system_id), []).append(imp)
-    if not grouped:
+    groups = production_import_groups(cs, start, end, area=area, landscape=landscape)
+    if not groups:
         return []
-    window = timedelta(hours=hours)
-    horizon = iso_utc(parse_utc(max(i.imported_at for rows in grouped.values() for i in rows)) + window)
-    earliest = iso_utc(parse_utc(min(i.imported_at for rows in grouped.values() for i in rows)) - window)
+    window = timedelta(hours=cs.charm.config.thresholds.incident_window_hours)
+    horizon = iso_utc(parse_utc(max(g.imported_at for g in groups)) + window)
+    earliest = iso_utc(parse_utc(min(g.imported_at for g in groups)) - window)
     where, params = l3.filters(scope).where()
     tickets = {t[0]: t for t in scope.tickets or ()}
+    group_area, app_landscape = scope.group_area, scope.app_landscape
     by_place: dict[tuple[str, str], list[tuple[str, str]]] = {}
     for ticket_id, number, opened_at in conn.execute(
         f"SELECT t.ticket_id, t.number, t.opened_at FROM ticket t WHERE {where} "
@@ -402,37 +441,35 @@ def incidents_after_imports(
         [*params, earliest, horizon],
     ):
         _, group, app_id = tickets[ticket_id]
-        place = (scope.area_of(group), scope.app_landscape.get(app_id or "", UNKNOWN))
+        place = (group_area.get(group or "", UNASSIGNED), app_landscape.get(app_id or "", UNKNOWN))
         by_place.setdefault(place, []).append((opened_at, number))
     out = []
-    for (_ref, system_id), rows in grouped.items():
-        first = min(i.imported_at for i in rows)
-        until = iso_utc(parse_utc(first) + window)
-        since = iso_utc(parse_utc(first) - window)
-        change = cs.changes.get(rows[0].change_id or "")
+    for g in groups:
+        moment = parse_utc(g.imported_at)
+        until, since = iso_utc(moment + window), iso_utc(moment - window)
+        change = cs.changes.get(g.change_id or "")
         change_area = change.area if change else UNASSIGNED
-        lands = rows[0].landscape
         candidates: list[tuple[str, str]] = []
         for (t_area, t_land), items in by_place.items():
-            if t_land == lands and (change_area == UNASSIGNED or t_area == change_area):
+            if t_land == g.landscape and (change_area == UNASSIGNED or t_area == change_area):
                 candidates += items
         candidates.sort()
-        before = bisect_left(candidates, (first, "")) - bisect_left(candidates, (since, ""))
-        lo = bisect_left(candidates, (first, ""))
-        hi = bisect_left(candidates, (until, ""))
-        numbers = [n for _, n in candidates[lo:hi]]
+        lo = bisect_left(candidates, (g.imported_at, ""))
+        before = lo - bisect_left(candidates, (since, ""))
+        numbers = [n for _, n in candidates[lo : bisect_left(candidates, (until, ""))]]
         out.append(
             {
-                "change_id": rows[0].change_id,
-                "transports": len(rows),
+                "change_id": g.change_id,
+                "transport": g.transport,
+                "transports": g.transports,
                 "title": change.title if change else None,
                 "change_type": change.change_type if change else None,
                 "area": change_area,
                 "area_label": scope.area_labels[change_area],
-                "landscape": lands,
-                "system_id": system_id,
-                "imported_at": first,
-                "return_code": max((i.return_code for i in rows if i.return_code is not None), default=None),
+                "landscape": g.landscape,
+                "system_id": g.system_id,
+                "imported_at": g.imported_at,
+                "return_code": g.return_code,
                 "incidents": len(numbers),
                 "incidents_before": before,
                 "lift": len(numbers) - before,

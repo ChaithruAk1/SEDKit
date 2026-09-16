@@ -88,11 +88,12 @@ def test_cp1_failed_import_with_incidents(cs, sap_truth):
     assert [(r["transport"], r["system_id"], r["role"], r["change_id"]) for r in failed] == [
         (cp1["transport"], "HP1", "prod", cp1["change_id"])
     ]
-    after = changes.incidents_after_imports(conn, changeset, since, iso_utc(changeset.at))
+    min_lift = changeset.charm.config.thresholds.incident_min_lift
+    after = changes.incidents_after_imports(conn, changeset, since, iso_utc(changeset.at), min_lift=min_lift)
     top = after[0]
     assert (top["change_id"], top["system_id"], top["incidents"]) == (cp1["change_id"], "HP1", cp1["incidents"])
     assert top["lift"] == top["incidents"] - top["incidents_before"] >= 10
-    assert all(r["lift"] >= changeset.charm.config.thresholds.incident_min_lift for r in after)
+    assert all(r["lift"] >= min_lift for r in after)
     everything = changes.incidents_after_imports(conn, changeset, since, iso_utc(changeset.at), min_lift=None)
     assert len(everything) >= len(after) and all(r["incidents"] > 0 for r in everything)
     cp1_tickets = {n for n, t in sap_truth["tickets"].items() if t["pattern"] == "CP1"}
@@ -211,3 +212,16 @@ def test_late_and_repeated_exports_keep_history_consistent(sap_profile_rw, sap_t
     assert history[:-1] == before[1] and history[-1] == ("2026-09-02T07:00:00Z", "Successfully Tested")
     export("sap_charm_changes_2026-09-03.csv", "successfully  tested", "2026-09-03 09:00:00")  # same status, new edit
     assert state()[1] == history
+    # A status change exported with the same changed-on moment (coarse export times) is still recorded and read.
+    export("sap_charm_changes_2026-09-03b.csv", "Authorized for Production", "2026-09-03 09:00:00")
+    row, history = state()
+    assert row[0] == "Authorized for Production" and history[-1] == (
+        "2026-09-03T07:00:00Z",
+        "Authorized for Production",
+    )
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        later = _load(sap_profile_rw, conn, date(2026, 9, 3))
+    finally:
+        conn.close()
+    assert later.changes[change_id].stage == "ready_for_production"

@@ -315,3 +315,10 @@ def test_idocs_view_filters_and_validation(client):
     for params in ({"system": "ZZ1"}, {"direction": "both"}, {"area": "hr"}, {"weeks": 3}):
         r = client.get("/api/sap/idocs", params=params)
         assert r.status_code == 422 and r.json()["error"]["kind"] == "validation", params
+
+
+def test_idoc_spikes_follow_the_error_filters(client):
+    outbound = get_ok(client, "/api/sap/idocs", m.SapIdocsOut, direction="outbound")
+    inbound = get_ok(client, "/api/sap/idocs", m.SapIdocsOut, direction="inbound")
+    assert [s["system_id"] for s in outbound["spikes"]] == ["HP1"] and outbound["spikes"][0]["transport"]
+    assert inbound["spikes"] == []  # the IP1 errors after the CP1 import are outbound INVOIC IDocs

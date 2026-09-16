@@ -187,6 +187,7 @@ class SapFailedImportRow(ApiModel):
 
 class SapImportIncidentsRow(ApiModel):
     change_id: str | None
+    transport: str  # the first transport imported
     transports: int
     title: str | None
     change_type: str | None
@@ -267,6 +268,7 @@ class SapIdocTextRow(ApiModel):
 
 class SapIdocSpikeRow(ApiModel):
     change_id: str | None
+    transport: str  # the first transport imported
     title: str | None
     change_type: str | None
     system_id: str

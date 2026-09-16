@@ -83,6 +83,8 @@ def test_unconfigured_scope_warns(sap_profile_rw):
     result = _by_name(paths)
     assert result["sap.scope_configured"][0] == "warn"
     assert "sap.scope_groups_seen" not in result
+    # ChaRM and IDoc data do not need a ticket scope, so their checks still run.
+    assert {"sap.transport_systems_known", "sap.charm_values_mapped", "sap.idoc_values_known"} <= set(result)
 
 
 def test_empty_profile_reports_no_data_yet(data_root):

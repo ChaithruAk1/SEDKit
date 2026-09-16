@@ -1425,6 +1425,8 @@ export interface components {
             system_id: string;
             /** Title */
             title: string | null;
+            /** Transport */
+            transport: string;
         };
         /** SapIdocTextRow */
         SapIdocTextRow: {
@@ -1539,6 +1541,8 @@ export interface components {
             system_id: string;
             /** Title */
             title: string | null;
+            /** Transport */
+            transport: string;
             /** Transports */
             transports: number;
         };
