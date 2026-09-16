@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -89,6 +90,7 @@ class CharmThresholds(StrictModel):
     waiting_for_production_days: int = Field(14, ge=1)
     failed_return_code: int = Field(8, ge=1)
     incident_window_hours: int = Field(72, ge=1, le=720)
+    incident_min_lift: int = Field(3, ge=1)
 
     @field_validator("stuck_days")
     @classmethod
@@ -153,13 +155,23 @@ class Charm:
     config: CharmConfig
     scope: Scope
 
+    @cached_property
+    def _types(self) -> dict[str, str]:
+        return {_norm(t.type): t.change_type for t in self.config.change_types}
+
+    @cached_property
+    def _stages(self) -> dict[str, str]:
+        return {_norm(s.status): s.stage for s in self.config.stages}
+
+    @cached_property
+    def _systems(self) -> dict[str, SystemDef]:
+        return {s.sid: s for s in self.scope.config.systems}
+
     def change_type(self, transaction_type: str | None) -> str:
-        types = {_norm(t.type): t.change_type for t in self.config.change_types}
-        return types.get(_norm(transaction_type), OTHER_TYPE)
+        return self._types.get(_norm(transaction_type), OTHER_TYPE)
 
     def stage(self, status: str | None) -> str:
-        stages = {_norm(s.status): s.stage for s in self.config.stages}
-        return stages.get(_norm(status), UNKNOWN_STAGE)
+        return self._stages.get(_norm(status), UNKNOWN_STAGE)
 
     def area(self, component: str | None) -> str:
         """Area of the longest configured component prefix ("SCM-EWM" before "SCM"), matched at a "-" boundary."""
@@ -176,8 +188,7 @@ class Charm:
         return cycles.get(_norm(cycle))
 
     def system(self, system_id: str | None) -> SystemDef | None:
-        sid = str(system_id or "").strip().upper()
-        return next((s for s in self.scope.config.systems if s.sid == sid), None)
+        return self._systems.get(str(system_id or "").strip().upper())
 
     def landscape_of_system(self, system_id: str | None) -> str:
         system = self.system(system_id)

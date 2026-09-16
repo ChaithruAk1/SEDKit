@@ -91,6 +91,10 @@ def test_cp1_failed_import_with_incidents(cs, sap_truth):
     after = changes.incidents_after_imports(conn, changeset, since, iso_utc(changeset.at))
     top = after[0]
     assert (top["change_id"], top["system_id"], top["incidents"]) == (cp1["change_id"], "HP1", cp1["incidents"])
+    assert top["lift"] == top["incidents"] - top["incidents_before"] >= 10
+    assert all(r["lift"] >= changeset.charm.config.thresholds.incident_min_lift for r in after)
+    everything = changes.incidents_after_imports(conn, changeset, since, iso_utc(changeset.at), min_lift=None)
+    assert len(everything) >= len(after) and all(r["incidents"] > 0 for r in everything)
     cp1_tickets = {n for n, t in sap_truth["tickets"].items() if t["pattern"] == "CP1"}
     assert set(top["numbers"]) <= cp1_tickets and len(cp1_tickets) == cp1["incidents"]
     assert changes.summary(conn, changeset, _week())["failed_4w"] == 1

@@ -3184,9 +3184,17 @@
             "title": "Incidents",
             "type": "integer"
           },
+          "incidents_before": {
+            "title": "Incidents Before",
+            "type": "integer"
+          },
           "landscape": {
             "title": "Landscape",
             "type": "string"
+          },
+          "lift": {
+            "title": "Lift",
+            "type": "integer"
           },
           "numbers": {
             "items": {
@@ -3238,6 +3246,8 @@
           "imported_at",
           "return_code",
           "incidents",
+          "incidents_before",
+          "lift",
           "numbers"
         ],
         "title": "SapImportIncidentsRow",

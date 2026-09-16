@@ -82,6 +82,7 @@ DEFINITIONS: dict[str, tuple[str, str]] = {
     "sap.changes.incidents_after_import": (
         "count",
         "SAP incidents of the same landscape (and the change's area, when known) opened within "
-        "thresholds.incident_window_hours after a production import. A correlation signal, not causation.",
+        "thresholds.incident_window_hours after a production import, against the same window before it (lift); "
+        "imports with a lift of at least thresholds.incident_min_lift are listed. A correlation signal, not causation.",
     ),
 }

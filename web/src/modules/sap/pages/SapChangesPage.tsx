@@ -151,7 +151,25 @@ export default function SapChangesPage() {
     { key: 'area', header: 'Area', value: (r) => r.area_label },
     { key: 'system', header: 'Production', value: (r) => r.imported_at, render: (r) => `${r.system_id} · ${formatDateTime(r.imported_at)}` },
     { key: 'rc', header: 'RC', value: (r) => r.return_code, render: (r) => formatInt(r.return_code), align: 'right' },
-    { key: 'incidents', header: 'Incidents', value: (r) => r.incidents, render: (r) => formatInt(r.incidents), align: 'right' },
+    { key: 'incidents', header: 'After', value: (r) => r.incidents, render: (r) => formatInt(r.incidents), align: 'right' },
+    {
+      key: 'before',
+      header: 'Before',
+      value: (r) => r.incidents_before,
+      render: (r) => formatInt(r.incidents_before),
+      align: 'right',
+    },
+    {
+      key: 'lift',
+      header: 'Lift',
+      value: (r) => r.lift,
+      render: (r) => (
+        <Text span size="sm" fw={600} c={r.lift >= 5 ? 'red' : undefined}>
+          +{formatInt(r.lift)}
+        </Text>
+      ),
+      align: 'right',
+    },
     {
       key: 'numbers',
       header: 'First incidents',
@@ -260,7 +278,7 @@ export default function SapChangesPage() {
 
       <SectionCard
         title="SAP incidents after production imports"
-        description="Incidents of the same landscape and area opened within the incident window after the import (a correlation signal, not causation)"
+        description="Imports followed by more incidents of the same landscape and area than in the same window before them (a correlation signal, not causation)"
         count={data?.incidents_after_imports.length ?? null}
       >
         <DataTable rows={data?.incidents_after_imports} columns={afterColumns} rowKey={(r) => `${r.change_id}:${r.system_id}:${r.imported_at}`} loading={view.loading} emptyText="No incidents after production imports" minWidth={640} serverOrdered />

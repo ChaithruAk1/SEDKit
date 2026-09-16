@@ -197,6 +197,8 @@ class SapImportIncidentsRow(ApiModel):
     imported_at: str
     return_code: int | None
     incidents: int
+    incidents_before: int
+    lift: int
     numbers: list[str]
 
 

@@ -119,6 +119,8 @@ def load(conn: sqlite3.Connection, charm: Charm, at: datetime) -> ChangeSet:
         if imp.change_id and imp.landscape != UNKNOWN:
             landscapes_by_change.setdefault(imp.change_id, Counter())[imp.landscape] += 1
 
+    key_re = re.compile(charm.config.jira.key_pattern)
+    projects = set(charm.config.jira.projects)
     changes: dict[str, Change] = {}
     for row in conn.execute(
         "SELECT change_id, title, transaction_type, status_raw, priority, component_raw, cycle_raw, created_at, "
@@ -153,8 +155,6 @@ def load(conn: sqlite3.Connection, charm: Charm, at: datetime) -> ChangeSet:
             landscape=landscape,
             priority=priority,
         )
-        key_re = re.compile(charm.config.jira.key_pattern)
-        projects = set(charm.config.jira.projects)
         change.jira_keys = {
             k for k in _matches(key_re, external_ref) + _matches(key_re, title) if k.split("-")[0] in projects
         }
@@ -372,9 +372,14 @@ def incidents_after_imports(
     area: str | None = None,
     landscape: str | None = None,
     limit: int = 50,
+    min_lift: int | None = -1,
 ) -> list[dict[str, Any]]:
     """Production imports in [start, end) with the SAP incidents of the same landscape (and the change's area, when
-    known) opened within the incident window after the import. A correlation signal, not causation."""
+    known) opened within the incident window after the import, against the same window before it (`lift` = after -
+    before). A correlation signal, not causation. Rows with a lift below `min_lift` are left out (default: the
+    thresholds.incident_min_lift of charm.yaml; None keeps every import with incidents after it); highest lift first."""
+    if min_lift == -1:
+        min_lift = cs.charm.config.thresholds.incident_min_lift
     scope = cs.charm.scope
     if scope.tickets is None:
         scope = scope.resolve(conn)
@@ -385,14 +390,16 @@ def incidents_after_imports(
             grouped.setdefault((imp.change_id or imp.transport, imp.system_id), []).append(imp)
     if not grouped:
         return []
-    horizon = iso_utc(parse_utc(max(i.imported_at for rows in grouped.values() for i in rows)) + timedelta(hours=hours))
+    window = timedelta(hours=hours)
+    horizon = iso_utc(parse_utc(max(i.imported_at for rows in grouped.values() for i in rows)) + window)
+    earliest = iso_utc(parse_utc(min(i.imported_at for rows in grouped.values() for i in rows)) - window)
     where, params = l3.filters(scope).where()
     tickets = {t[0]: t for t in scope.tickets or ()}
     by_place: dict[tuple[str, str], list[tuple[str, str]]] = {}
     for ticket_id, number, opened_at in conn.execute(
         f"SELECT t.ticket_id, t.number, t.opened_at FROM ticket t WHERE {where} "
         "AND t.opened_at >= ? AND t.opened_at < ? ORDER BY t.opened_at, t.number",
-        [*params, start, horizon],
+        [*params, earliest, horizon],
     ):
         _, group, app_id = tickets[ticket_id]
         place = (scope.area_of(group), scope.app_landscape.get(app_id or "", UNKNOWN))
@@ -400,7 +407,8 @@ def incidents_after_imports(
     out = []
     for (_ref, system_id), rows in grouped.items():
         first = min(i.imported_at for i in rows)
-        until = iso_utc(parse_utc(first) + timedelta(hours=hours))
+        until = iso_utc(parse_utc(first) + window)
+        since = iso_utc(parse_utc(first) - window)
         change = cs.changes.get(rows[0].change_id or "")
         change_area = change.area if change else UNASSIGNED
         lands = rows[0].landscape
@@ -409,6 +417,7 @@ def incidents_after_imports(
             if t_land == lands and (change_area == UNASSIGNED or t_area == change_area):
                 candidates += items
         candidates.sort()
+        before = bisect_left(candidates, (first, "")) - bisect_left(candidates, (since, ""))
         lo = bisect_left(candidates, (first, ""))
         hi = bisect_left(candidates, (until, ""))
         numbers = [n for _, n in candidates[lo:hi]]
@@ -425,11 +434,14 @@ def incidents_after_imports(
                 "imported_at": first,
                 "return_code": max((i.return_code for i in rows if i.return_code is not None), default=None),
                 "incidents": len(numbers),
+                "incidents_before": before,
+                "lift": len(numbers) - before,
                 "numbers": numbers[:5],
             }
         )
-    out.sort(key=lambda r: (-r["incidents"], r["imported_at"]), reverse=False)
-    return [r for r in out if r["incidents"]][:limit]
+    out.sort(key=lambda r: (-r["lift"], -r["incidents"], r["imported_at"]))
+    kept = [r for r in out if r["incidents"] and (min_lift is None or r["lift"] >= min_lift)]
+    return kept[:limit]
 
 
 def without_jira(cs: ChangeSet, changes: list[Change]) -> list[dict[str, Any]]:

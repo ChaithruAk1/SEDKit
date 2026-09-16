@@ -102,7 +102,7 @@ slides:
   - kind: table
     title: SAP incidents after production imports
     table: sap_incidents_after_imports
-    columns: [change_id, system_id, imported_at, return_code, incidents]
+    columns: [change_id, system_id, imported_at, return_code, incidents, incidents_before, lift]
   - kind: table
     title: Urgent share of new changes by area
     table: sap_urgent_by_area

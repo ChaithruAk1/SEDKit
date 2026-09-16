@@ -392,6 +392,8 @@ export function changes(query: GetQuery<'/api/sap/changes'> | undefined): Schema
         imported_at: isoAt(addDays(AS_OF, -(8)), 10),
         return_code: 8,
         incidents: 14,
+        incidents_before: 2,
+        lift: 12,
         numbers: ['INC24317800', 'INC24317801', 'INC24317802', 'INC24317803', 'INC24317804'],
       },
     ]),

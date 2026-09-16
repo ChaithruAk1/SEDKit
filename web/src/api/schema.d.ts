@@ -1355,8 +1355,12 @@ export interface components {
             imported_at: string;
             /** Incidents */
             incidents: number;
+            /** Incidents Before */
+            incidents_before: number;
             /** Landscape */
             landscape: string;
+            /** Lift */
+            lift: number;
             /** Numbers */
             numbers: string[];
             /** Return Code */

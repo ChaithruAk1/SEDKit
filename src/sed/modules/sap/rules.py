@@ -231,7 +231,7 @@ def _change_findings(
         hours = charm.config.thresholds.incident_window_hours
         after = {
             (r["change_id"], r["system_id"]): r["incidents"]
-            for r in changes.incidents_after_imports(conn, cs, since, iso_utc(at), limit=100_000)
+            for r in changes.incidents_after_imports(conn, cs, since, iso_utc(at), limit=100_000, min_lift=None)
         }
         for row in changes.failed_imports(cs, since):
             if row["role"] != "prod":

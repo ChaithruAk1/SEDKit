@@ -66,3 +66,4 @@ thresholds:
   waiting_for_production_days: 14   # a tested transport imported into QA and not into production for this long
   failed_return_code: 8             # import return code from which an import counts as failed
   incident_window_hours: 72         # SAP incidents after a production import (correlation, not causation)
+  incident_min_lift: 3              # list imports followed by at least this many more incidents than before
