@@ -88,24 +88,35 @@ class Filters:
     vendor_id: str | None = None
     group: str | None = None
     priorities: list[int] = field(default_factory=list)
+    # An extra predicate on the ticket alias, written with `{t}` for the alias (for example a module's ticket scope).
+    scope_sql: str | None = None
+    scope_params: tuple[Any, ...] = ()
+    # True when scope_sql selects a small set of tickets by key (`{t}.ticket_id IN (...)`). The other filter columns are
+    # then kept off their indexes (unary +), so SQLite starts from that key: without table statistics it would otherwise
+    # walk the (kind, opened_at) index over every ticket of the kind.
+    scope_drives: bool = False
 
     def where(self, alias: str = "t") -> tuple[str, list[Any]]:
-        clauses = [f"{alias}.kind = ?"]
+        col = f"+{alias}" if self.scope_drives else alias
+        clauses = [f"{col}.kind = ?"]
         params: list[Any] = [self.kind]
+        if self.scope_sql:
+            clauses.append(self.scope_sql.format(t=alias))
+            params += list(self.scope_params)
         if self.app_ids:
-            clauses.append(f"{alias}.app_id IN ({', '.join('?' for _ in self.app_ids)})")
+            clauses.append(f"{col}.app_id IN ({', '.join('?' for _ in self.app_ids)})")
             params += self.app_ids
         if self.family:
-            clauses.append(f"{alias}.app_id IN (SELECT app_id FROM application WHERE app_family = ?)")
+            clauses.append(f"{col}.app_id IN (SELECT app_id FROM application WHERE app_family = ?)")
             params.append(self.family)
         if self.vendor_id:
-            clauses.append(f"{alias}.vendor_id = ?")
+            clauses.append(f"{col}.vendor_id = ?")
             params.append(self.vendor_id)
         if self.group:
-            clauses.append(f"{alias}.assignment_group = ?")
+            clauses.append(f"{col}.assignment_group = ?")
             params.append(self.group)
         if self.priorities:
-            clauses.append(f"{alias}.priority IN ({', '.join('?' for _ in self.priorities)})")
+            clauses.append(f"{col}.priority IN ({', '.join('?' for _ in self.priorities)})")
             params += self.priorities
         return " AND ".join(clauses), params
 
@@ -159,24 +170,13 @@ def sla_source(conn: sqlite3.Connection) -> str:
 def sla(conn: sqlite3.Connection, f: Filters, period: Period, source: str | None = None) -> dict[str, Any]:
     src = source or sla_source(conn)
     where, params = f.where()
-    base = f"FROM ticket t WHERE {where} AND t.resolved_at >= ? AND t.resolved_at < ?"
-    bounds = [period.start_iso, period.end_iso]
-    if src == "task_sla":
-        sql = (
-            f"SELECT t.priority, COUNT(*), SUM(COALESCE(s.breached, t.made_sla = 0, 0) = 0) FROM ticket t "
-            "LEFT JOIN (SELECT ticket_id, MAX(has_breached) AS breached FROM task_sla WHERE sla_type = 'resolution' "
-            f"GROUP BY ticket_id) s ON s.ticket_id = t.ticket_id WHERE {where} AND t.resolved_at >= ? "
-            "AND t.resolved_at < ? GROUP BY t.priority"
-        )
-    elif src == "made_sla":
-        sql = f"SELECT t.priority, COUNT(*), SUM(COALESCE(t.made_sla, 1)) {base} GROUP BY t.priority"
-    else:
-        cases = " ".join(f"WHEN {p} THEN {h}" for p, h in INCIDENT_TARGET_H.items())
-        sql = (
-            f"SELECT t.priority, COUNT(*), SUM({_hours_expr('t.opened_at', 't.resolved_at')} <= "
-            f"(CASE t.priority {cases} ELSE 120 END)) {base} GROUP BY t.priority"
-        )
-    rows = conn.execute(sql, [*params, *bounds]).fetchall()
+    # Per-ticket SLA check (task_sla looked up through its ticket index), so the cost follows the tickets resolved in
+    # the period rather than the size of task_sla.
+    sql = (
+        f"SELECT t.priority, COUNT(*), SUM({sla_met_sql(src)}) FROM ticket t WHERE {where} "
+        "AND t.resolved_at >= ? AND t.resolved_at < ? GROUP BY t.priority"
+    )
+    rows = conn.execute(sql, [*params, period.start_iso, period.end_iso]).fetchall()
     by_priority = {
         int(r[0] or 0): {"total": int(r[1]), "met": int(r[2] or 0), "pct": _pct(r[2] or 0, r[1])} for r in rows
     }

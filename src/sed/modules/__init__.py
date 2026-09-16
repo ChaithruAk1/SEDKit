@@ -31,7 +31,7 @@ from sed.modules.contract import (
 from sed.paths import Paths
 from sed.settings import load_layered, repo_config_dir
 
-BUILTIN = ("sed.modules.ops",)
+BUILTIN = ("sed.modules.ops", "sed.modules.sap")
 EXTRA_ENV = "SED_EXTRA_MODULES"
 EXTRA_PREFIXES = ("tests.", "sed.modules.")
 CORE_CLI_NAMES = frozenset(

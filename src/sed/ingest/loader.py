@@ -553,7 +553,7 @@ def _import_entry(
                     )
                 post["soft_deleted"] = len(soft_delete_keys)
             if spec.load_mode == "active_snapshot" and target.active_scope:
-                post["stale_open_flagged"] = _apply_active_snapshot(conn, target, rows, as_of)
+                post["stale_open_flagged"] = _apply_active_snapshot(conn, paths, spec, target, rows, as_of)
             if target.after_load:
                 target.after_load(ctx, rows)
             unmapped = resolver.flush(batch_id)
@@ -609,26 +609,16 @@ def _soft_delete_keys(
 ) -> list[tuple[Any, ...]]:
     """Keys a full_snapshot file would soft-delete; refuses (exit 4) above SOFT_DELETE_GUARD unless forced.
 
-    Rows another module's mapping wrote last are not candidates, so a shared table keeps what other modules loaded when
-    this file omits it. Rows from any mapping of this module (including one renamed or replaced since) still are:
-    unchanged rows keep the batch that last changed them.
+    Only rows this mapping's module loaded are candidates (see `_module_rows`), so a shared table keeps what other
+    modules loaded when this file omits it.
     """
     if spec.load_mode != "full_snapshot" or not target.soft_delete:
         return []
-    owners = registry.mapping_owners(paths)
-    mine = owners.get(spec.name, set())
-    foreign = sorted(name for name, keys in owners.items() if name != spec.name and not keys & mine)
-    batch = target.batch_column
-    scope = (
-        f" AND ({batch} IS NULL OR {batch} NOT IN (SELECT batch_id FROM import_batch WHERE mapping_name IN "
-        f"({', '.join('?' for _ in foreign)})))"
-        if foreign
-        else ""
-    )
+    scope, scope_params = _module_rows(paths, spec, target)
     active = {
         tuple(r)
         for r in conn.execute(
-            f"SELECT {', '.join(target.key)} FROM {target.table} WHERE is_deleted = 0{scope}", foreign
+            f"SELECT {', '.join(target.key)} FROM {target.table} WHERE is_deleted = 0{scope}", scope_params
         ).fetchall()
     }
     file_keys = {tuple(r[k] for k in target.key) for r in rows}
@@ -661,7 +651,29 @@ def _restore(session: ImportSession, checkpoint: tuple[dict[str, Counter[str]], 
     session.state.update(state)
 
 
-def _apply_active_snapshot(conn, target: Target, rows: list[dict[str, Any]], as_of: str | None) -> int:
+def _module_rows(paths: Paths, spec: MappingSpec, target: Target) -> tuple[str, list[str]]:
+    """SQL (` AND ...`) excluding rows that another module's mapping wrote last, for full and active snapshots.
+
+    Rows from any mapping of this mapping's module (including one renamed or replaced since) stay in scope: unchanged
+    rows keep the batch that last changed them.
+    """
+    owners = registry.mapping_owners(paths)
+    mine = owners.get(spec.name, set())
+    foreign = sorted(name for name, keys in owners.items() if name != spec.name and not keys & mine)
+    if not foreign:
+        return "", []
+    batch = target.batch_column
+    return (
+        f" AND ({batch} IS NULL OR {batch} NOT IN (SELECT batch_id FROM import_batch WHERE mapping_name IN "
+        f"({', '.join('?' for _ in foreign)})))",
+        foreign,
+    )
+
+
+def _apply_active_snapshot(
+    conn, paths: Paths, spec: MappingSpec, target: Target, rows: list[dict[str, Any]], as_of: str | None
+) -> int:
+    """Flag open rows missing from an "all open" export as stale; rows other modules' mappings loaded stay untouched."""
     column, value = target.active_scope  # type: ignore[misc]
     conn.execute("CREATE TEMP TABLE IF NOT EXISTS _active_keys (k TEXT PRIMARY KEY)")
     conn.execute("DELETE FROM _active_keys")
@@ -672,10 +684,11 @@ def _apply_active_snapshot(conn, target: Target, rows: list[dict[str, Any]], as_
         "(SELECT k FROM _active_keys))",
         (value,),
     )
+    scope, scope_params = _module_rows(paths, spec, target)
     cur = conn.execute(
         f"UPDATE {target.table} SET stale_open = 1 WHERE {column} = ? AND is_open = 1 "
-        f"AND {target.key[0]} NOT IN (SELECT k FROM _active_keys) AND opened_at <= ? AND sys_updated_on <= ?",
-        (value, cutoff, cutoff),
+        f"AND {target.key[0]} NOT IN (SELECT k FROM _active_keys) AND opened_at <= ? AND sys_updated_on <= ?{scope}",
+        (value, cutoff, cutoff, *scope_params),
     )
     return cur.rowcount
 

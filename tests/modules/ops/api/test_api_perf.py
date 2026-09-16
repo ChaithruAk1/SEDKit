@@ -1,4 +1,4 @@
-"""Performance gate for EVERY GET in contracts/openapi.json (core and ops) on the scale-1.0 synthetic profile.
+"""Performance gate for EVERY GET in contracts/openapi.json (core and every module) on the scale-1.0 synthetic profile.
 
 Run: `uv run pytest -m slow tests/modules/ops/api/test_api_perf.py`
 (in an M2 worktree: `wt.sh python -m pytest -m slow ...`).
@@ -6,7 +6,8 @@ Run: `uv run pytest -m slow tests/modules/ops/api/test_api_perf.py`
 * Profile: built once (seed 42, pinned salt, about 108k tasks) under SED_PERF_DATA_ROOT, else `<SED_DATA_ROOT>/perf`,
   else `<tempdir>/sed-perf`, and reused while its marker matches. Pending migrations and then
   `src/sed/schema/pending/*.sql` are applied to that database (db.split_sql inside write_tx), as the integrator will
-  when numbering them.
+  when numbering them. The synthetic data of every other enabled module with a generator (same seed, as-of and scale)
+  is then imported on top, once per module, and its rule findings refreshed.
 * Every GET operation must have an entry in PERF_PARAMS (default filters; required parameters only); a missing or stale
   entry fails. Each endpoint gets 20 requests through the in-process client; p95 (nearest rank, the first, cold request
   included) must stay below 1 s, and ticket search (`/api/ops/tickets?q=`) below 300 ms.
@@ -72,6 +73,8 @@ PERF_PARAMS: dict[str, dict[str, Any]] = {
     "/api/ops/contracts/renewals": {},
     "/api/ops/licenses/utilization": {},
     "/api/ops/vendors/sla-trend": {},
+    "/api/sap/overview": {},
+    "/api/sap/l3": {},
 }
 # Full-text searches held to the 300 ms budget: planted multi-word text, a common word, a very broad word, a prefix.
 SEARCH_QUERIES = ("interface timeout", "timeout", "error", "time*")
@@ -104,6 +107,36 @@ def apply_pending(conn: sqlite3.Connection) -> list[str]:
     return applied
 
 
+def add_module_data(base: Path, paths: Any, done: list[str]) -> list[str]:
+    """Generate and import the synthetic data of enabled modules other than ops that are not in `done` yet."""
+    from datetime import date
+
+    from sed import db, modules, rule_findings
+    from sed.ingest.loader import ImportOptions, run_import
+    from sed.modules.contract import SynthRequest
+
+    as_of = date.fromisoformat(AS_OF)
+    added = []
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("SED_DATA_ROOT", str(base / "sed-data"))
+        mp.setenv("SED_CLAUDE_SETTINGS_LOCAL", str(base / "settings.local.json"))
+        mp.setenv("SED_CLAUDE_MD", str(base / "CLAUDE.md"))
+        for module in modules.enabled(paths):
+            if module.key == "ops" or module.synth is None or module.key in done:
+                continue
+            modules.load_ref(module.synth.generate)(paths, SynthRequest(seed=SEED, as_of=as_of, scale=SCALE))
+            result = run_import(paths, ImportOptions(inbox=True))
+            if result["summary"]["errors"]:
+                raise RuntimeError(f"perf profile: {module.key} import failed: {result['summary']}")
+            conn = db.connect(paths.db)
+            try:
+                rule_findings.refresh(conn, paths, as_of, module.key)
+            finally:
+                conn.close()
+            added.append(module.key)
+    return added
+
+
 def build_or_reuse(root: Path) -> dict[str, Any]:
     """Scale-1.0 profile under `root`, rebuilt only when its marker is missing or different."""
     from sed import db
@@ -115,6 +148,7 @@ def build_or_reuse(root: Path) -> dict[str, Any]:
     expected = {"scale": SCALE, "seed": SEED, "as_of": AS_OF}
     db_path = base / "sed-data" / "synthetic" / "sed.db"
     reused = False
+    stored: dict[str, Any] = {}
     if marker.is_file() and db_path.is_file():
         try:
             stored = json.loads(marker.read_text(encoding="utf-8"))
@@ -123,16 +157,27 @@ def build_or_reuse(root: Path) -> dict[str, Any]:
             reused = False
     build_seconds = None
     if not reused:
+        stored = {}
         if base.exists():
             shutil.rmtree(base)  # only this workstream-owned subfolder, never the root
         start = time.perf_counter()
         build_ops_profile(base, scale=SCALE, seed=SEED)
         build_seconds = round(time.perf_counter() - start, 1)
-        marker.write_text(json.dumps({**expected, "build_seconds": build_seconds}), encoding="utf-8")
+        stored = {**expected, "build_seconds": build_seconds, "modules": []}
+        marker.write_text(json.dumps(stored), encoding="utf-8")
+    paths = Paths("synthetic", db_path.parent)
     conn = db.connect(db_path)
     try:
         migrated = db.migrate(conn, db_path, None)["applied"]
         pending = apply_pending(conn)
+    finally:
+        conn.close()
+    added = add_module_data(base, paths, list(stored.get("modules", [])))
+    if added:
+        stored["modules"] = sorted({*stored.get("modules", []), *added})
+        marker.write_text(json.dumps(stored), encoding="utf-8")
+    conn = db.connect(db_path)
+    try:
         counts = {t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("ticket", "task_sla", "finding")}
         indexes = sorted(
             r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'ticket'")
@@ -140,12 +185,13 @@ def build_or_reuse(root: Path) -> dict[str, Any]:
     finally:
         conn.close()
     return {
-        "paths": Paths("synthetic", db_path.parent),
+        "paths": paths,
         "root": str(base),
         "reused": reused,
         "build_seconds": build_seconds,
         "migrated": migrated,
         "pending_applied": pending,
+        "modules_added": added,
         "row_counts": counts,
         "ticket_indexes": indexes,
     }

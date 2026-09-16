@@ -1,0 +1,12 @@
+# System-detected SAP risks (module: sap), refreshed with `sed analytics refresh` and by sap-weekly builds.
+rules:
+  # An SAP area receives more tickets than it closes in most recent complete weeks.
+  area_backlog_growth:
+    enabled: true
+    window_weeks: 8        # complete weeks looked at
+    min_weeks_growing: 6   # weeks with arrivals > closures
+    min_net_growth: 15     # arrivals - closures over the window
+  # An SAP area holds many open tickets older than 30 days.
+  area_aged_backlog:
+    enabled: true
+    min_tickets: 10

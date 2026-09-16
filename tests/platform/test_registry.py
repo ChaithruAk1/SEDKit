@@ -19,8 +19,8 @@ def test_builtin_modules_are_valid_and_every_reference_imports():
             modules.load_ref(ref)
 
 
-def test_ops_is_enabled_by_default_and_nav_is_namespaced():
-    assert [m.key for m in modules.enabled()] == ["ops"]
+def test_builtin_modules_are_enabled_by_default_and_nav_is_namespaced():
+    assert [m.key for m in modules.enabled()] == ["ops", "sap"]
     for key, item in modules.nav():
         prefix = "/data" if key == "core" else f"/{key}"
         assert item.path == prefix or item.path.startswith(prefix + "/")
@@ -109,7 +109,7 @@ def test_duplicate_entity_keys_are_rejected():
     [
         ("enabled: []\n", frozenset()),
         ("enabled: [ops]\n", frozenset({"ops"})),
-        ("title: no enabled key\n", frozenset({"ops"})),
+        ("title: no enabled key\n", frozenset({"ops", "sap"})),
         ("enabled: [\n", ValidationFailed),
         ("enabled: none\n", ValidationFailed),
         ("enabled:\n", ValidationFailed),

@@ -225,6 +225,70 @@ def test_full_snapshots_of_a_shared_table_retire_only_rows_their_module_loaded(d
     assert [a for (a,) in deleted] == ["APM0005", "APM0100"]
 
 
+INCIDENTS_MAPPING = """\
+name: demo_incidents
+target: ticket
+load_mode: delta
+match:
+  glob: ["demo_incident_*.csv"]
+source_tz: Europe/Paris
+constants: {kind: incident}
+fields:
+  number:         {from: [number], pii: none, required: true}
+  opened_at:      {from: [opened_at], transform: datetime, pii: none}
+  sys_updated_on: {from: [sys_updated_on], transform: datetime, pii: none}
+  state:          {from: [state], pii: none}
+"""
+ACTIVE_MAPPING = """\
+extends: demo_incidents
+name: demo_incidents_active
+load_mode: active_snapshot
+match:
+  glob: ["demo_incident_active_*.csv"]
+as_of:
+  from_filename: '(\\d{4}-\\d{2}-\\d{2})'
+  format: "%Y-%m-%d"
+"""
+
+
+def test_active_snapshots_of_a_shared_table_flag_only_rows_their_module_loaded(demo_profile, tmp_path, write_csv):
+    folder = demo_profile.config / "demo" / "mappings"
+    (folder / "demo_incidents.yaml").write_text(INCIDENTS_MAPPING, encoding="utf-8")
+    (folder / "demo_incidents_active.yaml").write_text(ACTIVE_MAPPING, encoding="utf-8")
+    header = ["number", "opened_at", "sys_updated_on", "state"]
+    opts = {"allow_unmanifested": True, "move_files": False}
+
+    def open_rows(*numbers: str, updated: str = "2026-08-21 09:00:00") -> list[list[str]]:
+        return [[n, "2026-08-20 09:00:00", updated, "In Progress"] for n in numbers]
+
+    def stale() -> list[str]:
+        return [n for (n,) in _rows(demo_profile, "SELECT number FROM ticket WHERE stale_open = 1 ORDER BY 1")]
+
+    ops_delta = write_csv(tmp_path / "incident_2026-08.csv", header, open_rows("INC0001", "INC0002"))
+    demo_delta = write_csv(tmp_path / "demo_incident_2026-08.csv", header, open_rows("INC0101", "INC0102"))
+    result = run_import(demo_profile, ImportOptions(files=[ops_delta, demo_delta], **opts))
+    assert result["summary"]["errors"] == 0, result["files"]
+
+    demo_active = write_csv(tmp_path / "demo_incident_active_2026-09-01.csv", header, open_rows("INC0101"))
+    (entry,) = run_import(demo_profile, ImportOptions(files=[demo_active], **opts))["files"]
+    assert (entry["mapping"], entry["dq"]["stale_open_flagged"]) == ("demo_incidents_active", 1)
+    assert stale() == ["INC0102"]  # the ops incidents are not in the demo export, yet stay current
+
+    ops_active = write_csv(tmp_path / "incident_active_2026-09-01.csv", header, open_rows("INC0001"))
+    (entry,) = run_import(demo_profile, ImportOptions(files=[ops_active], **opts))["files"]
+    assert (entry["mapping"], entry["dq"]["stale_open_flagged"]) == ("servicenow_incident_active", 1)
+    assert stale() == ["INC0002", "INC0102"]  # the demo incident INC0101 is not in the ops export, yet stays current
+
+    # Once the ops export also carries a demo-loaded incident, the ops mapping wrote it last and its snapshot owns it.
+    handover = write_csv(tmp_path / "incident_2026-09.csv", header, open_rows("INC0101", updated="2026-08-25 09:00:00"))
+    run_import(demo_profile, ImportOptions(files=[handover], **opts))
+    rows = open_rows("INC0001", updated="2026-09-02 09:00:00")  # new content: an identical file would be skipped
+    later = write_csv(tmp_path / "incident_active_2026-09-08.csv", header, rows)
+    (entry,) = run_import(demo_profile, ImportOptions(files=[later], **opts))["files"]
+    assert (entry["status"], entry["dq"]["stale_open_flagged"]) == ("completed", 2)
+    assert stale() == ["INC0002", "INC0101", "INC0102"]
+
+
 def test_duplicate_mapping_name_across_modules_is_rejected(demo_profile, tmp_path, write_csv):
     clash = demo_profile.config / "demo" / "mappings" / "servicenow_incident.yaml"
     clash.write_text(MAPPING.replace("name: demo_widgets", "name: servicenow_incident"), encoding="utf-8")

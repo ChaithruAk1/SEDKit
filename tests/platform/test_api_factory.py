@@ -59,14 +59,17 @@ def test_openapi_uses_error_envelope_and_response_models(tmp_path):
     assert "ErrorEnvelope" in components and "HTTPValidationError" not in components
     ops_routes = [p for p in schema["paths"] if p.startswith("/api/ops/")]
     assert len(ops_routes) == 15
+    keys = {m.key for m in modules.installed(include_extra=False)}
     for path, item in schema["paths"].items():
+        segment = path.split("/")[2]
+        prefix = f"{segment}_" if segment in keys else "core_"
         for method, operation in item.items():
             responses = operation["responses"]
             assert responses["422"]["content"]["application/json"]["schema"] == {
                 "$ref": "#/components/schemas/ErrorEnvelope"
             }
             assert "200" in responses and responses["200"].get("content"), (method, path)
-            assert operation["operationId"].startswith(("core_", "ops_")), operation["operationId"]
+            assert operation["operationId"].startswith(prefix), (path, operation["operationId"])
             if method == "post":
                 assert "403" in responses
 

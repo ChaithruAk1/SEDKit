@@ -1,6 +1,7 @@
 import {
   IconAlertTriangle,
   IconApps,
+  IconBuildingFactory2,
   IconChartBar,
   IconCurrencyEuro,
   IconDatabase,
@@ -19,6 +20,7 @@ const ICONS: Record<string, Icon> = {
   'alert-triangle': IconAlertTriangle,
   ticket: IconTicket,
   apps: IconApps,
+  'building-factory': IconBuildingFactory2,
   'currency-euro': IconCurrencyEuro,
   database: IconDatabase,
   'chart-bar': IconChartBar,

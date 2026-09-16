@@ -1,2 +1,2 @@
-# Enabled modules. Layered like all config: DATA_DIR\config\modules.yaml can override (e.g. `enabled: []`).
-enabled: [ops]
+# Enabled modules. Layered like all config: DATA_DIR\config\modules.yaml can override (e.g. `enabled: [ops]`).
+enabled: [ops, sap]

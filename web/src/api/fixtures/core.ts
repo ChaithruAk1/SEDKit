@@ -71,6 +71,8 @@ export function nav(): Schema<'NavOut'> {
       { id: 'ops.tickets', module: 'ops', label: 'Tickets', path: '/ops/tickets', order: 30, icon: 'ticket' },
       { id: 'ops.apps', module: 'ops', label: 'App 360', path: '/ops/apps', order: 40, icon: 'apps' },
       { id: 'ops.costs', module: 'ops', label: 'Costs & Contracts', path: '/ops/costs', order: 50, icon: 'currency-euro' },
+      { id: 'sap.overview', module: 'sap', label: 'SAP', path: '/sap', order: 60, icon: 'building-factory' },
+      { id: 'sap.tickets', module: 'sap', label: 'SAP L3 tickets', path: '/sap/tickets', order: 61, icon: 'ticket' },
       { id: 'core.data', module: 'core', label: 'Data', path: '/data', order: 900, icon: 'database' },
     ],
   };
@@ -87,6 +89,15 @@ export function modules(): Schema<'ModulesOut'> {
         enabled: true,
         reports: ['weekly', 'monthly', 'quarterly', 'vendor'],
         skills: ['sed-triage-batch'],
+      },
+      {
+        key: 'sap',
+        title: 'SAP application support',
+        description: 'SAP L3 support by area and landscape, with system-detected SAP risks and the weekly SAP review',
+        version: '1',
+        enabled: true,
+        reports: ['sap-weekly'],
+        skills: [],
       },
     ],
   };

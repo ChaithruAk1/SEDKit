@@ -8,6 +8,7 @@ import { ApiError, isAbortError } from '../client';
 import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostResponse } from '../types';
 import * as core from './core';
 import * as ops from './ops';
+import * as sap from './sap';
 
 type GetHandlers = {
   [P in GetPath]: (params: GetPathParams<P>, query: GetQuery<P>) => GetResponse<P>;
@@ -41,6 +42,8 @@ const GET_HANDLERS: GetHandlers = {
   '/api/ops/contracts/renewals': (_, query) => ops.renewals(query),
   '/api/ops/licenses/utilization': (_, query) => ops.licenses(query),
   '/api/ops/vendors/sla-trend': (_, query) => ops.vendorTrend(query),
+  '/api/sap/overview': () => sap.overview(),
+  '/api/sap/l3': (_, query) => sap.l3(query),
 };
 
 const POST_HANDLERS: PostHandlers = {

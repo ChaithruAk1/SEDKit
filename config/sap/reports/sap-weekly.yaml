@@ -1,0 +1,71 @@
+# Weekly SAP operations review. Facts/tables come from the frozen snapshot (sed.modules.sap.reports.weekly); module: sap.
+report: sap-weekly
+title: Weekly SAP Operations Review
+audience: SAP L3 team lead and application owner
+kpis:
+  - {fact: sap.l3.opened, compare: sap.l3.opened.avg4w, delta: sap.l3.opened.delta_vs_avg4w_pct}
+  - {fact: sap.l3.resolved, compare: sap.l3.resolved.avg4w}
+  - {fact: sap.l3.backlog, delta: sap.l3.backlog.delta}
+  - {fact: sap.l3.aged_30d}
+  - {fact: sap.l3.sla.pct, compare: sap.l3.sla.pct.avg4w, delta: sap.l3.sla.delta_pp_vs_4w}
+  - {fact: sap.l3.mttr.median_h, compare: sap.l3.mttr.median_h.avg4w}
+  - {fact: sap.l3.p1p2.opened}
+  - {fact: sap.l3.attention.count}
+  - {fact: sap.findings.count}
+sheets:
+  - table: sap_l3_trend_12w
+    sheet: Volume trend
+    chart: {type: column, categories: period, series: [opened, resolved], title: SAP incidents opened vs resolved}
+  - table: sap_areas
+    sheet: Areas
+    conditional:
+      - {column: sla_pct, rule: "<", value: 90, style: bad}
+      - {column: aged_30d, rule: ">=", value: 10, style: warn}
+  - {table: sap_backlog_aging_by_area, sheet: Backlog aging}
+  - {table: sap_landscapes, sheet: Landscapes}
+  - {table: sap_flow_8w, sheet: Area flow}
+  - table: sap_sla_by_priority
+    sheet: SLA
+    conditional: [{column: pct, rule: "<", value: 90, style: bad}]
+  - {table: sap_attention, sheet: Needs attention}
+  - {table: sap_findings, sheet: Risks}
+markdown:
+  max_words: 250
+slides:
+  - kind: title
+    subtitle: "Week {period}"
+  - kind: kpis
+    title: SAP L3 support vs 4-week average
+    kpis:
+      - {fact: sap.l3.opened, compare: sap.l3.opened.avg4w, delta: sap.l3.opened.delta_vs_avg4w_pct}
+      - {fact: sap.l3.resolved, compare: sap.l3.resolved.avg4w}
+      - {fact: sap.l3.backlog, delta: sap.l3.backlog.delta}
+      - {fact: sap.l3.aged_30d}
+      - {fact: sap.l3.sla.pct, compare: sap.l3.sla.pct.avg4w, delta: sap.l3.sla.delta_pp_vs_4w}
+      - {fact: sap.l3.mttr.median_h, compare: sap.l3.mttr.median_h.avg4w}
+    notes: "{{f:sap.scope.note}}. SLA source: {{f:sap.l3.sla.source}}."
+  - kind: line_chart
+    title: SAP incidents, last 12 weeks
+    table: sap_l3_trend_12w
+    chart: {type: line, categories: period, series: [opened, resolved], title: SAP incidents opened vs resolved}
+  - kind: table
+    title: SAP areas this week
+    table: sap_areas
+  - kind: stacked_bar
+    title: SAP backlog aging by area
+    table: sap_backlog_aging_by_area
+    chart: {type: bar, categories: label, series: [d0_7, d8_30, d31_90, d90p], title: Open SAP incidents by age}
+  - kind: bar_chart
+    title: Open SAP incidents by landscape
+    table: sap_landscapes
+    chart: {type: column, categories: label, series: [open], title: Open incidents}
+  - kind: attention_list
+    title: SAP tickets needing attention
+    table: sap_attention
+    columns: [number, priority, area_label, app, age_days, reasons]
+  - kind: findings
+    title: System-detected SAP risks
+    table: sap_findings
+    columns: [severity, title, kind, subject_id]
+  - kind: provenance
+    title: Provenance

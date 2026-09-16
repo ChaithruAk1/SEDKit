@@ -637,15 +637,16 @@ def analytics_refresh(
     data_dir: DataDirOpt = None,
     as_json: JsonOpt = False,
 ) -> None:
-    """Recompute rule-origin findings (renewals, notice deadlines, license use, vendor SLA, cost, quiet apps)."""
-    from sed import analytics
+    """Recompute the rule-origin findings of every enabled module (ops: renewals, licenses, vendor SLA, cost, quiet
+    apps; sap: area backlog)."""
+    from sed import rule_findings
 
     paths = _paths(profile, data_dir)
     conn = db.connect(paths.db)
     try:
         ref = _parse_date(as_of) or _latest_data_date(conn)
-        stats = analytics.refresh_rule_findings(conn, paths, ref, force=force)
-        published = analytics.published_rule_findings(conn, ref)
+        stats = rule_findings.refresh_enabled(conn, paths, ref, force=force)
+        published = rule_findings.published(conn, ref)
     finally:
         conn.close()
     emit(

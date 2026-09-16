@@ -1,8 +1,14 @@
 # SED modules
 
 SED is a platform: the core (import engine, PII, database, AI run lifecycle, report engines, API host, dashboard shell)
-knows nothing about any business domain. Each domain is a **module**. Ops (tickets, SLA, costs, licenses, vendors) is
-module #1. Later modules (for example delivery management of new business apps) plug in the same way.
+knows nothing about any business domain. Each domain is a **module**:
+
+| Module | Key | Scope |
+|---|---|---|
+| #1 | `ops` | tickets, SLA, backlog, costs, licenses, vendors; weekly, monthly, quarterly and vendor reports |
+| #2 | `sap` | SAP L3 support by area and landscape on top of the ops tickets, SAP risks, `sap-weekly` (`src/sed/modules/sap/CLAUDE.md`) |
+
+Later modules (for example delivery management of new business apps) plug in the same way.
 
 ## What a module declares
 
@@ -24,7 +30,7 @@ is a lazy import reference (`"package.module:attr"`), so the core imports module
 | Config | `config_files`, `data_subdirs` | `config/<key>/...`, overridable in `DATA_DIR\config\<key>\` |
 | Tables | `tables` | documentation and collision checks |
 
-Enable or disable modules in the layered `config/modules.yaml` (`enabled: [ops]`). A disabled module's commands exit 4,
+Enable or disable modules in the layered `config/modules.yaml` (`enabled: [ops, sap]`). A disabled module's commands exit 4,
 its API routes are not mounted and its pages are hidden.
 
 ## Adding a module
@@ -71,8 +77,20 @@ modules never undo each other's findings. Each module keeps its own refresh stat
 ## Shared ("portfolio") tables
 
 `vendor`, `application`, `work_item` and `doc_page` are core-owned schema shared by all modules. Any module may write
-them through its own mappings. A `full_snapshot` file only soft-deletes rows its own mapping (by name) last loaded, so
-one module's snapshot never retires rows another module's files loaded. Module-specific tables belong to one module.
+them through its own mappings, and a module that depends on another may also load that module's targets (the `sap`
+mappings load `ticket` and `application` rows through the ops targets). Snapshots stay within their module:
+
+- a `full_snapshot` file soft-deletes only rows that a mapping of its own module last wrote;
+- an `active_snapshot` file ("all open" export) flags as stale only open rows that a mapping of its own module last
+  wrote.
+
+A row belongs to the module whose mapping wrote it last (`last_batch_id`), including mappings renamed since; a row no
+installed module's mapping wrote stays in every module's scope (`sed.ingest.loader._module_rows`). One module's
+snapshot therefore never retires or stales rows another module's files loaded. Module-specific tables belong to one
+module.
+
+A module can also select rows of shared tables on read instead of copying them: `metrics.Filters.scope_sql` takes an
+extra ticket predicate (written with `{t}` for the alias), which is how the SAP scope reuses every ops metric.
 
 ## Synthetic inbox manifest
 

@@ -1,7 +1,7 @@
 # SED
 
-SED is a personal toolkit for an application owner, built as a platform of modules (ops is module #1; see
-`docs/modules.md`). It:
+SED is a personal toolkit for an application owner, built as a platform of modules (ops is module #1, SAP application
+support is module #2; see `docs/modules.md`). It:
 
 1. **Imports** ITSM (incidents, requests, changes, problems, SLAs, CMDB), Jira, Confluence and Excel/SharePoint
    exports into one local SQLite database.
@@ -74,6 +74,7 @@ Outputs land in `DATA_DIR\out\<period>\`. Useful follow-ups: `sed alias list --u
 | monthly | month | `uv run sed report build monthly --period 2026-08 --profile synthetic` |
 | quarterly | quarter | `uv run sed report build quarterly --period 2026-Q3 --profile synthetic` |
 | vendor | quarter or month | `uv run sed report build vendor --period 2026-Q3 --vendor V001 --profile synthetic` |
+| sap-weekly | ISO week | `uv run sed report build sap-weekly --period 2026-W35 --profile synthetic` |
 
 - `--ai approved|none|draft` controls AI content; `none` builds deterministic, shareable files.
 - What each report shows (KPIs, sheets, colour rules, slides) is YAML in `config/ops/reports/`; override it locally in
@@ -91,6 +92,24 @@ uv run sed serve --profile synthetic                  # http://127.0.0.1:8000, o
 
 The server binds 127.0.0.1 only; write requests need the per-launch token injected into the page. Development with
 hot reload: `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1`.
+
+## SAP application support (module `sap`)
+
+SAP tickets stay ordinary ops tickets. `config/sap/scope.yaml` decides on read which of them are SAP L3 tickets (an
+SAP assignment group, one per SAP area, or an SAP category or custom field) and gives each its area and landscape (ECC
+or S/4HANA, from the application). Real group names, categories and application ids go in
+`DATA_DIR\config\sap\scope.yaml`; `uv run sed doctor --profile real` warns about groups never seen on a ticket.
+
+```bash
+uv run sed synth --module sap --profile synthetic     # SAP apps and incidents with planted patterns
+uv run sed import --inbox --profile synthetic
+uv run sed analytics refresh --profile synthetic      # SAP backlog risks per area (config/sap/risk_rules.yaml)
+uv run sed report build sap-weekly --period 2026-W35 --ai none --profile synthetic
+```
+
+Dashboard pages: `#/sap` (KPIs, areas, landscapes, SAP risks) and `#/sap/tickets` (area and landscape filters, trend,
+aging, SLA, arrivals vs closures, attention list). Metrics stay at group (area) level, never per person. ChaRM changes
+and transports, IDoc health and SAP subcategories in AI triage follow in the next SAP phases.
 
 ## AI analysis (Claude Code)
 

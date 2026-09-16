@@ -1,0 +1,11 @@
+# "All open SAP incidents" list export. Open incidents that SAP files loaded and this export misses are flagged
+# stale_open (tickets the ops exports loaded are handled by the ops open-incident snapshot).
+extends: sap_incidents
+name: sap_incidents_active
+load_mode: active_snapshot
+description: Snapshot of all currently open SAP incidents (file name carries the snapshot date)
+match:
+  glob: ["sap_incident_active_*.csv", "sap_incident_active_*.xlsx"]
+as_of:
+  from_filename: '(\d{4}-\d{2}-\d{2})'
+  format: "%Y-%m-%d"

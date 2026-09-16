@@ -1,0 +1,41 @@
+# SAP scope: which ServiceNow tickets are SAP L3 tickets, their SAP area and their landscape (module: sap).
+# Synthetic, fictional defaults. Real group names, categories, custom fields and application ids belong in
+# DATA_DIR\config\sap\scope.yaml; each list there replaces the default list as a whole.
+version: 1
+
+# SAP functional areas (code: lower case, used in URLs and finding subjects).
+areas:
+  - {code: fi_co, label: "FI/CO"}
+  - {code: sd, label: "SD"}
+  - {code: mm, label: "MM"}
+  - {code: pp_qm, label: "PP/QM"}
+  - {code: ewm, label: "EWM"}
+  - {code: basis, label: "Basis"}
+  - {code: security, label: "Security & authorisations"}
+  - {code: integration, label: "Integration"}
+  - {code: abap, label: "ABAP development"}
+
+# One assignment group per area: tickets assigned to these groups are SAP tickets of that area (exact names).
+groups:
+  - {name: SAP-FICO-L3, area: fi_co}
+  - {name: SAP-SD-L3, area: sd}
+  - {name: SAP-MM-L3, area: mm}
+  - {name: SAP-PPQM-L3, area: pp_qm}
+  - {name: SAP-EWM-L3, area: ewm}
+  - {name: SAP-BASIS-L3, area: basis}
+  - {name: SAP-SEC-L3, area: security}
+  - {name: SAP-INT-L3, area: integration}
+  - {name: SAP-ABAP-L3, area: abap}
+
+# ServiceNow categories that mark a ticket as SAP before an SAP group has it (area "unassigned").
+categories: [SAP]
+
+# Kept custom fields (the incident mapping needs `raw_keep: [<field>]`) that mark a ticket as SAP: any non-empty value,
+# or one of `values` when given (area "unassigned").
+custom_fields:
+  - {field: u_sap_component}
+
+# Applications (app_id) per landscape; SAP tickets on other applications show as landscape "unknown".
+landscapes:
+  - {code: ecc, label: "SAP ECC", apps: [APM0990001]}
+  - {code: s4, label: "SAP S/4HANA", apps: [APM0990002]}

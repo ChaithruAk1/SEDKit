@@ -2566,6 +2566,594 @@
         "title": "RunsOut",
         "type": "object"
       },
+      "SapAging": {
+        "additionalProperties": false,
+        "properties": {
+          "d0_7": {
+            "title": "D0 7",
+            "type": "integer"
+          },
+          "d31_90": {
+            "title": "D31 90",
+            "type": "integer"
+          },
+          "d8_30": {
+            "title": "D8 30",
+            "type": "integer"
+          },
+          "d90p": {
+            "title": "D90P",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "d0_7",
+          "d8_30",
+          "d31_90",
+          "d90p"
+        ],
+        "title": "SapAging",
+        "type": "object"
+      },
+      "SapAreaRow": {
+        "additionalProperties": false,
+        "properties": {
+          "aged_30d": {
+            "title": "Aged 30D",
+            "type": "integer"
+          },
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "opened": {
+            "title": "Opened",
+            "type": "integer"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "integer"
+          },
+          "sla_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Pct"
+          }
+        },
+        "required": [
+          "area",
+          "label",
+          "open",
+          "aged_30d",
+          "opened",
+          "resolved",
+          "sla_pct"
+        ],
+        "title": "SapAreaRow",
+        "type": "object"
+      },
+      "SapAttentionRow": {
+        "additionalProperties": false,
+        "properties": {
+          "age_days": {
+            "title": "Age Days",
+            "type": "number"
+          },
+          "app": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App"
+          },
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "area_label": {
+            "title": "Area Label",
+            "type": "string"
+          },
+          "assignment_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Group"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opened_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened At"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "reasons": {
+            "title": "Reasons",
+            "type": "string"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "ticket_id": {
+            "title": "Ticket Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticket_id",
+          "number",
+          "priority",
+          "area",
+          "area_label",
+          "app",
+          "state",
+          "assignment_group",
+          "opened_at",
+          "age_days",
+          "reasons",
+          "short_description"
+        ],
+        "title": "SapAttentionRow",
+        "type": "object"
+      },
+      "SapBacklogAreaRow": {
+        "additionalProperties": false,
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "d0_7": {
+            "title": "D0 7",
+            "type": "integer"
+          },
+          "d31_90": {
+            "title": "D31 90",
+            "type": "integer"
+          },
+          "d8_30": {
+            "title": "D8 30",
+            "type": "integer"
+          },
+          "d90p": {
+            "title": "D90P",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "area",
+          "label",
+          "total",
+          "d0_7",
+          "d8_30",
+          "d31_90",
+          "d90p"
+        ],
+        "title": "SapBacklogAreaRow",
+        "type": "object"
+      },
+      "SapFlowRow": {
+        "additionalProperties": false,
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "arrived": {
+            "title": "Arrived",
+            "type": "integer"
+          },
+          "closed": {
+            "title": "Closed",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "net": {
+            "title": "Net",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "area",
+          "label",
+          "arrived",
+          "closed",
+          "net"
+        ],
+        "title": "SapFlowRow",
+        "type": "object"
+      },
+      "SapL3Out": {
+        "additionalProperties": false,
+        "properties": {
+          "aging": {
+            "$ref": "#/components/schemas/SapAging"
+          },
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "areas": {
+            "items": {
+              "$ref": "#/components/schemas/SapOption"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "attention": {
+            "items": {
+              "$ref": "#/components/schemas/SapAttentionRow"
+            },
+            "title": "Attention",
+            "type": "array"
+          },
+          "attention_count": {
+            "title": "Attention Count",
+            "type": "integer"
+          },
+          "backlog_total": {
+            "title": "Backlog Total",
+            "type": "integer"
+          },
+          "by_area": {
+            "items": {
+              "$ref": "#/components/schemas/SapBacklogAreaRow"
+            },
+            "title": "By Area",
+            "type": "array"
+          },
+          "by_landscape": {
+            "items": {
+              "$ref": "#/components/schemas/SapLandscapeRow"
+            },
+            "title": "By Landscape",
+            "type": "array"
+          },
+          "flow": {
+            "items": {
+              "$ref": "#/components/schemas/SapFlowRow"
+            },
+            "title": "Flow",
+            "type": "array"
+          },
+          "landscape": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landscape"
+          },
+          "landscapes": {
+            "items": {
+              "$ref": "#/components/schemas/SapOption"
+            },
+            "title": "Landscapes",
+            "type": "array"
+          },
+          "sla_by_priority": {
+            "items": {
+              "$ref": "#/components/schemas/SapSlaPriorityRow"
+            },
+            "title": "Sla By Priority",
+            "type": "array"
+          },
+          "sla_source": {
+            "title": "Sla Source",
+            "type": "string"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/SapTrendRow"
+            },
+            "title": "Trend",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "at",
+          "sla_source",
+          "area",
+          "landscape",
+          "areas",
+          "landscapes",
+          "backlog_total",
+          "aging",
+          "by_area",
+          "by_landscape",
+          "trend",
+          "flow",
+          "sla_by_priority",
+          "attention_count",
+          "attention"
+        ],
+        "title": "SapL3Out",
+        "type": "object"
+      },
+      "SapLandscapeRow": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "landscape": {
+            "title": "Landscape",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "landscape",
+          "label",
+          "open"
+        ],
+        "title": "SapLandscapeRow",
+        "type": "object"
+      },
+      "SapOption": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "SapOption",
+        "type": "object"
+      },
+      "SapOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "areas": {
+            "items": {
+              "$ref": "#/components/schemas/SapAreaRow"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "data_as_of_last_import": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data As Of Last Import"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/FindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/Kpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "landscapes": {
+            "items": {
+              "$ref": "#/components/schemas/SapLandscapeRow"
+            },
+            "title": "Landscapes",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "period",
+          "data_as_of_last_import",
+          "configured",
+          "kpis",
+          "areas",
+          "landscapes",
+          "findings"
+        ],
+        "title": "SapOverview",
+        "type": "object"
+      },
+      "SapSlaPriorityRow": {
+        "additionalProperties": false,
+        "properties": {
+          "met": {
+            "title": "Met",
+            "type": "integer"
+          },
+          "pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "priority",
+          "total",
+          "met",
+          "pct"
+        ],
+        "title": "SapSlaPriorityRow",
+        "type": "object"
+      },
+      "SapTrendRow": {
+        "additionalProperties": false,
+        "properties": {
+          "net": {
+            "title": "Net",
+            "type": "integer"
+          },
+          "opened": {
+            "title": "Opened",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "integer"
+          },
+          "sla_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Pct"
+          }
+        },
+        "required": [
+          "period",
+          "opened",
+          "resolved",
+          "net",
+          "sla_pct"
+        ],
+        "title": "SapTrendRow",
+        "type": "object"
+      },
       "SlaOut": {
         "additionalProperties": false,
         "properties": {
@@ -7499,6 +8087,432 @@
         "summary": "Runs",
         "tags": [
           "core"
+        ]
+      }
+    },
+    "/api/sap/l3": {
+      "get": {
+        "operationId": "sap_l3",
+        "parameters": [
+          {
+            "description": "SAP area code, or 'unassigned'",
+            "in": "query",
+            "name": "area",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "SAP area code, or 'unassigned'",
+              "title": "Area"
+            }
+          },
+          {
+            "description": "Landscape code, or 'unknown'",
+            "in": "query",
+            "name": "landscape",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Landscape code, or 'unknown'",
+              "title": "Landscape"
+            }
+          },
+          {
+            "in": "query",
+            "name": "weeks",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 52,
+              "minimum": 4,
+              "title": "Weeks",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "app_id (repeatable)",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "schema": {
+              "description": "app_id (repeatable)",
+              "items": {
+                "type": "string"
+              },
+              "title": "App",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          },
+          {
+            "description": "vendor_id",
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "vendor_id",
+              "title": "Vendor"
+            }
+          },
+          {
+            "description": "assignment group",
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "assignment group",
+              "title": "Group"
+            }
+          },
+          {
+            "description": "2026-W35, 2026-08 or 2026-Q3",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2026-W35, 2026-08 or 2026-Q3",
+              "title": "Period"
+            }
+          },
+          {
+            "description": "YYYY-MM-DD (default: data as-of)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "YYYY-MM-DD (default: data as-of)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Include unapproved AI content",
+            "in": "query",
+            "name": "include_drafts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include unapproved AI content",
+              "title": "Include Drafts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SapL3Out"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "L3",
+        "tags": [
+          "sap"
+        ]
+      }
+    },
+    "/api/sap/overview": {
+      "get": {
+        "operationId": "sap_overview",
+        "parameters": [
+          {
+            "description": "app_id (repeatable)",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "schema": {
+              "description": "app_id (repeatable)",
+              "items": {
+                "type": "string"
+              },
+              "title": "App",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          },
+          {
+            "description": "vendor_id",
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "vendor_id",
+              "title": "Vendor"
+            }
+          },
+          {
+            "description": "assignment group",
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "assignment group",
+              "title": "Group"
+            }
+          },
+          {
+            "description": "2026-W35, 2026-08 or 2026-Q3",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2026-W35, 2026-08 or 2026-Q3",
+              "title": "Period"
+            }
+          },
+          {
+            "description": "YYYY-MM-DD (default: data as-of)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "YYYY-MM-DD (default: data as-of)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Include unapproved AI content",
+            "in": "query",
+            "name": "include_drafts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include unapproved AI content",
+              "title": "Include Drafts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SapOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "sap"
         ]
       }
     }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 
@@ -152,8 +153,33 @@ def test_sla_sources(conn):
     assert (s_task["met"], s_task["total"], s_task["pct"]) == (2, 4, 50.0)  # task_sla: B and C breached
     s_made = metrics.sla(conn, core_only, W35, source="made_sla")
     assert (s_made["met"], s_made["total"], s_made["pct"]) == (3, 4, 75.0)  # made_sla: only B missed
+    s_target = metrics.sla(conn, core_only, W35, source="targets")
+    # targets: A 2 h <= 8 (P2), C 24 h and H 1.5 h <= 120 (P4) met; B 120 h > 40 (P3) missed
+    assert (s_target["met"], s_target["total"], s_target["pct"]) == (3, 4, 75.0)
     assert metrics.sla_source(conn) == "task_sla"
     assert s_task["by_priority"][4] == {"total": 2, "met": 1, "pct": 50.0}
+
+
+@pytest.mark.parametrize("drives", [False, True])
+def test_scope_predicate_matches_the_equivalent_filter(conn, drives):
+    by_app = metrics.Filters(app_ids=["A1"])
+    ids = [r[0] for r in conn.execute("SELECT ticket_id FROM ticket WHERE app_id = 'A1'")]
+    scoped = metrics.Filters(
+        scope_sql="{t}.ticket_id IN (SELECT value FROM json_each(?))",
+        scope_params=(json.dumps(ids),),
+        scope_drives=drives,
+    )
+    assert scoped.where()[0].startswith("+t.kind = ?" if drives else "t.kind = ?")
+    for source in ("task_sla", "made_sla", "targets"):
+        assert metrics.sla(conn, scoped, W35, source) == metrics.sla(conn, by_app, W35, source)
+    assert metrics.backlog(conn, scoped, W35.end_utc) == metrics.backlog(conn, by_app, W35.end_utc)
+    assert metrics.mttr(conn, scoped, W35) == metrics.mttr(conn, by_app, W35)
+    assert metrics.volume_trend(conn, scoped, [W35]) == metrics.volume_trend(conn, by_app, [W35])
+    plan = [
+        r[3]
+        for r in conn.execute("EXPLAIN QUERY PLAN SELECT 1 FROM ticket t WHERE " + scoped.where()[0], scoped.where()[1])
+    ]
+    assert any("(ticket_id=?)" in step for step in plan) == drives, plan
 
 
 def test_mttr(conn):

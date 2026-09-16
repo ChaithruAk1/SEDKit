@@ -194,8 +194,13 @@ def _git_commit() -> str | None:
 
 
 def _suppressed_findings(
-    conn: sqlite3.Connection, as_of: date, subjects: set[tuple[str, str]] | None = None
+    conn: sqlite3.Connection,
+    as_of: date,
+    subjects: set[tuple[str, str]] | None = None,
+    kinds: tuple[str, ...] | None = None,
 ) -> list[dict[str, Any]]:
+    """Acknowledged or suppressed rule findings for a report's provenance: only the report module's kinds (when given)
+    and, for subject-scoped reports, only those subjects."""
     rows = conn.execute(
         "SELECT stable_key, kind, title, status, suppress_until, subject_type, subject_id FROM finding "
         "WHERE origin = 'rule' AND (status = 'acknowledged' OR (status = 'active' AND suppress_until > ?)) "
@@ -204,7 +209,10 @@ def _suppressed_findings(
     ).fetchall()
     keys = ("stable_key", "kind", "title", "status", "suppress_until")
     return [
-        {k: r[k] for k in keys} for r in rows if subjects is None or (r["subject_type"], r["subject_id"]) in subjects
+        {k: r[k] for k in keys}
+        for r in rows
+        if (subjects is None or (r["subject_type"], r["subject_id"]) in subjects)
+        and (kinds is None or r["kind"] in kinds)
     ]
 
 
@@ -239,9 +247,10 @@ def create_snapshot(
     conn: sqlite3.Connection, paths: Paths, report_key: str, period_label: str, vendor_id: str | None = None
 ) -> Snapshot:
     from sed.ingest.freshness import import_freshness
-    from sed.modules import load_ref
+    from sed.modules import load_ref, report
 
     req = build_request(conn, paths, report_key, period_label, vendor_id)
+    module_kinds = tuple(report(report_key)[0].finding_kinds)
     parts: SnapshotParts = load_ref(req.report.builder)(req)
     meta = db.all_meta(conn)
     freshness = parts.freshness if parts.freshness is not None else import_freshness(conn)
@@ -258,7 +267,7 @@ def create_snapshot(
         "ai_derived_facts": list(parts.ai_derived_facts),
         "period_end": req.period.end_local.isoformat(),
         "data_as_of": req.data_as_of.isoformat() if req.data_as_of else None,
-        "suppressed_findings": _suppressed_findings(conn, req.as_of, parts.suppressed_subjects),
+        "suppressed_findings": _suppressed_findings(conn, req.as_of, parts.suppressed_subjects, module_kinds),
         "base_currency": req.settings.base_currency,
     }
     body = {

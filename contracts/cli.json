@@ -671,7 +671,7 @@
     {
       "commands": [
         {
-          "help": "Recompute rule-origin findings (renewals, notice deadlines, license use, vendor SLA, cost, quiet apps).",
+          "help": "Recompute the rule-origin findings of every enabled module (ops: renewals, licenses, vendor SLA, cost, quiet",
           "name": "refresh",
           "params": [
             {

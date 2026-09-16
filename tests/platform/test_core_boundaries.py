@@ -23,7 +23,6 @@ REGISTRY_FILES = {"modules/__init__.py", "modules/contract.py", "modules/cli.py"
 # Specific imports legacy core files still make into ops code. Every entry is debt: remove it when the file migrates.
 ALLOWLIST = {
     ("cli.py", "sed.metrics"),  # legacy top-level ops commands (metrics, attention)
-    ("cli.py", "sed.analytics"),  # legacy top-level `sed analytics refresh`
 }
 
 

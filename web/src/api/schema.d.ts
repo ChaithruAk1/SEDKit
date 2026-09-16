@@ -429,6 +429,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sap/l3": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** L3 */
+        get: operations["sap_l3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sap/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["sap_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1121,6 +1155,186 @@ export interface components {
         RunsOut: {
             /** Items */
             items: components["schemas"]["RunRow"][];
+        };
+        /** SapAging */
+        SapAging: {
+            /** D0 7 */
+            d0_7: number;
+            /** D31 90 */
+            d31_90: number;
+            /** D8 30 */
+            d8_30: number;
+            /** D90P */
+            d90p: number;
+        };
+        /** SapAreaRow */
+        SapAreaRow: {
+            /** Aged 30D */
+            aged_30d: number;
+            /** Area */
+            area: string;
+            /** Label */
+            label: string;
+            /** Open */
+            open: number;
+            /** Opened */
+            opened: number;
+            /** Resolved */
+            resolved: number;
+            /** Sla Pct */
+            sla_pct: number | null;
+        };
+        /** SapAttentionRow */
+        SapAttentionRow: {
+            /** Age Days */
+            age_days: number;
+            /** App */
+            app: string | null;
+            /** Area */
+            area: string;
+            /** Area Label */
+            area_label: string;
+            /** Assignment Group */
+            assignment_group: string | null;
+            /** Number */
+            number: string;
+            /** Opened At */
+            opened_at: string | null;
+            /** Priority */
+            priority: number | null;
+            /** Reasons */
+            reasons: string;
+            /** Short Description */
+            short_description: string | null;
+            /** State */
+            state: string | null;
+            /** Ticket Id */
+            ticket_id: string;
+        };
+        /** SapBacklogAreaRow */
+        SapBacklogAreaRow: {
+            /** Area */
+            area: string;
+            /** D0 7 */
+            d0_7: number;
+            /** D31 90 */
+            d31_90: number;
+            /** D8 30 */
+            d8_30: number;
+            /** D90P */
+            d90p: number;
+            /** Label */
+            label: string;
+            /** Total */
+            total: number;
+        };
+        /** SapFlowRow */
+        SapFlowRow: {
+            /** Area */
+            area: string;
+            /** Arrived */
+            arrived: number;
+            /** Closed */
+            closed: number;
+            /** Label */
+            label: string;
+            /** Net */
+            net: number;
+            /** Period */
+            period: string;
+        };
+        /** SapL3Out */
+        SapL3Out: {
+            aging: components["schemas"]["SapAging"];
+            /** Area */
+            area: string | null;
+            /** Areas */
+            areas: components["schemas"]["SapOption"][];
+            /** As Of */
+            as_of: string;
+            /** At */
+            at: string;
+            /** Attention */
+            attention: components["schemas"]["SapAttentionRow"][];
+            /** Attention Count */
+            attention_count: number;
+            /** Backlog Total */
+            backlog_total: number;
+            /** By Area */
+            by_area: components["schemas"]["SapBacklogAreaRow"][];
+            /** By Landscape */
+            by_landscape: components["schemas"]["SapLandscapeRow"][];
+            /** Flow */
+            flow: components["schemas"]["SapFlowRow"][];
+            /** Landscape */
+            landscape: string | null;
+            /** Landscapes */
+            landscapes: components["schemas"]["SapOption"][];
+            /** Sla By Priority */
+            sla_by_priority: components["schemas"]["SapSlaPriorityRow"][];
+            /** Sla Source */
+            sla_source: string;
+            /** Trend */
+            trend: components["schemas"]["SapTrendRow"][];
+        };
+        /** SapLandscapeRow */
+        SapLandscapeRow: {
+            /** Label */
+            label: string;
+            /** Landscape */
+            landscape: string;
+            /** Open */
+            open: number;
+        };
+        /** SapOption */
+        SapOption: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** SapOverview */
+        SapOverview: {
+            /** Areas */
+            areas: components["schemas"]["SapAreaRow"][];
+            /** As Of */
+            as_of: string;
+            /** Configured */
+            configured: boolean;
+            /** Data As Of Last Import */
+            data_as_of_last_import: string | null;
+            /** Findings */
+            findings: components["schemas"]["FindingOut"][];
+            /** Kpis */
+            kpis: components["schemas"]["Kpi"][];
+            /** Landscapes */
+            landscapes: components["schemas"]["SapLandscapeRow"][];
+            /** Period */
+            period: string;
+        };
+        /** SapSlaPriorityRow */
+        SapSlaPriorityRow: {
+            /** Met */
+            met: number;
+            /** Pct */
+            pct: number | null;
+            /** Priority */
+            priority: string;
+            /** Total */
+            total: number;
+        };
+        /** SapTrendRow */
+        SapTrendRow: {
+            /** Net */
+            net: number;
+            /** Opened */
+            opened: number;
+            /** Period */
+            period: string;
+            /** Resolved */
+            resolved: number;
+            /** Sla Pct */
+            sla_pct: number | null;
         };
         /** SlaOut */
         SlaOut: {
@@ -3196,6 +3410,169 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunsOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sap_l3: {
+        parameters: {
+            query?: {
+                /** @description SAP area code, or 'unassigned' */
+                area?: string | null;
+                /** @description Landscape code, or 'unknown' */
+                landscape?: string | null;
+                weeks?: number;
+                /** @description app_id (repeatable) */
+                app?: string[];
+                family?: string | null;
+                /** @description vendor_id */
+                vendor?: string | null;
+                /** @description assignment group */
+                group?: string | null;
+                /** @description 2026-W35, 2026-08 or 2026-Q3 */
+                period?: string | null;
+                /** @description YYYY-MM-DD (default: data as-of) */
+                as_of?: string | null;
+                /** @description Include unapproved AI content */
+                include_drafts?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SapL3Out"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    sap_overview: {
+        parameters: {
+            query?: {
+                /** @description app_id (repeatable) */
+                app?: string[];
+                family?: string | null;
+                /** @description vendor_id */
+                vendor?: string | null;
+                /** @description assignment group */
+                group?: string | null;
+                /** @description 2026-W35, 2026-08 or 2026-Q3 */
+                period?: string | null;
+                /** @description YYYY-MM-DD (default: data as-of) */
+                as_of?: string | null;
+                /** @description Include unapproved AI content */
+                include_drafts?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SapOverview"];
                 };
             };
             /** @description Not found */

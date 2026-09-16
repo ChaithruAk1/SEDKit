@@ -28,6 +28,9 @@ def _fmt(f: dict[str, Any] | None, currency: str = "EUR") -> str:
     return str(v)
 
 
+format_fact = _fmt  # public name for module Markdown renderers
+
+
 def _signed_pct(f: dict[str, Any] | None) -> str:
     if not f or f["value"] is None:
         return ""
