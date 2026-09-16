@@ -167,22 +167,91 @@ def sla_source(conn: sqlite3.Connection) -> str:
     return "targets"
 
 
-def sla(conn: sqlite3.Connection, f: Filters, period: Period, source: str | None = None) -> dict[str, Any]:
-    src = source or sla_source(conn)
-    where, params = f.where()
-    # Per-ticket SLA check (task_sla looked up through its ticket index), so the cost follows the tickets resolved in
-    # the period rather than the size of task_sla.
-    sql = (
-        f"SELECT t.priority, COUNT(*), SUM({sla_met_sql(src)}) FROM ticket t WHERE {where} "
-        "AND t.resolved_at >= ? AND t.resolved_at < ? GROUP BY t.priority"
-    )
-    rows = conn.execute(sql, [*params, period.start_iso, period.end_iso]).fetchall()
+def _bounds(periods: list[Period]) -> list[tuple[str, str]]:
+    """[start, end) of each period as stored UTC text (computed once: Period renders them on every access)."""
+    return [(p.start_iso, p.end_iso) for p in periods]
+
+
+def _periods_holding(ts: str | None, bounds: list[tuple[str, str]]) -> list[int]:
+    """Indexes of the periods whose [start, end) holds the stored UTC timestamp `ts` (ISO text compares in order)."""
+    if not ts:
+        return []
+    return [i for i, (start, end) in enumerate(bounds) if start <= ts < end]
+
+
+def _window(bounds: list[tuple[str, str]]) -> tuple[str, str]:
+    return min(b[0] for b in bounds), max(b[1] for b in bounds)
+
+
+def _sla_result(src: str, counts: dict[int, list[int]]) -> dict[str, Any]:
     by_priority = {
-        int(r[0] or 0): {"total": int(r[1]), "met": int(r[2] or 0), "pct": _pct(r[2] or 0, r[1])} for r in rows
+        p: {"total": total, "met": met, "pct": _pct(met, total)} for p, (total, met) in sorted(counts.items())
     }
     total = sum(v["total"] for v in by_priority.values())
     met = sum(v["met"] for v in by_priority.values())
     return {"pct": _pct(met, total), "met": met, "total": total, "source": src, "by_priority": by_priority}
+
+
+def _sla_rows(
+    conn: sqlite3.Connection, f: Filters, bounds: list[tuple[str, str]], src: str
+) -> list[tuple[str, str | None, int, int]]:
+    """(resolved_at, assignment_group, priority, met) of the incidents resolved in the periods' overall window.
+
+    The SLA check runs per ticket (task_sla looked up through its ticket index), so the cost follows the tickets
+    resolved in the window rather than the size of task_sla.
+    """
+    where, params = f.where()
+    lo, hi = _window(bounds)
+    sql = (
+        f"SELECT t.resolved_at, t.assignment_group, t.priority, {sla_met_sql(src)} FROM ticket t WHERE {where} "
+        "AND t.resolved_at >= ? AND t.resolved_at < ?"
+    )
+    return [(r[0], r[1], int(r[2] or 0), int(r[3] or 0)) for r in conn.execute(sql, [*params, lo, hi])]
+
+
+def sla_periods(
+    conn: sqlite3.Connection, f: Filters, periods: list[Period], source: str | None = None
+) -> list[dict[str, Any]]:
+    """`sla` for each period (one query for all of them), in the order given."""
+    if not periods:
+        return []
+    src = source or sla_source(conn)
+    bounds = _bounds(periods)
+    counts: list[dict[int, list[int]]] = [{} for _ in periods]
+    for resolved_at, _group, priority, met in _sla_rows(conn, f, bounds, src):
+        for i in _periods_holding(resolved_at, bounds):
+            slot = counts[i].setdefault(priority, [0, 0])
+            slot[0] += 1
+            slot[1] += met
+    return [_sla_result(src, c) for c in counts]
+
+
+def sla_by_group(
+    conn: sqlite3.Connection, f: Filters, period: Period, source: str | None = None
+) -> dict[str | None, dict[str, Any]]:
+    """`sla` per assignment group for one period (one query); groups with nothing resolved are absent."""
+    src = source or sla_source(conn)
+    counts: dict[str | None, dict[int, list[int]]] = {}
+    for _resolved_at, group, priority, met in _sla_rows(conn, f, _bounds([period]), src):
+        slot = counts.setdefault(group, {}).setdefault(priority, [0, 0])
+        slot[0] += 1
+        slot[1] += met
+    return {group: _sla_result(src, c) for group, c in counts.items()}
+
+
+def merge_sla(results: list[dict[str, Any]], source: str) -> dict[str, Any]:
+    """One `sla` result from several over disjoint ticket sets (for example groups that make up one team)."""
+    counts: dict[int, list[int]] = {}
+    for result in results:
+        for priority, v in result["by_priority"].items():
+            slot = counts.setdefault(priority, [0, 0])
+            slot[0] += v["total"]
+            slot[1] += v["met"]
+    return _sla_result(source, counts)
+
+
+def sla(conn: sqlite3.Connection, f: Filters, period: Period, source: str | None = None) -> dict[str, Any]:
+    return sla_periods(conn, f, [period], source)[0]
 
 
 def sla_met_sql(source: str) -> str:
@@ -198,13 +267,8 @@ def sla_met_sql(source: str) -> str:
     return f"({_hours_expr('t.opened_at', 't.resolved_at')} <= (CASE t.priority {cases} ELSE 120 END))"
 
 
-def mttr(conn: sqlite3.Connection, f: Filters, period: Period) -> dict[str, Any]:
-    where, params = f.where()
-    sql = (
-        f"SELECT {_hours_expr('t.opened_at', 't.resolved_at')} FROM ticket t WHERE {where} "
-        "AND t.resolved_at >= ? AND t.resolved_at < ? AND t.opened_at IS NOT NULL"
-    )
-    hours = sorted(r[0] for r in conn.execute(sql, [*params, period.start_iso, period.end_iso]) if r[0] is not None)
+def _mttr_result(values: list[float]) -> dict[str, Any]:
+    hours = sorted(values)
     if not hours:
         return {"count": 0, "median_h": None, "mean_h": None, "p90_h": None}
     p90 = hours[min(len(hours) - 1, round(0.9 * (len(hours) - 1)))]
@@ -214,6 +278,29 @@ def mttr(conn: sqlite3.Connection, f: Filters, period: Period) -> dict[str, Any]
         "mean_h": round(statistics.fmean(hours), 2),
         "p90_h": round(p90, 2),
     }
+
+
+def mttr_periods(conn: sqlite3.Connection, f: Filters, periods: list[Period]) -> list[dict[str, Any]]:
+    """`mttr` for each period (one query for all of them), in the order given."""
+    if not periods:
+        return []
+    where, params = f.where()
+    bounds = _bounds(periods)
+    lo, hi = _window(bounds)
+    sql = (
+        f"SELECT t.resolved_at, {_hours_expr('t.opened_at', 't.resolved_at')} FROM ticket t WHERE {where} "
+        "AND t.resolved_at >= ? AND t.resolved_at < ? AND t.opened_at IS NOT NULL"
+    )
+    values: list[list[float]] = [[] for _ in periods]
+    for resolved_at, hours in conn.execute(sql, [*params, lo, hi]):
+        if hours is not None:
+            for i in _periods_holding(resolved_at, bounds):
+                values[i].append(hours)
+    return [_mttr_result(v) for v in values]
+
+
+def mttr(conn: sqlite3.Connection, f: Filters, period: Period) -> dict[str, Any]:
+    return mttr_periods(conn, f, [period])[0]
 
 
 def _open_at_clause(alias: str = "t") -> str:
@@ -253,20 +340,29 @@ def stale_open_count(conn: sqlite3.Connection, f: Filters) -> int:
 
 
 def group_flow(conn: sqlite3.Connection, f: Filters, periods: list[Period]) -> list[dict[str, Any]]:
-    """Arrivals vs closures per assignment group per period (backlog growth signal)."""
+    """Arrivals vs closures per assignment group per period (backlog growth signal): periods in the order given,
+    groups ordered by name (no group first), only groups with an arrival or a closure in the period."""
+    if not periods:
+        return []
     where, params = f.where()
-    out = []
-    for p in periods:
-        rows = conn.execute(
-            f"SELECT t.assignment_group, SUM(t.opened_at >= ? AND t.opened_at < ?), "
-            f"SUM(t.resolved_at >= ? AND t.resolved_at < ?) FROM ticket t WHERE {where} "
-            "AND ((t.opened_at >= ? AND t.opened_at < ?) OR (t.resolved_at >= ? AND t.resolved_at < ?)) "
-            "GROUP BY t.assignment_group",
-            [p.start_iso, p.end_iso, p.start_iso, p.end_iso, *params, p.start_iso, p.end_iso, p.start_iso, p.end_iso],
-        ).fetchall()
-        for group, arrived, closed in rows:
-            out.append({"period": p.label, "group": group, "arrived": int(arrived or 0), "closed": int(closed or 0)})
-    return out
+    bounds = _bounds(periods)
+    lo, hi = _window(bounds)
+    rows = conn.execute(
+        f"SELECT t.assignment_group, t.opened_at, t.resolved_at FROM ticket t WHERE {where} "
+        "AND ((t.opened_at >= ? AND t.opened_at < ?) OR (t.resolved_at >= ? AND t.resolved_at < ?))",
+        [*params, lo, hi, lo, hi],
+    ).fetchall()
+    counts: list[dict[str | None, list[int]]] = [{} for _ in periods]
+    for group, opened_at, resolved_at in rows:
+        for i in _periods_holding(opened_at, bounds):
+            counts[i].setdefault(group, [0, 0])[0] += 1
+        for i in _periods_holding(resolved_at, bounds):
+            counts[i].setdefault(group, [0, 0])[1] += 1
+    return [
+        {"period": p.label, "group": group, "arrived": arrived, "closed": closed}
+        for p, by_group in zip(periods, counts, strict=True)
+        for group, (arrived, closed) in sorted(by_group.items(), key=lambda kv: (kv[0] is not None, kv[0] or ""))
+    ]
 
 
 def quality(conn: sqlite3.Connection, f: Filters, period: Period) -> dict[str, Any]:

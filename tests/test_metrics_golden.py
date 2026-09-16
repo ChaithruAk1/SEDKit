@@ -182,6 +182,45 @@ def test_scope_predicate_matches_the_equivalent_filter(conn, drives):
     assert any("(ticket_id=?)" in step for step in plan) == drives, plan
 
 
+def test_batched_period_metrics_match_single_periods(conn):
+    f = metrics.Filters(app_ids=["A1"])
+    periods = [W35.previous(2), W35.previous(), W35, parse_period("2026-W36", TZ)]
+    for source in ("task_sla", "made_sla", "targets"):
+        assert metrics.sla_periods(conn, f, periods, source) == [metrics.sla(conn, f, p, source) for p in periods]
+    assert metrics.mttr_periods(conn, f, periods) == [metrics.mttr(conn, f, p) for p in periods]
+    assert metrics.sla_periods(conn, f, [], "task_sla") == [] and metrics.mttr_periods(conn, f, []) == []
+    # Overlapping periods count a ticket in each of them.
+    month = parse_period("2026-08", TZ)
+    assert metrics.sla_periods(conn, f, [month, W35], "made_sla")[1] == metrics.sla(conn, f, W35, "made_sla")
+
+
+def test_group_flow_counts_arrivals_and_closures_per_period(conn):
+    with db.write_tx(conn):
+        conn.execute("UPDATE ticket SET assignment_group = 'G-B' WHERE number IN ('A', 'C')")
+        conn.execute("UPDATE ticket SET assignment_group = 'G-A' WHERE number = 'B'")
+    f = metrics.Filters(app_ids=["A1"])
+    rows = metrics.group_flow(conn, f, [W35.previous(), W35])
+    # W34: B arrives (G-A), H arrives Sun 23:30 local (no group). W35: A and C arrive and resolve (G-B); B resolves
+    # (G-A); E arrives and H resolves (no group).
+    assert rows == [
+        {"period": "2026-W34", "group": None, "arrived": 1, "closed": 0},
+        {"period": "2026-W34", "group": "G-A", "arrived": 1, "closed": 0},
+        {"period": "2026-W35", "group": None, "arrived": 1, "closed": 1},
+        {"period": "2026-W35", "group": "G-A", "arrived": 0, "closed": 1},
+        {"period": "2026-W35", "group": "G-B", "arrived": 2, "closed": 2},
+    ]
+
+
+def test_sla_by_group_merges_back_to_the_total(conn):
+    with db.write_tx(conn):
+        conn.execute("UPDATE ticket SET assignment_group = 'G-B' WHERE number IN ('A', 'C')")
+    f = metrics.Filters(app_ids=["A1"])
+    by_group = metrics.sla_by_group(conn, f, W35, "task_sla")
+    assert set(by_group) == {None, "G-B"}
+    assert (by_group["G-B"]["met"], by_group["G-B"]["total"]) == (1, 2)  # A met, C breached
+    assert metrics.merge_sla(list(by_group.values()), "task_sla") == metrics.sla(conn, f, W35, "task_sla")
+
+
 def test_mttr(conn):
     m = metrics.mttr(conn, metrics.Filters(app_ids=["A1"]), W35)
     # Hours: H 1.5, A 2, C 24, B 120 -> median 13.0

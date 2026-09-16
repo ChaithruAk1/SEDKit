@@ -6,8 +6,8 @@ the last two have area "unassigned" unless an SAP group also holds the ticket. T
 application ("unknown" when it is not listed). Real names live only in DATA_DIR\\config\\sap\\scope.yaml.
 
 The scope predicate cannot use an index (it ORs groups, categories and JSON fields), so a request that runs many
-metrics first calls `Scope.resolve(conn)`: one scan lists the SAP tickets, and every later predicate looks them up by
-ticket id. Both forms select the same tickets.
+metrics first calls `Scope.resolve(conn)`: one indexed query per criterion lists the SAP tickets, and every later
+predicate looks them up by ticket id. Both forms select the same tickets.
 """
 
 from __future__ import annotations
@@ -106,12 +106,16 @@ class Scope:
         return self.group_area.get(group or "", UNASSIGNED)
 
     def resolve(self, conn: sqlite3.Connection) -> Scope:
-        """This scope with its tickets listed (one scan), so `ticket_sql` selects them by ticket id."""
-        sql, params = self._predicate(None, None)
-        rows = conn.execute(
-            f"SELECT t.ticket_id, t.assignment_group, t.app_id FROM ticket t WHERE {sql.format(t='t')}", params
-        ).fetchall()
-        return replace(self, tickets=tuple((r[0], r[1], r[2]) for r in rows))
+        """This scope with its tickets listed, so `ticket_sql` selects them by ticket id. One indexed query per
+        criterion (assignment group, category, kept custom field; see migration 006) instead of a scan."""
+        found: dict[str, tuple[str, str | None, str | None]] = {}
+        for sql, params in self._criteria():
+            rows = conn.execute(
+                f"SELECT t.ticket_id, t.assignment_group, t.app_id FROM ticket t WHERE {sql.format(t='t')}", params
+            )
+            for ticket_id, group, app_id in rows:
+                found.setdefault(ticket_id, (ticket_id, group, app_id))
+        return replace(self, tickets=tuple(found[k] for k in sorted(found)))
 
     def check_area(self, area: str | None) -> None:
         if area is not None and area not in self.area_labels:
@@ -139,24 +143,30 @@ class Scope:
         ]
         return "{t}.ticket_id IN (SELECT value FROM json_each(?))", (json.dumps(ids),)
 
-    def _predicate(self, area: str | None, landscape: str | None) -> tuple[str, tuple[Any, ...]]:
+    def _criteria(self) -> list[tuple[str, list[Any]]]:
+        """One (predicate with `{t}`, params) per way a ticket enters the scope."""
         c = self.config
-        clauses: list[str] = []
-        params: list[Any] = []
+        out: list[tuple[str, list[Any]]] = []
         if c.groups:
-            clauses.append(f"{{t}}.assignment_group IN ({_marks(c.groups)})")
-            params += [g.name for g in c.groups]
+            out.append((f"{{t}}.assignment_group IN ({_marks(c.groups)})", [g.name for g in c.groups]))
         if c.categories:
-            clauses.append(f"{{t}}.category IN ({_marks(c.categories)})")
-            params += list(c.categories)
+            out.append((f"{{t}}.category IN ({_marks(c.categories)})", list(c.categories)))
         for cf in c.custom_fields:
             path = '$."' + cf.field + '"'
             if cf.values:
-                clauses.append(f"json_extract({{t}}.raw_keep_json, ?) IN ({_marks(cf.values)})")
-                params += [path, *cf.values]
+                sql = f"json_extract({{t}}.raw_keep_json, ?) IN ({_marks(cf.values)})"
+                out.append(("{t}.raw_keep_json IS NOT NULL AND " + sql, [path, *cf.values]))
             else:
-                clauses.append("COALESCE(json_extract({t}.raw_keep_json, ?), '') <> ''")
-                params.append(path)
+                out.append(
+                    ("{t}.raw_keep_json IS NOT NULL AND COALESCE(json_extract({t}.raw_keep_json, ?), '') <> ''", [path])
+                )
+        return out
+
+    def _predicate(self, area: str | None, landscape: str | None) -> tuple[str, tuple[Any, ...]]:
+        c = self.config
+        criteria = self._criteria()
+        clauses = [f"({sql})" for sql, _ in criteria]
+        params: list[Any] = [p for _, ps in criteria for p in ps]
         sql = f"({' OR '.join(clauses) or '0'})"
         if area is not None:
             names = (

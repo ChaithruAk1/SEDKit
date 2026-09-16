@@ -205,7 +205,7 @@ export default function SapTicketsPage() {
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <SectionCard
             title="Arrivals vs closures by area"
-            description={`Last ${flowWeeks || 8} weeks; a positive net means the backlog grew`}
+            description={`All areas, last ${flowWeeks || 8} weeks; a positive net means the backlog grew`}
           >
             <DataTable rows={flowByArea} columns={flowColumns} rowKey={(r) => r.area} loading={l3.loading} emptyText="No SAP tickets in these weeks" minWidth={360} />
           </SectionCard>

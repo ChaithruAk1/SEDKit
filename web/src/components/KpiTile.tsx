@@ -19,6 +19,7 @@ const LOWER_IS_BETTER = new Set([
   'attention.count',
   'sap.l3.backlog',
   'sap.l3.aged_30d',
+  'sap.l3.opened',
   'sap.l3.mttr.median_h',
   'sap.l3.p1p2.open',
   'sap.findings.count',

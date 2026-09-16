@@ -61,8 +61,8 @@ def trend(
     """Opened, resolved, net and SLA % per period."""
     f = filters(scope, area=area, landscape=landscape)
     rows = metrics.volume_trend(conn, f, periods)
-    for row, period in zip(rows, periods, strict=True):
-        row["sla_pct"] = metrics.sla(conn, f, period, source)["pct"]
+    for row, sla in zip(rows, metrics.sla_periods(conn, f, periods, source), strict=True):
+        row["sla_pct"] = sla["pct"]
     return rows
 
 
@@ -128,6 +128,9 @@ def area_summary(
     """Per area: open and aged (> 30 days) at `at`, opened/resolved and SLA % in `period`."""
     open_by_area = {r["area"]: r for r in backlog(conn, scope, at)["by_area"]}
     flow = {r["area"]: r for r in flow_by_area(conn, scope, [period])}
+    sla_by_area: dict[str, list[dict[str, Any]]] = {}
+    for group, result in metrics.sla_by_group(conn, filters(scope), period, source).items():
+        sla_by_area.setdefault(scope.area_of(group), []).append(result)
     labels = scope.area_labels
     out = []
     for code in area_order(scope):
@@ -144,7 +147,7 @@ def area_summary(
                 "aged_30d": open_row["d31_90"] + open_row["d90p"],
                 "opened": opened,
                 "resolved": resolved,
-                "sla_pct": metrics.sla(conn, filters(scope, area=code), period, source)["pct"] if resolved else None,
+                "sla_pct": metrics.merge_sla(sla_by_area.get(code, []), source)["pct"] if resolved else None,
             }
         )
     return out
@@ -176,16 +179,17 @@ def week_kpis(
 ) -> dict[str, Any]:
     """Opened, resolved, SLA % and MTTR median for `week`, with the averages of the `previous` weeks."""
     f = filters(scope)
-    vol = metrics.volume_trend(conn, f, [*previous, week])
-    now = metrics.sla(conn, f, week, source)["pct"]
-    mttr_now = metrics.mttr(conn, f, week)["median_h"]
+    periods = [*previous, week]
+    vol = metrics.volume_trend(conn, f, periods)
+    sla = [r["pct"] for r in metrics.sla_periods(conn, f, periods, source)]
+    mttr = [r["median_h"] for r in metrics.mttr_periods(conn, f, periods)]
     return {
         "opened": vol[-1]["opened"],
         "opened_avg": _avg([v["opened"] for v in vol[:-1]]),
         "resolved": vol[-1]["resolved"],
         "resolved_avg": _avg([v["resolved"] for v in vol[:-1]]),
-        "sla_pct": now,
-        "sla_pct_avg": _avg([metrics.sla(conn, f, p, source)["pct"] for p in previous]),
-        "mttr_median_h": mttr_now,
-        "mttr_median_h_avg": _avg([metrics.mttr(conn, f, p)["median_h"] for p in previous]),
+        "sla_pct": sla[-1],
+        "sla_pct_avg": _avg(sla[:-1]),
+        "mttr_median_h": mttr[-1],
+        "mttr_median_h_avg": _avg(mttr[:-1]),
     }

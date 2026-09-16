@@ -246,3 +246,15 @@ def test_rule_window_ends_with_the_last_complete_week():
 
     assert week_label(AS_OF - timedelta(days=7)) == WEEK
     assert week_label(date(2026, 8, 30) - timedelta(days=7)) == "2026-W34"
+
+
+def test_scope_resolution_uses_indexes(ro_conn, env):
+    for sql, params in env["scope"]._criteria():
+        plan = " ".join(
+            r[3]
+            for r in ro_conn.execute(
+                f"EXPLAIN QUERY PLAN SELECT t.ticket_id FROM ticket t WHERE {sql.format(t='t')}", params
+            )
+        )
+        # an index search, or a scan of the small partial index of tickets with kept fields; never the whole table
+        assert "USING INDEX" in plan or "USING COVERING INDEX" in plan, (sql, plan)
