@@ -1,10 +1,14 @@
-"""Human review of AI runs: sample cards, verdicts, approve-run and reject-run.
+"""Human review of AI runs and findings: sample cards, verdicts, approve-run, reject-run, finding decisions and label
+corrections.
 
 Labels are approved per run, never per item and never on model confidence. finish-run draws a random stratified
 sample (the only input to sample accuracy) plus the lowest-confidence items (shown separately). A reviewer records
 verdicts in a JSON file keyed "<item_id>|<stage>" (`sample --template` writes one with null placeholders):
 "correct", {"verdict": "incorrect", "category": ..., "subcategory": ...}, or null (skipped, not recorded).
-approve-run needs a verdict for every random-sample item and stores the weighted accuracy with a Wilson 95% interval.
+approve-run needs a verdict for every random-sample item and stores the weighted accuracy with a Wilson 95% interval;
+the categories of incorrect verdicts become manual corrections. Corrections live in an auto-approved run per day
+(`manual-YYYYMMDD`, skill `manual`), which always wins in the current-label rule. Findings (issue clusters, risks,
+report sections) are reviewed one by one through `sed.ai.findings`.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from sed import db
+from sed.ai.findings import mark_stale_dependents, review_finding
 from sed.ai.runs import get_run, open_db, resolve_handler
 from sed.ai.stats import weighted_accuracy, wilson_interval
 from sed.errors import PreconditionFailed, ValidationFailed
@@ -217,9 +222,17 @@ def approve_run(paths: Paths, run_id: str, reviewer: str, note: str | None = Non
                 "VALUES ('run', ?, 'approve_run', ?, ?, ?)",
                 (run_id, json.dumps(payload, sort_keys=True), reviewer, reviewed_at),
             )
+            corrected = _apply_sample_corrections(conn, paths, run, rows, reviewer)
     finally:
         conn.close()
-    return {"run_id": run_id, "status": "approved", "reviewed_by": reviewer, "reviewed_at": reviewed_at, **payload}
+    return {
+        "run_id": run_id,
+        "status": "approved",
+        "reviewed_by": reviewer,
+        "reviewed_at": reviewed_at,
+        "corrections_applied": corrected,
+        **payload,
+    }
 
 
 def reject_run(paths: Paths, run_id: str, reviewer: str, note: str) -> dict[str, Any]:
@@ -244,6 +257,138 @@ def reject_run(paths: Paths, run_id: str, reviewer: str, note: str) -> dict[str,
                 "VALUES ('run', ?, 'reject_run', ?, ?, ?)",
                 (run_id, json.dumps({"note": note.strip(), "previous_status": run["status"]}), reviewer, reviewed_at),
             )
+            own = conn.execute(
+                "UPDATE finding SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, review_note = ? "
+                "WHERE run_id = ? AND status IN ('draft', 'update_pending', 'stale_input')",
+                (reviewer, reviewed_at, note.strip(), run_id),
+            ).rowcount
+            stale = mark_stale_dependents(conn, run_id)
     finally:
         conn.close()
-    return {"run_id": run_id, "status": "rejected", "reviewed_by": reviewer, "reviewed_at": reviewed_at}
+    return {
+        "run_id": run_id,
+        "status": "rejected",
+        "reviewed_by": reviewer,
+        "reviewed_at": reviewed_at,
+        "findings_rejected": own,
+        "dependent_findings_stale": stale,
+    }
+
+
+# -- label corrections -------------------------------------------------------------------------------------------
+
+
+def _manual_run(conn: Any, paths: Paths, reviewer: str) -> str:
+    """The auto-approved correction run of today (created on first use)."""
+    now = db.utc_now()
+    run_id = f"manual-{now[:10].replace('-', '')}"
+    conn.execute(
+        "INSERT OR IGNORE INTO ai_run (run_id, skill, skill_hash, schema_version, invoked_via, profile, status, "
+        "started_at, finished_at, reviewed_by, reviewed_at, review_note) "
+        "VALUES (?, 'manual', 'manual', 1, 'manual', ?, 'approved', ?, ?, ?, ?, 'human label corrections')",
+        (run_id, paths.profile, now, now, reviewer, now),
+    )
+    return run_id
+
+
+def _insert_correction(
+    conn: Any, paths: Paths, handler: Any, reviewer: str, ticket_id: str, stage: str, correction: dict[str, Any]
+) -> dict[str, Any]:
+    problems = list(handler.check_correction(paths, conn, ticket_id, stage, correction))
+    if problems:
+        raise ValidationFailed(f"Correction for {ticket_id}|{stage} is invalid", problems)
+    column = "open_hash" if stage == "open" else "resolved_hash"
+    row = conn.execute(f"SELECT {column} AS h FROM ticket WHERE ticket_id = ?", (ticket_id,)).fetchone()
+    if row is None or not row["h"]:
+        raise PreconditionFailed(f"Ticket {ticket_id} has no {stage} content to label")
+    run_id = _manual_run(conn, paths, reviewer)
+    now = db.utc_now()
+    conn.execute(
+        "INSERT INTO ai_ticket_label (ticket_id, stage, run_id, input_hash, am_category, am_subcategory, symptom_key, "
+        "misfiled_as, confidence, rationale, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1.0, ?, ?) "
+        "ON CONFLICT (ticket_id, stage, run_id) DO UPDATE SET input_hash = excluded.input_hash, "
+        "am_category = excluded.am_category, am_subcategory = excluded.am_subcategory, "
+        "symptom_key = COALESCE(excluded.symptom_key, ai_ticket_label.symptom_key), "
+        "misfiled_as = COALESCE(excluded.misfiled_as, ai_ticket_label.misfiled_as), rationale = excluded.rationale",
+        (
+            ticket_id,
+            stage,
+            run_id,
+            row["h"],
+            correction["category"],
+            correction.get("subcategory"),
+            correction.get("symptom_key"),
+            correction.get("misfiled_as"),
+            "human correction",
+            now,
+        ),
+    )
+    conn.execute(
+        "INSERT INTO review_decision (target_type, target_id, decision, payload_json, reviewer, decided_at) "
+        "VALUES ('label', ?, 'correct_label', ?, ?, ?)",
+        (f"{ticket_id}|{stage}", json.dumps(correction, sort_keys=True), reviewer, now),
+    )
+    return {"ticket_id": ticket_id, "stage": stage, "run_id": run_id, **correction}
+
+
+def _apply_sample_corrections(conn: Any, paths: Paths, run: Any, rows: list[Any], reviewer: str) -> int:
+    handler = resolve_handler(paths, run["skill"])
+    if not hasattr(handler, "check_correction"):
+        return 0
+    done: set[tuple[str, str]] = set()
+    for r in rows:
+        key = (r["item_id"], r["stage"])
+        if r["verdict"] != "incorrect" or not r["correction_json"] or key in done:
+            continue
+        correction = json.loads(r["correction_json"])
+        if correction.get("category"):
+            _insert_correction(conn, paths, handler, reviewer, r["item_id"], r["stage"], correction)
+            done.add(key)
+    return len(done)
+
+
+def correct_label(
+    paths: Paths, ticket_id: str, stage: str, correction: dict[str, Any], reviewer: str, *, skill: str
+) -> dict[str, Any]:
+    """Record a human label for one (ticket, stage), validated by the skill's handler."""
+    if stage not in ("open", "resolved"):
+        raise ValidationFailed("stage must be open or resolved")
+    if not correction.get("category"):
+        raise ValidationFailed("a correction needs a category")
+    handler = resolve_handler(paths, skill)
+    if not hasattr(handler, "check_correction"):
+        raise ValidationFailed(f"Skill {skill} does not take label corrections")
+    conn = open_db(paths)
+    try:
+        with db.write_tx(conn):
+            return _insert_correction(conn, paths, handler, reviewer, ticket_id, stage, correction)
+    finally:
+        conn.close()
+
+
+# -- findings ----------------------------------------------------------------------------------------------------
+
+
+def review_findings(
+    paths: Paths,
+    finding_ids: list[str],
+    action: str,
+    reviewer: str,
+    *,
+    note: str | None = None,
+    body_md: str | None = None,
+    until: Any = None,
+) -> dict[str, Any]:
+    """Apply one action to one or more findings in a single transaction (all or nothing)."""
+    if not finding_ids:
+        raise ValidationFailed("Name at least one finding id")
+    conn = open_db(paths)
+    try:
+        with db.write_tx(conn):
+            results = [
+                review_finding(conn, fid, action, reviewer, note=note, body_md=body_md, until=until)
+                for fid in finding_ids
+            ]
+    finally:
+        conn.close()
+    return {"action": action, "reviewed_by": reviewer, "results": results}

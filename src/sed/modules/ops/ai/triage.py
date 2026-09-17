@@ -192,6 +192,32 @@ class TriageBatchHandler:
 
     # -- ingest ----------------------------------------------------------------------------------------------------
 
+    def check_correction(
+        self, paths: Any, conn: sqlite3.Connection, ticket_id: str, stage: str, correction: dict[str, Any]
+    ) -> list[str]:
+        """Problems with a human label correction (empty = valid), against the effective taxonomy and extensions."""
+        taxonomy = load_taxonomy(paths)
+        extensions = load_extensions(paths, taxonomy)
+        code, sub = correction.get("category"), correction.get("subcategory")
+        category = taxonomy.categories.get(code or "")
+        problems: list[str] = []
+        if category is None:
+            problems.append(f"'{code}' is not a taxonomy category ({', '.join(taxonomy.categories)})")
+        elif sub is not None and sub not in category.subcategories:
+            keys = {ext.key for ext in extensions if ticket_id in ext.context(conn, [ticket_id])}
+            message = _subcategory_error(code, sub, category, extensions, keys)
+            if message:
+                problems.append(message)
+        misfiled = correction.get("misfiled_as")
+        if misfiled is not None and misfiled not in taxonomy.misfiled_as:
+            problems.append(f"misfiled_as '{misfiled}' is not allowed ({', '.join(taxonomy.misfiled_as)})")
+        key = correction.get("symptom_key")
+        if key is not None and slugify_symptom(key) != key:
+            problems.append(f"symptom_key '{key}' must be lowercase snake_case (for example '{slugify_symptom(key)}')")
+        if conn.execute("SELECT 1 FROM ticket WHERE ticket_id = ?", (ticket_id,)).fetchone() is None:
+            problems.append(f"unknown ticket '{ticket_id}'")
+        return problems
+
     @staticmethod
     def _claimed(ctx: RunContext, extensions: list[TriageExtension], refs: dict[str, WorkItem]) -> dict[str, set[str]]:
         """Ticket id -> keys of the extensions that claim it, for the batch's tickets."""

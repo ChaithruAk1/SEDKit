@@ -228,3 +228,165 @@ def review_reject_run(
     from sed.bootstrap import reviewer_name
 
     emit(reject_run(paths_for(profile, data_dir), run_id, reviewer_name(), note), as_json)
+
+
+@review_app.command("list")
+@handle_errors
+def review_list(
+    kind: Annotated[str | None, typer.Option(help="Only this finding kind, e.g. issue_cluster")] = None,
+    no_rule: Annotated[bool, typer.Option("--no-rule", help="Leave out active rule findings")] = False,
+    limit: Annotated[int, typer.Option(min=1, max=1000)] = 200,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Findings waiting for a person: AI drafts, stale inputs and wording updates, then active rule findings."""
+    from sed.ai.findings import queue
+    from sed.ai.runs import open_db
+
+    conn = open_db(paths_for(profile, data_dir), readonly=True)
+    try:
+        items = queue(conn, kind=kind, include_rule=not no_rule, limit=limit)
+    finally:
+        conn.close()
+
+    def human(p: dict) -> None:
+        for f in p["items"]:
+            console().print(
+                f"{f['finding_id']}  {f['status']:<14} {f['severity'] or '-':<8} {f['title']}", markup=False
+            )
+
+    emit({"items": items, "count": len(items)}, as_json, human)
+
+
+def _findings_action(
+    paths_args: tuple, ids: list[str], action: str, *, note=None, body=None, until=None, as_json=False
+) -> None:
+    from sed.ai.review import review_findings
+    from sed.bootstrap import reviewer_name
+
+    result = review_findings(paths_for(*paths_args), ids, action, reviewer_name(), note=note, body_md=body, until=until)
+    emit(result, as_json)
+
+
+@review_app.command("approve")
+@handle_errors
+def review_approve(
+    finding_ids: Annotated[list[str], typer.Argument(help="Finding ids (draft or stale_input)")],
+    note: Annotated[str | None, typer.Option(help="Review note")] = None,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Approve AI findings; earlier approved findings with the same stable key are superseded."""
+    _findings_action((profile, data_dir), finding_ids, "approve", note=note, as_json=as_json)
+
+
+@review_app.command("reject")
+@handle_errors
+def review_reject(
+    finding_ids: Annotated[list[str], typer.Argument(help="Finding ids")],
+    note: Annotated[str, typer.Option(help="Why the finding is rejected")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Reject AI findings (they never reach reports)."""
+    _findings_action((profile, data_dir), finding_ids, "reject", note=note, as_json=as_json)
+
+
+@review_app.command("edit")
+@handle_errors
+def review_edit(
+    finding_id: Annotated[str, typer.Argument(help="Finding id")],
+    file: Annotated[Path, typer.Option("--file", help="Markdown file with the corrected body")],
+    note: Annotated[str | None, typer.Option(help="Review note")] = None,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Replace an AI finding's body with your text and approve it (the AI text is kept as original_body_md)."""
+    try:
+        body = Path(str(file).replace("\\", "/")).read_bytes().decode("utf-8-sig")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ValidationFailed(f"Cannot read {file}: {exc}") from exc
+    _findings_action((profile, data_dir), [finding_id], "edit", note=note, body=body, as_json=as_json)
+
+
+@review_app.command("approve-update")
+@handle_errors
+def review_approve_update(
+    finding_ids: Annotated[list[str], typer.Argument(help="Finding ids in status update_pending")],
+    note: Annotated[str | None, typer.Option(help="Review note")] = None,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Publish the new wording of carried-forward findings (update_pending)."""
+    _findings_action((profile, data_dir), finding_ids, "approve_update", note=note, as_json=as_json)
+
+
+@review_app.command("acknowledge")
+@handle_errors
+def review_acknowledge(
+    finding_ids: Annotated[list[str], typer.Argument(help="Rule finding ids")],
+    note: Annotated[str, typer.Option(help="Why no action is needed")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Acknowledge rule findings: hidden until their evidence changes materially."""
+    _findings_action((profile, data_dir), finding_ids, "acknowledge", note=note, as_json=as_json)
+
+
+@review_app.command("suppress")
+@handle_errors
+def review_suppress(
+    finding_ids: Annotated[list[str], typer.Argument(help="Rule finding ids")],
+    until: Annotated[str, typer.Option(help="Hide until this date (YYYY-MM-DD)")],
+    note: Annotated[str, typer.Option(help="Why the finding is suppressed")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Suppress rule findings until a date (they return earlier when their evidence changes materially)."""
+    from datetime import date
+
+    try:
+        day = date.fromisoformat(until)
+    except ValueError as exc:
+        raise ValidationFailed(f"Invalid --until '{until}' (use YYYY-MM-DD)") from exc
+    _findings_action((profile, data_dir), finding_ids, "suppress_until", note=note, until=day, as_json=as_json)
+
+
+@review_app.command("correct")
+@handle_errors
+def review_correct(
+    ticket_id: Annotated[str, typer.Argument(help="Ticket id, e.g. incident:INC0012345")],
+    stage: Annotated[str, typer.Option(help="open | resolved")],
+    category: Annotated[str, typer.Option(help="Correct category code")],
+    subcategory: Annotated[str | None, typer.Option(help="Correct subcategory code")] = None,
+    symptom_key: Annotated[str | None, typer.Option("--symptom-key", help="Symptom key")] = None,
+    misfiled_as: Annotated[str | None, typer.Option("--misfiled-as", help="none | request | change | problem")] = None,
+    skill: Annotated[str, typer.Option(help="Skill whose taxonomy validates the label")] = "sed-triage-batch",
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Record a human label for one ticket stage (auto-approved manual run; always wins over AI labels)."""
+    from sed.ai.review import correct_label
+    from sed.bootstrap import reviewer_name
+
+    correction = {
+        k: v
+        for k, v in {
+            "category": category,
+            "subcategory": subcategory,
+            "symptom_key": symptom_key,
+            "misfiled_as": misfiled_as,
+        }.items()
+        if v is not None
+    }
+    emit(
+        correct_label(paths_for(profile, data_dir), ticket_id, stage, correction, reviewer_name(), skill=skill), as_json
+    )

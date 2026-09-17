@@ -22,6 +22,7 @@ from typing import Any
 from sed import db
 from sed.ai import packets
 from sed.ai.contract import BatchInput, FinishSummary, PacketLimits, RunContext, RunPlan, StartParams, WorkItem
+from sed.ai.findings import carry_forward
 from sed.ai.hashing import sha256_text, skill_hash
 from sed.ai.stats import proportional_allocation
 from sed.calendar import iso_utc, local_midnight_utc, parse_period
@@ -270,6 +271,12 @@ def _real_run(conn, paths, settings, handler, skill, params, data_date, limits, 
             if len(items) > max_items:
                 raise _too_many(len(items), max_items, _plan_counts(len(items), batches, 0))
             handler.claim(ctx, items)
+            input_runs = getattr(handler, "input_run_ids", None)
+            if input_runs is not None:  # label runs a finding skill's packet used (stale-input tracking)
+                conn.execute(
+                    "UPDATE ai_run SET input_run_ids_json = ? WHERE run_id = ?",
+                    (json.dumps(sorted(set(input_runs(ctx, items)))), run_id),
+                )
             context_files = dict(handler.context_files(ctx, items))
             reserved = {f"{b.name}.jsonl" for b in batches}
             for name in context_files:
@@ -528,6 +535,8 @@ def finish_run(paths: Paths, run_id: str) -> FinishSummary:
                 "lowest_conf_sample": len(lowest),
             }
             status = "completed" if ingested else "failed"
+            if conn.execute("SELECT 1 FROM finding WHERE run_id = ? LIMIT 1", (run_id,)).fetchone():
+                counts.update({f"findings_{k}": v for k, v in carry_forward(conn, run_id).items()})
             conn.execute(
                 "UPDATE ai_run SET status = ?, counts_json = ?, finished_at = ? WHERE run_id = ?",
                 (status, json.dumps(counts, sort_keys=True), db.utc_now(), run_id),

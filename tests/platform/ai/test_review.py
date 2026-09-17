@@ -217,10 +217,25 @@ def test_approve_stores_statistics_and_decision(finished, tmp_path):
     assert run["reviewed_by"] == "tester" and run["reviewed_at"] and run["review_note"] == "looks right"
     lowest = query(paths, "SELECT verdict FROM ai_sample WHERE run_id = ? AND sample_kind = 'lowest_conf'", run_id)
     assert run["lowest_conf_error_rate"] == pytest.approx(sum(r[0] == "incorrect" for r in lowest) / len(lowest))
-    decision = query(paths, "SELECT * FROM review_decision ORDER BY decision_id DESC LIMIT 1")[0]
-    assert scalar(paths, "SELECT COUNT(*) FROM review_decision") == decisions_before + 1
+    decision = query(paths, "SELECT * FROM review_decision WHERE decision = 'approve_run'")[0]
+    corrected = sorted(
+        {
+            (r["item_id"], r["stage"])
+            for r in query(paths, "SELECT * FROM ai_sample WHERE run_id = ? AND verdict = 'incorrect'", run_id)
+            if r["correction_json"] and json.loads(r["correction_json"]).get("category")
+        }
+    )
+    assert result["corrections_applied"] == len(corrected) == 2  # only the verdicts that name a category
+    assert scalar(paths, "SELECT COUNT(*) FROM review_decision") == decisions_before + 1 + len(corrected)
     assert (decision["target_type"], decision["target_id"], decision["decision"]) == ("run", run_id, "approve_run")
     assert json.loads(decision["payload_json"])["sample_n"] == 30
+    manual = query(
+        paths, "SELECT l.* FROM ai_ticket_label l JOIN ai_run r ON r.run_id = l.run_id WHERE r.skill = 'manual'"
+    )
+    assert sorted((r["ticket_id"], r["stage"]) for r in manual) == corrected
+    assert {r["am_category"] for r in manual} == {"other"}
+    shown = query(paths, "SELECT run_id FROM v_label_current WHERE ticket_id = ? AND stage = ?", *corrected[0])
+    assert shown[0]["run_id"].startswith("manual-")  # the human correction wins
     with pytest.raises(PreconditionFailed):
         approve_run(paths, run_id, "tester")
 

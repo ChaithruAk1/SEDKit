@@ -10,17 +10,24 @@ def sample_keys(sample: dict[str, Any]) -> list[str]:
     return sorted({f"{c['item_id']}|{c['stage']}" for c in cards})
 
 
-def verdicts_for(sample: dict[str, Any], *, incorrect_every: int = 10, skip: set[str] | None = None) -> dict[str, Any]:
-    """Verdict "correct" for every sampled item except every Nth key (sorted), which is marked incorrect as `other`.
+def verdicts_for(
+    sample: dict[str, Any],
+    *,
+    incorrect_every: int = 10,
+    skip: set[str] | None = None,
+    correct_to: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Verdict "correct" for every sampled item except every Nth key (sorted), which is marked incorrect.
 
-    Keys in `skip` get null (a skipped item, which record_verdicts does not record).
+    `correct_to` (e.g. {"category": "other", "subcategory": "other"}) adds the right label to incorrect verdicts, which
+    approve-run then applies as manual corrections. Keys in `skip` get null (skipped, not recorded).
     """
     out: dict[str, Any] = {}
     for idx, key in enumerate(sample_keys(sample), start=1):
         if skip and key in skip:
             out[key] = None
         elif incorrect_every and idx % incorrect_every == 0:
-            out[key] = {"verdict": "incorrect", "category": "other", "subcategory": "other"}
+            out[key] = {"verdict": "incorrect", **(correct_to or {})}
         else:
             out[key] = "correct"
     return out
