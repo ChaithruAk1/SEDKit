@@ -68,6 +68,7 @@ MODULE = Module(
     skills=(
         SkillDef("sed-triage-batch", "sed.modules.ops.ai.triage:TriageBatchHandler", ("sed-analyze.js",)),
         SkillDef("sed-find-recurring", "sed.modules.ops.ai.recurring:RecurringHandler"),
+        SkillDef("sed-assess-risks", "sed.modules.ops.ai.risks:RisksHandler"),
     ),
     mappings_dir="ops/mappings",
     ingest_targets="sed.ingest.targets:TARGETS",
@@ -137,6 +138,7 @@ MODULE = Module(
         "config/ops/**",
         ".claude/skills/sed-triage-batch/**",
         ".claude/skills/sed-find-recurring/**",
+        ".claude/skills/sed-assess-risks/**",
         ".claude/workflows/sed-analyze.js",
         "web/src/modules/ops/**",
     ),

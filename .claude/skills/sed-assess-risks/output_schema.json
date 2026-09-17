@@ -1,0 +1,166 @@
+{
+  "additionalProperties": false,
+  "description": "The JSON file the agent writes to runs/<run_id>/out/batch_0001.json.",
+  "properties": {
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "description": "One commercial or vendor risk with the evidence behind it and the decision it needs.",
+        "properties": {
+          "annotates_rule_stable_key": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "stable_key of the rule finding this adds context to, or null",
+            "title": "Annotates Rule Stable Key"
+          },
+          "body_md": {
+            "description": "Markdown for the reviewer; numbers only as {{f:<fact_key>}} tokens",
+            "maxLength": 1500,
+            "minLength": 1,
+            "title": "Body Md",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "decision_due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The date a decision is needed, e.g. the notice deadline",
+            "title": "Decision Due"
+          },
+          "kind": {
+            "enum": [
+              "renewal_risk",
+              "license_risk",
+              "vendor_risk",
+              "cost_risk",
+              "rationalization"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "recommendation": {
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Recommendation",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "fact_key": {
+                  "description": "A key of a packet line's `facts`, verbatim",
+                  "pattern": "^[A-Za-z0-9_.:\\-]{1,120}$",
+                  "title": "Fact Key",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fact_key"
+              ],
+              "title": "Signal",
+              "type": "object"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Signals",
+            "type": "array"
+          },
+          "subject_id": {
+            "description": "The subject_id shown on the packet line",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "contract",
+              "license",
+              "vendor",
+              "app"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          },
+          "title": {
+            "description": "The risk in plain words; no numbers or names",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "subject_type",
+          "subject_id",
+          "severity",
+          "title",
+          "body_md",
+          "recommendation",
+          "signals",
+          "confidence"
+        ],
+        "title": "RiskFinding",
+        "type": "object"
+      },
+      "maxItems": 60,
+      "title": "Findings",
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "BatchMeta",
+      "type": "object"
+    }
+  },
+  "title": "RisksOutput",
+  "type": "object"
+}
