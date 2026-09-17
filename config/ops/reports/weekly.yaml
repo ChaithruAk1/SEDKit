@@ -46,6 +46,7 @@ markdown:
 slides:
   - kind: title
     subtitle: "Week {period}"
+  - {kind: narrative, title: Headline, ai_section_key: headline, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: Service KPIs vs 4-week average
     kpis:
@@ -56,6 +57,8 @@ slides:
       - {fact: inc.mttr.median_h, compare: inc.mttr.median_h.avg4w, delta: inc.mttr.delta_vs_avg4w_pct}
       - {fact: inc.p1p2.opened}
     notes: "SLA source: {{f:inc.sla.source}}. Backlog excludes stale open incidents ({{f:inc.backlog.stale_excluded}})."
+  - {kind: narrative, title: Highlights, ai_section_key: highlights, notes: "AI-drafted, human-approved section."}
+  - {kind: narrative, title: Lowlights, ai_section_key: lowlights, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: Attention, changes and commercial indicators
     kpis:
@@ -117,10 +120,44 @@ slides:
     title: System-detected risks
     table: findings
     columns: [severity, title, kind, subject_id]
+  - {kind: narrative, title: Recurring issues, ai_section_key: recurring_issues, notes: "AI-drafted, human-approved section."}
   - kind: findings
     title: AI-assisted findings (approved)
     table: ai_findings
     columns: [severity, title, kind, subject_id, recommendation, reviewed_by]
     when: has_rows
+  - {kind: narrative, title: Actions for next week, ai_section_key: actions, notes: "AI-drafted, human-approved section."}
   - kind: provenance
     title: Provenance
+sections:
+  - key: headline
+    title: Headline
+    summary: true
+    max_words: 40
+    guide: >-
+      One or two sentences on the most important thing about this week's service, with the fact that shows it.
+      Written last, from the other sections.
+  - key: highlights
+    title: Highlights
+    max_words: 80
+    guide: >-
+      Two or three bullets on what went well: SLA or resolution time better than the 4-week average, backlog down,
+      problems or clusters closed. Each bullet cites its fact.
+  - key: lowlights
+    title: Lowlights
+    max_words: 80
+    guide: >-
+      Two or three bullets on what went badly: SLA misses, backlog growth, P1/P2 incidents, failed changes, tickets
+      needing attention. Each bullet cites its fact.
+  - key: recurring_issues
+    title: Recurring issues
+    max_words: 120
+    guide: >-
+      The recurring issues and risks from the AI findings of the packet (cite their finding ids), what they cost in
+      tickets and what is being done. Say plainly when there are none.
+  - key: actions
+    title: Actions for next week
+    max_words: 100
+    guide: >-
+      Three to five concrete actions with the role that owns each (support lead, vendor manager, application owner),
+      tied to the lowlights, recurring issues or commercial watchlist. No person names.

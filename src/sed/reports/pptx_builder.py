@@ -45,7 +45,7 @@ DRAFT_STAMP = "DRAFT"
 EXCLUDED_TEXT = "AI-derived content excluded (--ai none)."
 NO_ROWS_TEXT = "No rows for this period."
 AI_ASSISTED_TEXT = "AI-assisted: see the provenance slide for runs and sample accuracy."
-NARRATIVE_OMITTED = "AI narrative is not rendered in M2"
+NARRATIVE_OMITTED = "no AI section to show in this mode (see `sed report readiness`)"
 SHAPE_PREFIX = "sed-"
 
 _ILLEGAL_XML = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
@@ -295,10 +295,13 @@ def plan_deck(
             planned.append(idx)
             continue
         if s.kind == "narrative":
-            if narratives is not None and s.ai_section_key in narratives:
-                planned.append(PlannedSlide(s, idx, bullets=list(narratives[s.ai_section_key])))
+            # Template proofs pass dummy narratives; builds show the AI sections attached to the snapshot.
+            source = narratives if narratives is not None else {x["key"]: x["paragraphs"] for x in view.sections}
+            if s.ai_section_key in source:
+                planned.append(PlannedSlide(s, idx, bullets=list(source[s.ai_section_key])))
             else:
-                omitted.append(f"{title or s.ai_section_key}: {NARRATIVE_OMITTED} (ai_section_key {s.ai_section_key})")
+                reason = EXCLUDED_TEXT if ai_mode == "none" else NARRATIVE_OMITTED
+                omitted.append(f"{title or s.ai_section_key}: {reason} (ai_section_key {s.ai_section_key})")
             continue
         if s.kind == "kpis":
             visible = [k for k in s.kpis or [] if k.fact in view.facts]

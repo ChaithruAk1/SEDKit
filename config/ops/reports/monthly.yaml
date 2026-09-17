@@ -41,6 +41,7 @@ sheets:
   - {table: findings, sheet: Risks}
 slides:
   - {kind: title, title: Monthly Service Review, subtitle: Business stakeholders}
+  - {kind: narrative, title: Executive summary, ai_section_key: exec_summary, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: Executive summary
     kpis:
@@ -53,6 +54,7 @@ slides:
       - {fact: chg.success.pct}
       - {fact: work.resolved.count}
   - {kind: section, title: Service performance, subtitle: Last 6 months}
+  - {kind: narrative, title: Service performance, ai_section_key: service_performance, notes: "AI-drafted, human-approved section."}
   - kind: bar_chart
     title: Incident volume, last 6 months
     table: trend_6m
@@ -70,6 +72,7 @@ slides:
     table: sla_6m_by_family
     columns: [family, m1, m2, m3, m4, m5, m6]
   - {kind: section, title: Issues and delivery}
+  - {kind: narrative, title: Top issues, ai_section_key: top_issues, notes: "AI-drafted, human-approved section."}
   - kind: table
     title: Top recurring issues
     table: top_recurring
@@ -86,6 +89,8 @@ slides:
     table: improvements
     columns: [app, project, resolved, stories, bugs, points]
     when: has_rows
+  - {kind: narrative, title: Improvements delivered, ai_section_key: improvements, notes: "AI-drafted, human-approved section."}
+  - {kind: narrative, title: Upcoming changes, ai_section_key: upcoming_changes, notes: "AI-drafted, human-approved section."}
   - {kind: section, title: Looking ahead}
   - kind: table
     title: Upcoming changes (next 30 days)
@@ -98,7 +103,43 @@ slides:
     columns: [severity, kind, title]
     max_rows: 8
     when: has_rows
-  - {kind: narrative, title: Asks, ai_section_key: asks, notes: "AI-drafted and human-approved section (omitted in M2)."}
+  - {kind: narrative, title: Asks, ai_section_key: asks, notes: "AI-drafted, human-approved section."}
   - {kind: provenance, title: Provenance}
 markdown:
   max_words: 400
+sections:
+  - key: exec_summary
+    title: Executive summary
+    summary: true
+    max_words: 150
+    guide: >-
+      Four or five sentences for business stakeholders: service level this month against the previous month, the
+      main issue, what was delivered and the ask. Written last, from the other sections.
+  - key: service_performance
+    title: Service performance
+    max_words: 120
+    guide: >-
+      How volume, SLA and resolution time moved over the last six months and this month, and which application
+      families stand out.
+  - key: top_issues
+    title: Top issues
+    max_words: 120
+    guide: >-
+      The top recurring issues and open problems, with the AI findings of the packet where they apply (cite their
+      finding ids), and what is being done about them.
+  - key: improvements
+    title: Improvements delivered
+    max_words: 100
+    guide: >-
+      What the delivery teams resolved this month (work items, stories, bugs) and the benefit for users.
+  - key: upcoming_changes
+    title: Upcoming changes
+    max_words: 80
+    guide: >-
+      The changes planned for the next 30 days that business users should know about and any expected impact.
+  - key: asks
+    title: Asks
+    max_words: 100
+    guide: >-
+      What the application owner needs from business stakeholders (decisions, priorities, test support), each tied
+      to an issue or change above.

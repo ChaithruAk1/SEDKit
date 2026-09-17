@@ -38,6 +38,7 @@ sheets:
   - {table: risks, sheet: Risks}
 slides:
   - {kind: title, title: Vendor Review, subtitle: Vendor and contract review}
+  - {kind: narrative, title: Relationship summary, ai_section_key: relationship_summary, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: Vendor summary
     kpis:
@@ -50,6 +51,7 @@ slides:
       - {fact: vendor.incidents.count}
       - {fact: vendor.license.idle_cost}
   - {kind: section, title: Commercial position}
+  - {kind: narrative, title: Commercial position, ai_section_key: commercial, notes: "AI-drafted, human-approved section."}
   - kind: table
     title: Contract terms
     table: contracts
@@ -65,6 +67,7 @@ slides:
     columns: [app, product, entitled_qty, active_qty_90d, utilization, position, idle_cost_base]
     when: has_rows
   - {kind: section, title: Service performance}
+  - {kind: narrative, title: Service performance, ai_section_key: performance, notes: "AI-drafted, human-approved section."}
   - kind: line_chart
     title: SLA trend
     table: sla_trend
@@ -81,6 +84,7 @@ slides:
     columns: [app, opened, p1p2, resolved, sla_pct, mttr_median_h]
     when: has_rows
   - {kind: section, title: Renewals and risks}
+  - {kind: narrative, title: Risks, ai_section_key: risks, notes: "AI-drafted, human-approved section."}
   - kind: table
     title: Renewal and notice timeline
     table: renewal_timeline
@@ -94,7 +98,36 @@ slides:
   - kind: narrative
     title: Negotiation points
     ai_section_key: negotiation_points
-    notes: "AI-drafted and human-approved section (omitted in M2)."
+    notes: "AI-drafted, human-approved section."
   - {kind: provenance, title: Provenance}
 markdown:
   max_words: 400
+sections:
+  - key: relationship_summary
+    title: Relationship summary
+    summary: true
+    max_words: 120
+    guide: >-
+      Three or four sentences on the state of the relationship: service trend, spend, the renewal ahead and the main
+      negotiation point. Written last, from the other sections.
+  - key: performance
+    title: Service performance
+    max_words: 100
+    guide: >-
+      The vendor's SLA, resolution time and reassignment trend, and the applications where service is weakest.
+  - key: commercial
+    title: Commercial position
+    max_words: 100
+    guide: >-
+      Contract terms, spend against the previous period and the license position with this vendor.
+  - key: risks
+    title: Risks
+    max_words: 100
+    guide: >-
+      The renewal, license and service risks with this vendor, citing the approved AI risk findings of the packet.
+  - key: negotiation_points
+    title: Negotiation points
+    max_words: 120
+    guide: >-
+      The points to raise with the vendor at the next review (service credits, right-sizing, renewal terms), each
+      backed by a fact.

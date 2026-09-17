@@ -40,6 +40,9 @@ def _table_name(key: str) -> str:
     return "T_" + re.sub(r"[^A-Za-z0-9_]", "_", key)[:200]
 
 
+SECTIONS_SHEET = "AI sections"
+
+
 def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode: str, generated_at: str) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     wb = xlsxwriter.Workbook(
@@ -172,6 +175,22 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
     defs.set_column(0, 0, 26)
     defs.set_column(2, 2, 110, wrap)
 
+    if view.sections:
+        narrative = add_sheet(SECTIONS_SHEET)
+        narrative.write_string(top, 0, "AI-drafted sections", title_fmt)
+        label = "approved by a person" if ai_mode != "draft" else "DRAFT: may include unapproved sections"
+        narrative.write_string(top + 1, 0, f"AI-drafted, {label}; numbers come from this snapshot.")
+        r = top + 3
+        for section in view.sections:
+            status = section["status"] + (f", {section['reviewed_by']}" if section.get("reviewed_by") else "")
+            narrative.write_string(r, 0, section["title"], bold)
+            narrative.write_string(r, 1, status)
+            narrative.write_string(r + 1, 0, "\n".join(section["paragraphs"]), wrap)
+            narrative.set_row(r + 1, 15 * max(2, len(section["paragraphs"]) * 2))
+            r += 3
+        narrative.set_column(0, 0, 110)
+        narrative.set_column(1, 1, 30)
+
     prov = add_sheet("Provenance")
     items = [
         ("Data class", snapshot.data_class.upper()),
@@ -185,6 +204,7 @@ def build_xlsx(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode:
         ("Snapshot sha256", snapshot.sha256),
         ("AI content mode", ai_mode),
         ("AI runs used", _ai_runs_text(snapshot, view, ai_mode)),
+        ("AI sections", ", ".join(f"{x['key']} ({x['finding_id']})" for x in view.sections) or "none"),
         ("Data as of", snapshot.data_as_of or "n/a"),
         ("Period end (exclusive)", snapshot.period_end or "n/a"),
         ("Generated at (UTC)", generated_at),

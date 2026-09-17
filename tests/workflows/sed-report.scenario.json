@@ -1,0 +1,581 @@
+{
+  "workflow": "sed-report.js",
+  "description": "Canned fake-agent results for the offline workflow harness (tests/workflow_harness.mjs).",
+  "cases": [
+    {
+      "name": "full draft: snapshot, sections, summary last, finish and draft build",
+      "args": {
+        "profile": "synthetic",
+        "report": "monthly",
+        "period": "2026-08",
+        "sectionModel": "claude-opus-5",
+        "claudeVersion": "2.1.0 (Claude Code)",
+        "formats": "pptx"
+      },
+      "responses": {
+        "snapshot": {
+          "exit_code": 0,
+          "error": null,
+          "snapshot": {
+            "snapshot_id": "snap-monthly-2026-08-abc",
+            "sha256": "fixture-sha"
+          }
+        },
+        "start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": "20260902T080000-draft-report-2b3c",
+            "skill": "sed-draft-report",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 4,
+              "batches": 4,
+              "est_agents": 4,
+              "max_chars_per_batch": 900,
+              "longest_line_chars": 900,
+              "claimed": 0
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/context.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/facts.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/findings.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/tables.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0001.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0001.json",
+                "items": 1,
+                "chars": 900
+              },
+              {
+                "batch": "batch_0002",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0002.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0002.json",
+                "items": 1,
+                "chars": 900
+              },
+              {
+                "batch": "batch_0003",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0003.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0003.json",
+                "items": 1,
+                "chars": 900
+              },
+              {
+                "batch": "batch_0004",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0004.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/summary_batch_0004.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0004.json",
+                "items": 1,
+                "chars": 900
+              }
+            ]
+          }
+        },
+        "section batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "section batch_0002": {
+          "batch": "batch_0002",
+          "status": "failed",
+          "ingested": 0,
+          "errors_count": 2,
+          "low_conf": 0
+        },
+        "section batch_0003": {
+          "batch": "batch_0003",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "section batch_0004": {
+          "batch": "batch_0004",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260902T080000-draft-report-2b3c",
+            "status": "completed",
+            "counts": {
+              "batches": 4,
+              "ingested_batches": 3,
+              "failed_batches": 1
+            },
+            "failed_batches": [
+              "batch_0002"
+            ],
+            "review": {}
+          }
+        },
+        "build": {
+          "exit_code": 0,
+          "error": null,
+          "build": {
+            "snapshot_id": "snap-monthly-2026-08-abc",
+            "artifacts": [
+              {
+                "format": "pptx",
+                "path": "C:/Users/tester/AppData/Local/sed/synthetic/out/2026-08/monthly_2026-08_SYNTHETIC_DRAFT.pptx"
+              }
+            ],
+            "readiness": {
+              "ai_sections_required": 4,
+              "ai_sections_shown": 3,
+              "omitted": [
+                "asks: no draft"
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Snapshot",
+          "Start run",
+          "Draft sections",
+          "Summary",
+          "Finish run",
+          "Build draft"
+        ],
+        "agent_labels": [
+          "snapshot",
+          "start-run",
+          "section batch_0001",
+          "section batch_0002",
+          "section batch_0003",
+          "section batch_0004",
+          "finish-run",
+          "build"
+        ],
+        "prompt_contains": {
+          "snapshot": [
+            "uv run sed report snapshot monthly --period 2026-08 --profile synthetic --json"
+          ],
+          "start-run": [
+            "uv run sed ai start-run sed-draft-report --report monthly --scope period:2026-08 --invoked-via workflow --model claude-opus-5 --claude-version \"2.1.0 (Claude Code)\" --profile synthetic --json"
+          ],
+          "section batch_0001": [
+            "uv run sed ai ingest 20260902T080000-draft-report-2b3c \"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0001.json\" --profile synthetic --json",
+            "\"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/facts.md\"",
+            "untrusted data",
+            "exactly this one section."
+          ],
+          "section batch_0004": [
+            "\"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/summary_batch_0004.txt\"",
+            "exactly this one summary section."
+          ],
+          "finish-run": [
+            "uv run sed ai finish-run 20260902T080000-draft-report-2b3c --profile synthetic --json"
+          ],
+          "build": [
+            "uv run sed report build monthly --period 2026-08 --format pptx --ai draft --profile synthetic --json"
+          ]
+        },
+        "prompt_excludes": {
+          "start-run": [
+            "--resume",
+            "--vendor"
+          ],
+          "section batch_0001": [
+            "summary_batch"
+          ]
+        },
+        "opts": {
+          "section batch_0001": {
+            "phase": "Draft sections",
+            "model": "claude-opus-5"
+          },
+          "section batch_0004": {
+            "phase": "Summary",
+            "model": "claude-opus-5"
+          },
+          "snapshot": {
+            "phase": "Snapshot"
+          }
+        },
+        "logs_contain": [
+          "Run 20260902T080000-draft-report-2b3c: 3 sections, then 1 summary sections.",
+          "Failed sections: batch_0002",
+          "Draft pptx: C:/Users/tester/AppData/Local/sed/synthetic/out/2026-08/monthly_2026-08_SYNTHETIC_DRAFT.pptx",
+          "--ai approved --require-complete"
+        ],
+        "result": {
+          "status": "completed",
+          "run_id": "20260902T080000-draft-report-2b3c",
+          "failed_batches": [
+            "batch_0002"
+          ],
+          "draft": {
+            "snapshot_id": "snap-monthly-2026-08-abc"
+          }
+        }
+      }
+    },
+    {
+      "name": "vendor report passes the vendor and resumes a run",
+      "args": {
+        "profile": "synthetic",
+        "report": "vendor",
+        "period": "2026-Q3",
+        "vendor": "V001",
+        "resumeRunId": "20260902T080000-draft-report-2b3c"
+      },
+      "responses": {
+        "snapshot": {
+          "exit_code": 0,
+          "error": null,
+          "snapshot": {
+            "snapshot_id": "snap-monthly-2026-08-abc",
+            "sha256": "fixture-sha"
+          }
+        },
+        "start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": "20260902T080000-draft-report-2b3c",
+            "skill": "sed-draft-report",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 2,
+              "batches": 2,
+              "est_agents": 2,
+              "max_chars_per_batch": 900,
+              "longest_line_chars": 900,
+              "claimed": 0
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/context.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/facts.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/findings.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/tables.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0001.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0001.json",
+                "items": 1,
+                "chars": 900
+              },
+              {
+                "batch": "batch_0002",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0002.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/summary_batch_0002.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0002.json",
+                "items": 1,
+                "chars": 900
+              }
+            ]
+          }
+        },
+        "section batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "section batch_0002": {
+          "batch": "batch_0002",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260902T080000-draft-report-2b3c",
+            "status": "completed",
+            "counts": {
+              "batches": 4,
+              "ingested_batches": 3,
+              "failed_batches": 1
+            },
+            "failed_batches": [
+              "batch_0002"
+            ],
+            "review": {}
+          }
+        },
+        "build": {
+          "exit_code": 0,
+          "error": null,
+          "build": {
+            "snapshot_id": "snap-monthly-2026-08-abc",
+            "artifacts": [
+              {
+                "format": "pptx",
+                "path": "C:/Users/tester/AppData/Local/sed/synthetic/out/2026-08/monthly_2026-08_SYNTHETIC_DRAFT.pptx"
+              }
+            ],
+            "readiness": {
+              "ai_sections_required": 4,
+              "ai_sections_shown": 3,
+              "omitted": [
+                "asks: no draft"
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "prompt_contains": {
+          "snapshot": [
+            "uv run sed report snapshot vendor --period 2026-Q3 --vendor V001 --profile synthetic --json"
+          ],
+          "start-run": [
+            "uv run sed ai start-run sed-draft-report --resume 20260902T080000-draft-report-2b3c --invoked-via workflow"
+          ],
+          "build": [
+            "uv run sed report build vendor --period 2026-Q3 --vendor V001 --ai draft --profile synthetic --json"
+          ]
+        },
+        "prompt_excludes": {
+          "start-run": [
+            "--scope",
+            "--report"
+          ]
+        },
+        "result": {
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "name": "a failed snapshot stops before start-run",
+      "args": {
+        "profile": "real",
+        "report": "weekly",
+        "period": "2026-W35"
+      },
+      "responses": {
+        "snapshot": {
+          "exit_code": 4,
+          "snapshot": null,
+          "error": {
+            "kind": "precondition",
+            "message": "No database"
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Snapshot"
+        ],
+        "agent_labels": [
+          "snapshot"
+        ],
+        "logs_contain": [
+          "snapshot failed (exit 4)"
+        ],
+        "result": {
+          "status": "snapshot_failed"
+        }
+      }
+    },
+    {
+      "name": "a failed draft build keeps the run and logs the command to retry",
+      "args": {
+        "profile": "synthetic",
+        "report": "monthly",
+        "period": "2026-08",
+        "sectionModel": "claude-opus-5",
+        "claudeVersion": "2.1.0 (Claude Code)",
+        "formats": "pptx"
+      },
+      "responses": {
+        "snapshot": {
+          "exit_code": 0,
+          "error": null,
+          "snapshot": {
+            "snapshot_id": "snap-monthly-2026-08-abc",
+            "sha256": "fixture-sha"
+          }
+        },
+        "start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": "20260902T080000-draft-report-2b3c",
+            "skill": "sed-draft-report",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 4,
+              "batches": 4,
+              "est_agents": 4,
+              "max_chars_per_batch": 900,
+              "longest_line_chars": 900,
+              "claimed": 0
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/context.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/facts.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/findings.md",
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/tables.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0001.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0001.json",
+                "items": 1,
+                "chars": 900
+              },
+              {
+                "batch": "batch_0002",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0002.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0002.json",
+                "items": 1,
+                "chars": 900
+              },
+              {
+                "batch": "batch_0003",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0003.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0003.json",
+                "items": 1,
+                "chars": 900
+              },
+              {
+                "batch": "batch_0004",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/batch_0004.jsonl",
+                "aux": [
+                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/in/summary_batch_0004.txt"
+                ],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260902T080000-draft-report-2b3c/out/batch_0004.json",
+                "items": 1,
+                "chars": 900
+              }
+            ]
+          }
+        },
+        "section batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "section batch_0002": {
+          "batch": "batch_0002",
+          "status": "failed",
+          "ingested": 0,
+          "errors_count": 2,
+          "low_conf": 0
+        },
+        "section batch_0003": {
+          "batch": "batch_0003",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "section batch_0004": {
+          "batch": "batch_0004",
+          "status": "ingested",
+          "ingested": 1,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260902T080000-draft-report-2b3c",
+            "status": "completed",
+            "counts": {
+              "batches": 4,
+              "ingested_batches": 3,
+              "failed_batches": 1
+            },
+            "failed_batches": [
+              "batch_0002"
+            ],
+            "review": {}
+          }
+        },
+        "build": {
+          "exit_code": 2,
+          "build": null,
+          "error": {
+            "kind": "validation",
+            "message": "bad map"
+          }
+        }
+      },
+      "expect": {
+        "logs_contain": [
+          "Draft build failed",
+          "uv run sed report build monthly --period 2026-08 --format pptx --ai draft"
+        ],
+        "logs_exclude": [
+          "--require-complete"
+        ],
+        "result": {
+          "status": "build_failed",
+          "run_id": "20260902T080000-draft-report-2b3c"
+        }
+      }
+    },
+    {
+      "name": "report and period are required",
+      "args": {
+        "profile": "synthetic",
+        "period": "2026-08"
+      },
+      "responses": {},
+      "expect": {
+        "throws": "report is required",
+        "agent_labels": []
+      }
+    },
+    {
+      "name": "an unsafe period is rejected",
+      "args": {
+        "profile": "synthetic",
+        "report": "monthly",
+        "period": "2026-08; rm -rf /"
+      },
+      "responses": {},
+      "expect": {
+        "throws": "period is required",
+        "agent_labels": []
+      }
+    }
+  ]
+}

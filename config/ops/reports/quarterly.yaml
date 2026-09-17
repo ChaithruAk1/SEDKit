@@ -34,6 +34,7 @@ sheets:
   - {table: quiet_apps, sheet: Quiet apps}
 slides:
   - {kind: title, title: Quarterly Budget & Governance, subtitle: IT leadership}
+  - {kind: narrative, title: Executive summary, ai_section_key: exec_summary, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: Budget and governance summary
     kpis:
@@ -44,6 +45,7 @@ slides:
       - {fact: notice.2q.count}
       - {fact: apps.quiet.count}
   - {kind: section, title: Spend vs budget}
+  - {kind: narrative, title: Spend vs budget, ai_section_key: spend_vs_budget, notes: "AI-drafted, human-approved section."}
   - kind: bar_chart
     title: Actual vs budget by cost category
     table: spend_by_category
@@ -54,6 +56,8 @@ slides:
     columns: [key, actual_qtd, budget_qtd, variance_pct, qoq_pct, actual_ytd]
     max_rows: 12
   - {kind: section, title: Licenses and renewals}
+  - {kind: narrative, title: License optimisation, ai_section_key: license_optimization, notes: "AI-drafted, human-approved section."}
+  - {kind: narrative, title: Renewals and vendor risk, ai_section_key: renewals_and_vendor_risk, notes: "AI-drafted, human-approved section."}
   - kind: table
     title: Idle license cost and right-size opportunities
     table: license_idle
@@ -71,6 +75,7 @@ slides:
     max_rows: 8
     when: has_rows
   - {kind: section, title: Portfolio health}
+  - {kind: narrative, title: Portfolio health, ai_section_key: portfolio_health, notes: "AI-drafted, human-approved section."}
   - kind: table
     title: Criticality x life cycle
     table: portfolio_health
@@ -83,7 +88,43 @@ slides:
   - kind: narrative
     title: Decisions needed
     ai_section_key: decisions_needed
-    notes: "AI-drafted and human-approved section (omitted in M2)."
+    notes: "AI-drafted, human-approved section."
   - {kind: provenance, title: Provenance}
 markdown:
   max_words: 400
+sections:
+  - key: exec_summary
+    title: Executive summary
+    summary: true
+    max_words: 150
+    guide: >-
+      Four or five sentences for IT leadership: spend against budget, the largest savings opportunity, the renewal
+      decisions due and the portfolio risk that matters most. Written last, from the other sections.
+  - key: spend_vs_budget
+    title: Spend vs budget
+    max_words: 120
+    guide: >-
+      Quarter-to-date and year-to-date spend against budget, the categories and applications driving the variance,
+      and whether the trend needs action.
+  - key: license_optimization
+    title: License optimisation
+    max_words: 100
+    guide: >-
+      Idle license cost, the largest under-used licenses and the right-sizing opportunity, and over-assigned licenses
+      that need a true-up.
+  - key: renewals_and_vendor_risk
+    title: Renewals and vendor risk
+    max_words: 120
+    guide: >-
+      Renewals and notice deadlines in the next two quarters and the vendor, renewal and license risks, citing the
+      approved AI risk findings of the packet where they apply.
+  - key: portfolio_health
+    title: Portfolio health
+    max_words: 100
+    guide: >-
+      Criticality against life cycle, quiet applications with cost, and candidates for rationalisation.
+  - key: decisions_needed
+    title: Decisions needed
+    max_words: 120
+    guide: >-
+      The decisions leadership must take this quarter, each with its deadline and the fact behind it.

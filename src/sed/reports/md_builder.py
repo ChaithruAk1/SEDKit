@@ -102,5 +102,18 @@ def build_md(snapshot: Snapshot, spec: ReportSpec, out_path: Path, *, ai_mode: s
     if not rdef.markdown:
         raise ValidationFailed(f"The {snapshot.report_key} report has no Markdown format")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(load_ref(rdef.markdown)(snapshot, spec, ai_mode=ai_mode), encoding="utf-8")
+    text = load_ref(rdef.markdown)(snapshot, spec, ai_mode=ai_mode).rstrip("\n") + "\n"
+    text += sections_md(render_view(snapshot, ai_mode).sections, ai_mode)
+    out_path.write_text(text, encoding="utf-8")
     return out_path
+
+
+def sections_md(sections: list[dict[str, Any]], ai_mode: str) -> str:
+    """The AI-drafted sections shown in this mode, after the deterministic summary (empty when there are none)."""
+    if not sections:
+        return ""
+    note = "approved by a person" if ai_mode != "draft" else "DRAFT, may include unapproved text"
+    lines = ["", f"_AI-drafted sections ({note}); numbers come from the report snapshot._"]
+    for section in sections:
+        lines += ["", f"**{section['title']}**", "", section["body_md"].strip()]
+    return "\n".join(lines) + "\n"

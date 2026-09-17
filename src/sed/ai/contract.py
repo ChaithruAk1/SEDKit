@@ -40,6 +40,9 @@ class StartParams(StrictModel):
     limit: int | None = Field(None, ge=1)
     # Restrict the run to one handler-defined subset, e.g. the tickets of a triage extension (`sap`).
     only: str | None = Field(None, pattern=r"^[a-z][a-z0-9]{1,15}$")
+    # Report skills (sed-draft-report): the report key and, for vendor reports, the vendor id.
+    report: str | None = Field(None, pattern=r"^[a-z][a-z0-9-]{1,39}$")
+    vendor: str | None = Field(None, pattern=r"^[A-Za-z0-9_.:-]{1,60}$")
     resume: str | None = None
     invoked_via: InvokedVia = "interactive"
     model_arg: str | None = None

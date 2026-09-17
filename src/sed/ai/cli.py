@@ -34,6 +34,8 @@ def ai_start_run(
     only: Annotated[
         str | None, typer.Option(help="Only this subset of items, e.g. a triage extension key such as sap")
     ] = None,
+    report: Annotated[str | None, typer.Option(help="Report key for report skills, e.g. monthly")] = None,
+    vendor: Annotated[str | None, typer.Option(help="Vendor id for vendor reports")] = None,
     resume: Annotated[str | None, typer.Option(help="Resume a run: only batches not yet ingested")] = None,
     invoked_via: Annotated[
         str, typer.Option("--invoked-via", help="interactive | workflow | headless")
@@ -59,6 +61,8 @@ def ai_start_run(
             max_items=max_items,
             limit=limit,
             only=only,
+            report=report,
+            vendor=vendor,
             resume=resume,
             invoked_via=invoked_via,
             model_arg=model,

@@ -332,6 +332,30 @@
               "is_flag": false,
               "kind": "option",
               "multiple": false,
+              "name": "report",
+              "opts": [
+                "--report"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "vendor",
+              "opts": [
+                "--vendor"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
               "name": "resume",
               "opts": [
                 "--resume"
@@ -2638,6 +2662,18 @@
               "type": "str"
             },
             {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "require_complete",
+              "opts": [
+                "--require-complete"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
               "default": null,
               "is_flag": false,
               "kind": "option",
@@ -2680,6 +2716,85 @@
           "help": "List the reports of every enabled module.",
           "name": "list",
           "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "AI section readiness of a report period (read-only): approved, drafts, stale and blocked sections.",
+          "name": "readiness",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "report",
+              "opts": [
+                "report"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "period",
+              "opts": [
+                "--period"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "vendor",
+              "opts": [
+                "--vendor"
+              ],
+              "required": false,
+              "type": "str"
+            },
             {
               "default": null,
               "is_flag": false,

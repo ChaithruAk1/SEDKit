@@ -68,6 +68,8 @@ class Snapshot:
     data_as_of: str | None = None
     suppressed_findings: list[dict[str, Any]] = field(default_factory=list)
     base_currency: str = "EUR"  # the currency of every "eur"-unit amount (settings.base_currency)
+    # AI-drafted sections a build shows (sed.reports.sections.attach); never stored with the snapshot.
+    sections: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -116,6 +118,7 @@ class RenderView:
     excluded_tables: list[str]
     ai_runs: list[AiRunProvenance]
     note: str | None
+    sections: list[dict[str, Any]] = field(default_factory=list)
 
 
 def fact(value: Any, unit: str, label: str, definition: str | None = None) -> dict[str, Any]:
@@ -148,9 +151,12 @@ def format_provenance_line(run: AiRunProvenance) -> str:
 
 
 def render_view(snapshot: Snapshot, ai_mode: str) -> RenderView:
-    """What a renderer may show. `none` drops AI-derived facts and tables; `approved` and `draft` show everything."""
+    """What a renderer may show. `none` drops AI-derived facts, tables and sections; `approved` and `draft` show
+    everything (the sections attached for that mode)."""
     if ai_mode != "none":
-        return RenderView(dict(snapshot.facts), dict(snapshot.tables), [], [], list(snapshot.ai_runs), None)
+        return RenderView(
+            dict(snapshot.facts), dict(snapshot.tables), [], [], list(snapshot.ai_runs), None, list(snapshot.sections)
+        )
     excluded_facts = [k for k in snapshot.ai_derived_facts if k in snapshot.facts]
     excluded_tables = [k for k in snapshot.ai_derived_tables if k in snapshot.tables]
     return RenderView(

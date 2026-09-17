@@ -14,7 +14,12 @@ from sed.reports.snapshot import Snapshot, create_snapshot
 from sed.reports.specs import ReportSpec, load_report_spec
 
 REPORTS = {"monthly": ("2026-08", False), "quarterly": ("2026-Q3", False), "vendor": ("2026-Q3", True)}
-NARRATIVE_SLOTS = {"monthly": "asks", "quarterly": "decisions_needed", "vendor": "negotiation_points"}
+NARRATIVE_SLOTS = {
+    "monthly": ["exec_summary", "service_performance", "top_issues", "improvements", "upcoming_changes", "asks"],
+    "quarterly": ["exec_summary", "spend_vs_budget", "license_optimization", "renewals_and_vendor_risk",
+                  "portfolio_health", "decisions_needed"],
+    "vendor": ["relationship_summary", "commercial", "performance", "risks", "negotiation_points"],
+}  # fmt: skip
 RESERVED_SHEETS = {"Summary", "Definitions", "Provenance"}
 # The contract (build spec section 6): fact and table keys each report must carry.
 REQUIRED = {
@@ -91,7 +96,9 @@ def test_specs_validate_with_sheets_and_slides():
         assert all(len(n) <= 31 and not set(n) & set("[]:*?/\\") for n in names)
         assert spec.slides[0].kind == "title" and spec.slides[-1].kind == "provenance"
         narrative = [s for s in spec.slides if s.kind == "narrative"]
-        assert [s.ai_section_key for s in narrative] == [NARRATIVE_SLOTS[key]]
+        assert [s.ai_section_key for s in narrative] == NARRATIVE_SLOTS[key]
+        assert sorted(s.key for s in spec.sections) == sorted(NARRATIVE_SLOTS[key])
+        assert sum(1 for s in spec.sections if s.summary) == 1
         assert any(s.kind == "kpis" for s in spec.slides)
 
 

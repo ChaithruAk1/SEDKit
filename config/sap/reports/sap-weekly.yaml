@@ -65,6 +65,7 @@ markdown:
 slides:
   - kind: title
     subtitle: "Week {period}"
+  - {kind: narrative, title: Headline, ai_section_key: headline, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: SAP L3 support vs 4-week average
     kpis:
@@ -75,6 +76,7 @@ slides:
       - {fact: sap.l3.sla.pct, compare: sap.l3.sla.pct.avg4w, delta: sap.l3.sla.delta_pp_vs_4w}
       - {fact: sap.l3.mttr.median_h, compare: sap.l3.mttr.median_h.avg4w}
     notes: "{{f:sap.scope.note}}. SLA source: {{f:sap.l3.sla.source}}."
+  - {kind: narrative, title: L3 support, ai_section_key: l3_support, notes: "AI-drafted, human-approved section."}
   - kind: line_chart
     title: SAP incidents, last 12 weeks
     table: sap_l3_trend_12w
@@ -103,6 +105,7 @@ slides:
       AI triage labels (approved runs only) of the SAP tickets opened this week: {{f:sap.ai.labelled}} labelled
       ({{f:sap.ai.labelled_pct}}). Sample accuracy {{f:sap.ai.sample_accuracy_pct}}, 95% CI
       {{f:sap.ai.sample_ci_low_pct}} to {{f:sap.ai.sample_ci_high_pct}}.
+  - {kind: narrative, title: Changes and transports, ai_section_key: changes, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: SAP changes and transports
     kpis:
@@ -136,6 +139,7 @@ slides:
     title: Transports waiting for production
     table: sap_transports_waiting
     columns: [transport, change_id, landscape, qa_system, days_waiting]
+  - {kind: narrative, title: IDoc health, ai_section_key: idocs, notes: "AI-drafted, human-approved section."}
   - kind: kpis
     title: SAP IDoc health
     kpis:
@@ -160,5 +164,35 @@ slides:
     title: System-detected SAP risks
     table: sap_findings
     columns: [severity, title, kind, subject_id]
+  - {kind: narrative, title: Actions for next week, ai_section_key: actions, notes: "AI-drafted, human-approved section."}
   - kind: provenance
     title: Provenance
+sections:
+  - key: headline
+    title: Headline
+    summary: true
+    max_words: 40
+    guide: >-
+      One or two sentences on the most important thing in SAP support this week, with the fact that shows it.
+      Written last, from the other sections.
+  - key: l3_support
+    title: L3 support
+    max_words: 100
+    guide: >-
+      SAP L3 volume, backlog and SLA against the 4-week average, and the areas or landscapes that stand out.
+  - key: changes
+    title: Changes and transports
+    max_words: 100
+    guide: >-
+      Urgent-change share, stuck changes, failed or waiting transports, and incidents after production imports.
+  - key: idocs
+    title: IDoc health
+    max_words: 80
+    guide: >-
+      Open and aged IDoc errors, new persistent errors and spikes after imports.
+  - key: actions
+    title: Actions for next week
+    max_words: 100
+    guide: >-
+      Three to five actions with the owning role (area lead, Basis, change manager), tied to the facts above. No
+      person names.

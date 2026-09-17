@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from sed import db
-from sed.errors import ValidationFailed
+from sed.errors import PreconditionFailed, ValidationFailed
 from sed.paths import Paths
 from sed.reports.md_builder import build_md
 from sed.reports.snapshot import Snapshot, create_snapshot, render_view
@@ -36,6 +36,14 @@ def artifact_name(snapshot: Snapshot, ext: str, ai_mode: str) -> str:
     return "_".join(parts) + f".{ext}"
 
 
+def _omitted(state: Any, ai_mode: str) -> str:
+    """'<section key>: <why it is not shown>' for report_artifact.unapproved_omitted_json."""
+    if ai_mode == "none":
+        return f"{state.key}: excluded (--ai none)"
+    reason = "; ".join(state.reasons) if state.reasons else ("no draft" if state.status == "missing" else state.status)
+    return f"{state.key}: {reason}"
+
+
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -49,12 +57,17 @@ def build_report(
     vendor_id: str | None = None,
     *,
     template_map: str | None = None,
+    require_complete: bool = False,
 ) -> dict[str, Any]:
     """Build artifacts for one report period. `formats=None` builds every format the report declares.
 
     `template_map` (name or path; default `settings.reports.template_map`) is used for pptx; each pptx artifact records
     the map name and sha256 (map bytes plus template bytes) in `artifacts[].template_map` and
     `report_artifact.template_map_sha`.
+
+    AI-drafted sections (sed.reports.sections) render in approved mode when approved, current and backed by published
+    findings, and also as drafts in draft mode. `require_complete` refuses (exit 4, before any artifact) when a
+    required section would be missing.
     """
     from sed.modules import report
 
@@ -65,6 +78,8 @@ def build_report(
         raise ValidationFailed(f"Unsupported format(s) {unknown} for {report_key}; available: {list(rdef.formats)}")
     if ai_mode not in AI_MODES:
         raise ValidationFailed(f"--ai must be one of {sorted(AI_MODES)}")
+    if require_complete and ai_mode == "none":
+        raise ValidationFailed("--require-complete needs --ai approved or --ai draft")
     spec = load_report_spec(report_key, paths)
     tmap = None
     if "pptx" in wanted:
@@ -75,6 +90,16 @@ def build_report(
     conn = db.connect(paths.db)
     try:
         snapshot = create_snapshot(conn, paths, report_key, period, vendor_id)
+        from sed.reports import sections as report_sections
+
+        states = report_sections.attach(snapshot, conn, spec, ai_mode)
+        missing = report_sections.incomplete(states, ai_mode)
+        if require_complete and missing:
+            raise PreconditionFailed(
+                f"{len(missing)} required AI sections are not ready for --ai {ai_mode}", {"sections": missing}
+            )
+        shown = {x["key"] for x in snapshot.sections}
+        omitted_sections = [_omitted(st, ai_mode) for st in states if st.key not in shown]
         if tmap is not None:
             from sed.reports.pptx_builder import check_spec_refs
 
@@ -87,17 +112,15 @@ def build_report(
         for fmt in wanted:
             target = out_dir / artifact_name(snapshot, fmt, ai_mode)
             template_info: dict[str, str] | None = None
-            omitted: list[str] = []
             if fmt == "xlsx":
                 build_xlsx(snapshot, spec, target, ai_mode=ai_mode, generated_at=generated)
             elif fmt == "md":
                 build_md(snapshot, spec, target, ai_mode=ai_mode)
             elif fmt == "pptx" and tmap is not None:
-                from sed.reports.pptx_builder import build_pptx, effective_slides
+                from sed.reports.pptx_builder import build_pptx
 
                 build_pptx(snapshot, spec, tmap, target, ai_mode=ai_mode, generated_at=generated)
                 template_info = {"name": tmap.map.name, "sha256": tmap.sha256}
-                omitted = [s.ai_section_key or "" for s in effective_slides(spec, snapshot) if s.kind == "narrative"]
             else:
                 raise ValidationFailed(f"Unknown format '{fmt}'")
             sha = _sha(target)
@@ -116,7 +139,7 @@ def build_report(
                         template_info["sha256"] if template_info else None,
                         ai_mode,
                         json.dumps(run_ids),
-                        json.dumps(omitted),
+                        json.dumps(omitted_sections),
                         generated,
                     ),
                 )
@@ -132,9 +155,9 @@ def build_report(
         "ai_mode": ai_mode,
         "ai_runs": run_ids,
         "readiness": {
-            "ai_sections_required": 0,
-            "ai_sections_approved": 0,
-            "note": "AI narrative sections arrive in M5; deterministic content only.",
+            "ai_sections_required": sum(1 for st in states if st.required),
+            "ai_sections_shown": len(shown),
+            "omitted": omitted_sections,
         },
         "artifacts": artifacts,
     }

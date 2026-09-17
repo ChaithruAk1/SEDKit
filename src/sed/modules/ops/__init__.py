@@ -70,6 +70,7 @@ MODULE = Module(
         SkillDef("sed-find-recurring", "sed.modules.ops.ai.recurring:RecurringHandler"),
         SkillDef("sed-assess-risks", "sed.modules.ops.ai.risks:RisksHandler"),
         SkillDef("sed-triage-open", "sed.modules.ops.ai.triage_open:TriageOpenHandler"),
+        SkillDef("sed-draft-report", "sed.modules.ops.ai.draft_report:DraftReportHandler", ("sed-report.js",)),
     ),
     mappings_dir="ops/mappings",
     ingest_targets="sed.ingest.targets:TARGETS",

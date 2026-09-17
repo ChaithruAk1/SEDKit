@@ -30,6 +30,10 @@ def report_build(
     template_map: Annotated[
         str | None, typer.Option("--template-map", help="PPTX template map name or path (default: settings)")
     ] = None,
+    require_complete: Annotated[
+        bool,
+        typer.Option("--require-complete", help="Refuse (exit 4) when a required AI section is not ready"),
+    ] = False,
     profile: ProfileOpt = None,
     data_dir: DataDirOpt = None,
     as_json: JsonOpt = False,
@@ -39,7 +43,9 @@ def report_build(
 
     paths = paths_for(profile, data_dir)
     formats = [x.strip().lower() for x in fmt.split(",") if x.strip()] if fmt else None
-    result = build_report(paths, report, period, formats, ai, vendor, template_map=template_map)
+    result = build_report(
+        paths, report, period, formats, ai, vendor, template_map=template_map, require_complete=require_complete
+    )
     emit(result, as_json, lambda p: [console().print(f"{a['format']}: {a['path']}") for a in p["artifacts"]])
 
 
@@ -74,6 +80,43 @@ def report_snapshot(
         },
         as_json,
     )
+
+
+@report_app.command("readiness")
+@handle_errors
+def report_readiness(
+    report: Annotated[str, typer.Argument(help="Report key (see `sed report list`)")],
+    period: Annotated[str, typer.Option(help="Period label, e.g. 2026-W35, 2026-08, 2026-Q3")],
+    vendor: Annotated[str | None, typer.Option(help="Vendor id (vendor report)")] = None,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """AI section readiness of a report period (read-only): approved, drafts, stale and blocked sections."""
+    from sed.modules import report as report_def
+    from sed.reports.sections import readiness
+
+    report_def(report)
+    paths = paths_for(profile, data_dir)
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        result = readiness(conn, paths, report, period, vendor)
+    finally:
+        conn.close()
+
+    def human(p: dict) -> None:
+        console().print(
+            f"{p['report']} {p['period']}: {p['sections_approved']}/{p['sections_required']} required sections "
+            f"approved, {p['sections_with_drafts']} with drafts",
+            markup=False,
+        )
+        for s in p["sections"]:
+            reasons = f" ({'; '.join(s['reasons'])})" if s["reasons"] else ""
+            console().print(
+                f"  {s['key']:<28} {s['approved_status']:<9} draft={s['draft_status']}{reasons}", markup=False
+            )
+
+    emit(result, as_json, human)
 
 
 @report_app.command("list")
