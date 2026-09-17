@@ -2482,9 +2482,215 @@
           ]
         },
         {
+          "help": "Quality gate of one module: manifest, boundaries, owned paths, config, skills, web fixtures, tests, docs.",
+          "name": "gate",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "key",
+              "opts": [
+                "key"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "run_tests",
+              "opts": [
+                "--run-tests"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "root",
+              "opts": [
+                "--root"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
           "help": "List installed modules and whether each is enabled for the profile.",
           "name": "list",
           "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Scaffold a module that passes `sed modules check` and the gate: manifest, API, CLI, page, fixture, test, docs.",
+          "name": "new",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "key",
+              "opts": [
+                "key"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "title",
+              "opts": [
+                "--title"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "description",
+              "opts": [
+                "--description"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": true,
+              "name": "depends_on",
+              "opts": [
+                "--depends-on"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": 90,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "order",
+              "opts": [
+                "--order"
+              ],
+              "required": false,
+              "type": "int range"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "root",
+              "opts": [
+                "--root"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "dry_run",
+              "opts": [
+                "--dry-run"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
             {
               "default": null,
               "is_flag": false,

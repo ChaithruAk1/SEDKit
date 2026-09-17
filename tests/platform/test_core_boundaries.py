@@ -18,8 +18,16 @@ from tests.conftest import REPO
 
 SRC = REPO / "src" / "sed"
 LEGACY_OPS = {"metrics.py", "analytics.py"}
+# Registry submodules core may import (the registry itself, not module packages).
+REGISTRY_MODULES = {"contract", "cli", "scaffold", "gate"}
 FORBIDDEN_PREFIXES = ("sed.metrics", "sed.analytics", "sed.synth", "sed.ingest.targets")
-REGISTRY_FILES = {"modules/__init__.py", "modules/contract.py", "modules/cli.py"}
+REGISTRY_FILES = {
+    "modules/__init__.py",
+    "modules/contract.py",
+    "modules/cli.py",
+    "modules/scaffold.py",
+    "modules/gate.py",
+}
 # Specific imports legacy core files still make into ops code. Every entry is debt: remove it when the file migrates.
 ALLOWLIST = {
     ("cli.py", "sed.metrics"),  # legacy top-level ops commands (metrics, attention)
@@ -72,7 +80,7 @@ def _violations(name: str) -> bool:
     if name.startswith(FORBIDDEN_PREFIXES):
         return True
     parts = name.split(".")
-    return len(parts) >= 3 and parts[:2] == ["sed", "modules"] and parts[2] not in {"contract", "cli"}
+    return len(parts) >= 3 and parts[:2] == ["sed", "modules"] and parts[2] not in REGISTRY_MODULES
 
 
 def test_core_does_not_import_module_code():

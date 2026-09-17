@@ -148,7 +148,10 @@ MODULE = Module(
         ".claude/skills/sed-find-recurring/**",
         ".claude/skills/sed-assess-risks/**",
         ".claude/skills/sed-triage-open/**",
+        ".claude/skills/sed-draft-report/**",
         ".claude/workflows/sed-analyze.js",
+        ".claude/workflows/sed-report.js",
         "web/src/modules/ops/**",
+        "tests/modules/ops/**",
     ),
 )

@@ -41,7 +41,8 @@ stopped, because Windows locks `.venv\Scripts\sed.exe`). Exit codes: 0 ok, 1 int
 ## Modules
 SED is a platform of modules; ops is module #1, sap (SAP application support) is module #2 and delivery (delivery
 management of new business apps) is module #3. How to add one:
-`docs/modules.md`.
+`docs/modules.md` (`uv run sed modules new <key>` scaffolds it, `uv run sed modules gate <key> --json` checks it; the
+`sed-build-module` skill drives a full build).
 - Core never imports `sed.modules.<key>` directly. It reaches modules only through `sed.modules` (the registry, with lazy
   import references). `tests/platform/test_core_boundaries.py` enforces this.
 - Namespaces: CLI `sed <name>`, API `/api/<key>/...`, pages `#/<key>/...`, config `config/<key>/`, skills `sed-...`,

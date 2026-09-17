@@ -37,13 +37,36 @@ its API routes are not mounted and its pages are hidden.
 
 ## Adding a module
 
-1. Create `src/sed/modules/<key>/__init__.py` with `MODULE = Module(key="<key>", ...)` and add it to `BUILTIN` in
-   `src/sed/modules/__init__.py`.
-2. Put config under `config/<key>/`, tests under `tests/modules/<key>/`, pages under `web/src/modules/<key>/`, skills
-   under `.claude/skills/sed-<key>-<verb>/`.
-3. Run `uv run sed modules check --json` and `uv run python scripts/codegen.py`, then CI.
-4. `tests/platform/modules/sample_module` (module `hello`) is the minimal working example: CLI, API and nav with no core
-   edits.
+The app factory does the wiring (the `sed-build-module` skill drives the whole build with you: approved stories and
+ADRs, scaffold, slices, gate, review, checkpoint):
+
+```bash
+uv run sed modules new <key> --title "<title>" --description "<text>" --depends-on ops --dry-run --json
+uv run sed modules new <key> --title "<title>" --description "<text>" --depends-on ops --json
+uv run python scripts/codegen.py
+uv run sed modules gate <key> --run-tests --json
+```
+
+`sed modules new` writes a working module and registers it:
+- the package `src/sed/modules/<key>/` (manifest, read-only API route `/api/<key>/overview` with its model, CLI
+  `sed <key> status`, CLAUDE.md), `config/<key>/README.md` and `tests/modules/<key>/`;
+- the page `#/<key>` in `web/src/modules/<key>/` with its typed fixture `web/src/api/fixtures/<key>.ts`;
+- `BUILTIN`, the `enabled` list in `config/modules.yaml`, the fixture GET handler and nav item, and a row in the table
+  above.
+
+It refuses invalid, reserved or taken keys and never overwrites a file, and the result passes CI as it is (platform
+tests read the built-in modules from `BUILTIN`).
+
+`sed modules gate <key>` is the quality gate before a commit: manifest and import references, import boundaries (core
+never imports the module; the module imports only its `depends_on`), `owned_paths` coverage (package, config, tests,
+web, skill folders and workflows), config files, skill folders, web routes for every nav item and a fixture for every
+GET route in `contracts/openapi.json`, tests present, CLAUDE.md and a row here; `--run-tests` adds
+`pytest tests/modules/<key>`. It exits 2 with the problems listed.
+
+By hand, the same steps are: create `src/sed/modules/<key>/__init__.py` with `MODULE = Module(key="<key>", ...)`, add
+it to `BUILTIN`; put config under `config/<key>/`, tests under `tests/modules/<key>/`, pages under
+`web/src/modules/<key>/`, skills under `.claude/skills/sed-<...>/`; run `uv run sed modules check --json`, codegen and
+CI. `tests/platform/modules/sample_module` (module `hello`) is the minimal example: CLI, API and nav with no core edits.
 
 Rules enforced by tests (`tests/platform/test_registry.py`, `test_core_boundaries.py`):
 - Core code never imports `sed.modules.<key>` (only through the registry). Modules may import the core.

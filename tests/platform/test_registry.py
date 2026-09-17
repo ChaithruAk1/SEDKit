@@ -11,6 +11,9 @@ from sed.errors import PreconditionFailed, ValidationFailed
 from sed.ingest.resolve import ALIAS_KINDS
 from sed.modules.contract import Module, NavItem, ReportDef, SkillDef
 
+# Built-in module keys in BUILTIN order (a module added with `sed modules new` appears here without test edits).
+BUILTIN_KEYS = [package.rsplit(".", 1)[-1] for package in modules.BUILTIN]
+
 
 def test_builtin_modules_are_valid_and_every_reference_imports():
     assert modules.validate() == []
@@ -20,7 +23,8 @@ def test_builtin_modules_are_valid_and_every_reference_imports():
 
 
 def test_builtin_modules_are_enabled_by_default_and_nav_is_namespaced():
-    assert [m.key for m in modules.enabled()] == ["ops", "sap", "delivery"]
+    assert BUILTIN_KEYS[:3] == ["ops", "sap", "delivery"]
+    assert [m.key for m in modules.enabled()] == BUILTIN_KEYS
     for key, item in modules.nav():
         if key == "core":
             assert item.path.strip("/").split("/")[0] in modules.CORE_PAGE_KEYS
@@ -152,7 +156,7 @@ def test_duplicate_entity_keys_are_rejected():
     [
         ("enabled: []\n", frozenset()),
         ("enabled: [ops]\n", frozenset({"ops"})),
-        ("title: no enabled key\n", frozenset({"ops", "sap", "delivery"})),
+        ("title: no enabled key\n", frozenset(BUILTIN_KEYS)),
         ("enabled: [\n", ValidationFailed),
         ("enabled: none\n", ValidationFailed),
         ("enabled:\n", ValidationFailed),

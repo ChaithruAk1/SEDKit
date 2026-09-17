@@ -200,6 +200,24 @@ Exports read the approved text, so reviewer edits reach the file. A test plan ca
 are approved. Files land in `DATA_DIR\out\delivery\<project>\`. For code review of a module change, the
 `sed-review-module` skill runs the module checks and reports verified findings in chat.
 
+## Building a new module (app factory)
+
+New capabilities are built as modules inside SED with the `sed-build-module` skill: approved stories and ADRs, then a
+scaffold, vertical slices with tests, the quality gate, an adversarial review (`sed-review-module`) and a checkpoint
+with you before any commit.
+
+```bash
+uv run sed modules new crm --title "Customer relations" --depends-on ops --dry-run --json
+uv run sed modules new crm --title "Customer relations" --depends-on ops --json
+uv run python scripts/codegen.py
+uv run sed modules gate crm --run-tests --json
+```
+
+The scaffold is a working module (manifest, API route, CLI command, page with a fixture, test, CLAUDE.md) registered
+in `BUILTIN`, `config/modules.yaml`, the web fixtures and `docs/modules.md`. The gate checks the manifest, import
+boundaries, owned paths, config files, skill folders, web routes and fixtures, tests and docs (`--run-tests` also runs
+the module's tests). Details: `docs/modules.md`.
+
 ## AI analysis (Claude Code)
 
 - Triage runs through the `sed-triage-batch` skill (small runs in-session) or the `sed-analyze` workflow (larger runs):
@@ -250,5 +268,5 @@ headless spike): `docs/real-data-onboarding.md`.
 | M4 | Full AI analysis & review | built; AI-run gates (90-day triage, eval slice, real 50-ticket sample) pending |
 | M5 | AI-drafted reports | built; a real monthly draft (needs Claude usage) pending |
 | M6 | Automation & connectors | built; real connector setup and the scheduled run pending |
-| M7 | AI-native SDLC: delivery module (D1), AI drafts for stories, ADRs, test plans and release notes (D2), app factory (D3) | D1–D2 built; D3 in progress |
+| M7 | AI-native SDLC: delivery module (D1), AI drafts for stories, ADRs, test plans and release notes (D2), app factory (D3) | built |
 | SAP S5 | SAP connectivity (`sed pull sap`), last wave | built; SAP services, technical user and reconciliation pending |
