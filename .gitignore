@@ -13,7 +13,7 @@ build/
 web/node_modules/
 web/dist/
 
-# Data never lives in the repo (DATA_DIR is <data root>\<profile>; see docs/data-location.md)
+# Data never lives in the repo (DATA_DIR is <data root>/<profile>; see docs/data-location.md)
 *.db
 *.db-wal
 *.db-shm
@@ -23,10 +23,14 @@ data/
 out/
 *.log
 
-# Branding files (company logos) stay on this machine: SED reads them from <data root>randing (sed branding)
+# Branding files (company logos) stay on this machine: SED reads them from the branding folder under the
+# data root (see `sed branding` and docs/data-location.md)
 /Logo/
 
 # Secrets / machine-local config
 .env
 .env.*
 .claude/settings.local.json
+
+# Worktrees for parallel builds (docs/playbooks/parallel-build.md)
+.claude/worktrees/

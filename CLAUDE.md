@@ -74,10 +74,17 @@ such a build, work in the main checkout as usual. Never put high-entropy literal
   (ops: `config/ops/{taxonomy,sla,risk_rules,vendor_groups}.yaml`, `mappings/`, `reports/`; sap:
   `config/sap/{scope,charm,idoc,taxonomy,risk_rules}.yaml`, `mappings/`, `reports/`; delivery:
   `config/delivery/risk_rules.yaml`, `mappings/`, `reports/`).
-- `.claude/skills/sed-*` — project skills (always `sed-` prefixed; a personal `/review` skill exists on this machine).
-- `.claude/workflows/` — `sed-analyze.js`, `sed-report.js` (schema blocks generated from Pydantic; do not hand-edit).
+- `.claude/` — Claude Code configuration, everything `sed-` prefixed so a personal skill, command or agent of the same
+  name cannot shadow it (a personal `/review` skill exists on this machine):
+  - `settings.json` (shared: env, permissions) and `settings.local.json` (machine-local, gitignored, written by
+    `sed init`; `settings.local.example.json` is its template).
+  - `skills/sed-*/SKILL.md` — project skills. `commands/sed-*.md` — slash commands (`/sed-check`, `/sed-status`,
+    `/sed-weekly`). `agents/sed-*.md` — subagents (`sed-guard-reviewer`).
+  - `workflows/` — `sed-analyze.js`, `sed-report.js` (schema blocks generated from Pydantic; do not hand-edit).
+  - `launch.json` — the dev server the built-in browser starts; `worktrees/` — parallel builds (gitignored).
 - `scripts/` — `ci.py`, `guard_confidential.py`, `codegen.py`, `check_ownership.py`, `wt.sh`, `setup.ps1`.
 - `tests/` — pytest; synthetic fixtures only.
+- `.github/workflows/ci.yml` — CI, which runs the same `scripts/ci.py`.
 
 ## Conventions
 - Python 3.11, ruff (line length 120), `open()` always with `encoding=` (ruff PLW1514).

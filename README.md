@@ -53,6 +53,24 @@ uv run python scripts/ci.py
 ```
 
 This runs ruff, pytest, the confidentiality guard, detect-secrets, and (when present) the workflow scripts and web build.
+`.github/workflows/ci.yml` runs the same command on every push and pull request.
+
+## Repository layout
+
+```
+src/sed/          the package: CLI, ingest, metrics, AI, reports, API, module registry (src/sed/modules/<key>)
+web/              the dashboard (Vite + React + Mantine); web/src/design holds the design book
+config/           synthetic defaults, overridable file by file from the data folder
+contracts/        generated API contract and schemas (scripts/codegen.py; never hand-edited)
+docs/             architecture, data model, export specs, playbooks, runbooks
+evals/  templates/  tests/  scripts/
+.claude/          Claude Code configuration: settings, skills, commands, agents, workflows
+.github/workflows/  CI
+CLAUDE.md         the agent contract for this repository (web/ and each module carry their own)
+```
+
+Everything real — exports, mappings with real values, the corporate template, branding, salts, ground truth — lives in
+the data folder outside the repository (`docs/data-location.md`).
 
 ## First run (synthetic data)
 

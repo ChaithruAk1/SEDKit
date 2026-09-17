@@ -1,0 +1,48 @@
+name: CI
+
+# One entry point, the same one used locally: `uv run python scripts/ci.py`
+# (ruff, pytest, the confidentiality guard, detect-secrets, workflow scripts, generated contracts, web checks).
+# SED runs on Windows, so CI runs there too. No Claude calls, no network beyond the installs.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python and dependencies
+        run: uv sync --locked --all-extras
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm --prefix web ci
+
+      - name: All checks
+        run: uv run python scripts/ci.py

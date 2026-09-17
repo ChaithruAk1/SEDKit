@@ -182,8 +182,32 @@ def test_skill_name_problems_detects_bad_frontmatter(tmp_path: Path):
 
 def test_gitignore_covers_data_and_local_settings():
     ignore = (REPO / ".gitignore").read_text(encoding="utf-8")
-    for entry in ("*.db", ".claude/settings.local.json", ".env", "web/node_modules/"):
+    for entry in ("*.db", ".claude/settings.local.json", ".claude/worktrees/", ".env", "web/node_modules/"):
         assert entry in ignore
+
+
+@pytest.mark.parametrize("kind", ["commands", "agents"])
+def test_project_commands_and_agents_follow_the_conventions(kind: str):
+    """Both are `sed-` prefixed like the skills (a personal command or agent of the same name would win) and carry the
+    frontmatter Claude Code reads: a description, and for an agent a name equal to its file."""
+    files = sorted((REPO / ".claude" / kind).glob("*.md"))
+    assert files, kind
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        assert text.startswith("---\n"), path.name
+        meta = yaml.safe_load(text.split("---")[1])
+        assert path.stem.startswith("sed-"), path.name
+        assert 0 < len(meta["description"]) <= 1024, path.name
+        if kind == "agents":
+            assert meta["name"] == path.stem, path.name
+
+
+def test_github_ci_workflow_runs_the_single_check_entry_point():
+    workflow = REPO / ".github" / "workflows" / "ci.yml"
+    cfg = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+    steps = cfg["jobs"]["checks"]["steps"]
+    assert any("scripts/ci.py" in step.get("run", "") for step in steps), "CI must run scripts/ci.py"
+    assert cfg["jobs"]["checks"]["runs-on"].startswith("windows"), "SED runs on Windows"
 
 
 # Zero-width, bidi-control, word-joiner, soft-hyphen and mid-file BOM characters: invisible in review, so they can hide
