@@ -81,7 +81,7 @@ def _finish(paths: Paths, run: Any, section: str, scores: dict[str, Any], gates:
         "checks": gates,
         "passed": all(gates.values()),
     }
-    previous = previous_eval(paths, run["skill"], run["run_id"])
+    previous = previous_eval(paths, run["skill"], run["run_seq"])
     if previous is not None:
         result["previous"] = {k: previous.get(k) for k in ("run_id", "skill_hash", "passed", "checks") if k in previous}
     folder = paths.runs / run["run_id"]
@@ -90,20 +90,26 @@ def _finish(paths: Paths, run: Any, section: str, scores: dict[str, Any], gates:
     return result
 
 
-def previous_eval(paths: Paths, skill: str, run_id: str) -> dict[str, Any] | None:
-    """The newest eval.json of the same skill from another run (run folders sort by their timestamped ids)."""
-    if not paths.runs.is_dir():
-        return None
-    for folder in sorted(paths.runs.iterdir(), reverse=True):
-        file = folder / "eval.json"
-        if folder.name == run_id or not file.is_file():
+def previous_eval(paths: Paths, skill: str, run_seq: int) -> dict[str, Any] | None:
+    """The eval.json of the newest earlier run (by run_seq) of the same skill that has one."""
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        earlier = [
+            r[0]
+            for r in conn.execute(
+                "SELECT run_id FROM ai_run WHERE skill = ? AND run_seq < ? ORDER BY run_seq DESC", (skill, run_seq)
+            )
+        ]
+    finally:
+        conn.close()
+    for run_id in earlier:
+        file = paths.runs / run_id / "eval.json"
+        if not file.is_file():
             continue
         try:
-            data = json.loads(file.read_text(encoding="utf-8"))
+            return json.loads(file.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        if data.get("skill") == skill and folder.name < run_id:
-            return data
     return None
 
 
