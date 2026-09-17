@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from sed.api import routes_core, routes_review
+from sed.api import routes_core, routes_reports, routes_review
 
 SECURITY_HEADERS = {
     "x-frame-options": "DENY",
@@ -16,14 +16,14 @@ SECURITY_HEADERS = {
     "referrer-policy": "no-referrer",
 }
 # Query strings needed by core GET routes that have required parameters.
-REQUIRED_QUERY = {"/alias-targets": "?kind=vendor"}
+REQUIRED_QUERY = {"/alias-targets": "?kind=vendor", "/reports/readiness": "?report=weekly&period=2026-W35"}
 
 
 def core_get_routes() -> list[tuple[str, Any]]:
     """(/api path with required query, response model) for every GET route of the core routers without path
     parameters (routes like /runs/{run_id} are tested with a real run)."""
     out = []
-    for route in [*routes_core.router.routes, *routes_review.router.routes]:
+    for route in [*routes_core.router.routes, *routes_review.router.routes, *routes_reports.router.routes]:
         if "GET" in getattr(route, "methods", set()) and "{" not in route.path:
             out.append((f"/api{route.path}{REQUIRED_QUERY.get(route.path, '')}", route.response_model))
     return sorted(out, key=lambda item: item[0])

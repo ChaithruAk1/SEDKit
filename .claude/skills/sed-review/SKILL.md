@@ -23,6 +23,8 @@ before it runs.
    and values, and for clusters the ticket count, periodicity, suspected change and recommendation. Then ask for a
    decision: approve, reject (a note is required), edit (the person gives the new text), approve the update, or skip.
    For an active rule finding the choices are acknowledge (note) or suppress until a date (note), or skip.
+   Report sections (kind `report_section`) cite findings: review the cited findings first, because a section cannot be
+   approved while one of them is still a draft, and an edited section may only use the fact tokens it already has.
 3. Run exactly the command for the decision the person gave. For an edit, write the person's text to a file under
    `runs/review/` first and pass it with `--file`.
 4. Label runs: for each completed triage run, run the sample command with a template path under `runs/review/`, show

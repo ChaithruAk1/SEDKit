@@ -53,7 +53,7 @@ export interface ShellValue {
 
 const ShellContext = createContext<ShellValue | null>(null);
 
-const CORE_ICONS: Record<string, string> = { '/review': 'list-check', '/runs': 'robot', '/data': 'database' };
+const CORE_ICONS: Record<string, string> = { '/review': 'list-check', '/runs': 'robot', '/reports': 'file-text', '/data': 'database' };
 
 function localNav(): NavEntry[] {
   return REGISTERED_ROUTES.filter((r) => !r.path.includes(':')).map((r, index) => ({

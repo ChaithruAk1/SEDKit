@@ -18,6 +18,7 @@ from sed.ai.review import review_findings
 from sed.ai.runs import finish_run, start_run
 from sed.errors import PreconditionFailed, ValidationFailed
 from sed.reports.build import build_report
+from sed.reports.evals import evaluate_report_run
 from sed.reports.snapshot import create_snapshot
 from tests.fake_agent.flow import query
 from tests.fake_agent.triage import write_output
@@ -129,6 +130,14 @@ def test_draft_ingest_approval_and_build(ops_profile_rw):
     _ingest(paths, plan, headline, body_md="Service held at {{f:inc.sla.pct}} SLA.", slide_headline="Service held")
     summary = finish_run(paths, plan.run_id)
     assert summary.failed_batches == ["batch_0004"]  # actions was never written
+
+    scores = evaluate_report_run(paths, plan.run_id)
+    assert scores["checks"]["tokens_resolve"] and scores["checks"]["citations_valid"]
+    assert not scores["checks"]["required_sections"] and scores["missing_sections"] == ["actions"]
+    assert not scores["checks"]["no_bare_numbers"] and not scores["passed"] and scores["cited_findings"] == 1
+    assert json.loads((paths.runs / plan.run_id / "eval.json").read_text(encoding="utf-8"))["passed"] is False
+    with pytest.raises(PreconditionFailed, match="not sed-draft-report"):
+        evaluate_report_run(paths, "rec-dr")
 
     rows = {
         r["stable_key"].rsplit(":", 1)[1]: r

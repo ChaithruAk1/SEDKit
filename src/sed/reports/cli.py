@@ -119,6 +119,27 @@ def report_readiness(
     emit(result, as_json, human)
 
 
+@report_app.command("eval")
+@handle_errors
+def report_eval(
+    run_id: Annotated[str, typer.Argument(help="A sed-draft-report run id")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Score a sed-draft-report run: tokens resolve, required sections, word limits, bare numbers, citations."""
+    from sed.reports.evals import evaluate_report_run
+
+    result = evaluate_report_run(paths_for(profile, data_dir), run_id)
+
+    def human(p: dict) -> None:
+        console().print(f"{p['run_id']} ({p['report']} {p['period']}): passed={p['passed']}", markup=False)
+        for check, ok in p["checks"].items():
+            console().print(f"  {'ok  ' if ok else 'FAIL'} {check}", markup=False)
+
+    emit(result, as_json, human)
+
+
 @report_app.command("list")
 @handle_errors
 def report_list(profile: ProfileOpt = None, data_dir: DataDirOpt = None, as_json: JsonOpt = False) -> None:

@@ -20,7 +20,7 @@ is a lazy import reference (`"package.module:attr"`), so the core imports module
 | CLI | `CliMount(name, app)` | `sed <name> ...` (keep names short; core names are reserved) |
 | API | `ApiMount(router)` | `/api/<key>/...` with the core's host check, token and error envelope |
 | Dashboard | `NavItem(id="<key>.<page>", path="/<key>/...")` + `web/src/modules/<key>/index.ts` | `#/<key>/...`, nav from `GET /api/nav` |
-| Reports | `ReportDef(key, title, spec, builder, period_kinds, ...)` | `sed report build <key>`; spec in `config/<key>/reports/` |
+| Reports | `ReportDef(key, title, spec, builder, period_kinds, ...)` | `sed report build <key>`; spec in `config/<key>/reports/`; AI sections under `sections:` (drafted by `sed-draft-report`, shown on `narrative` slides) |
 | AI skills | `SkillDef(name="sed-<...>", handler)` + `.claude/skills/<name>/` | `sed ai start-run <name>` |
 | Import | `mappings_dir`, `ingest_targets`, `ingest_hooks`, `entities`, `alias_kinds` | `sed import`; mappings in `config/<key>/mappings/` |
 | Synthetic data | `SynthDef(generate)` | `sed synth [--module <key>]`; ground truth under `ground_truth/<key>/` |

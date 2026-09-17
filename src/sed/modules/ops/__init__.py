@@ -48,6 +48,8 @@ MODULE = Module(
             "ops/reports/monthly.yaml",
             "sed.modules.ops.reports.monthly:build",
             ("month",),
+            formats=("xlsx", "md", "pptx"),
+            markdown="sed.modules.ops.reports.markdown:render_monthly",
         ),
         ReportDef(
             "quarterly",
@@ -55,6 +57,8 @@ MODULE = Module(
             "ops/reports/quarterly.yaml",
             "sed.modules.ops.reports.quarterly:build",
             ("quarter",),
+            formats=("xlsx", "md", "pptx"),
+            markdown="sed.modules.ops.reports.markdown:render_quarterly",
         ),
         ReportDef(
             "vendor",
@@ -63,6 +67,8 @@ MODULE = Module(
             "sed.modules.ops.reports.vendor:build",
             ("quarter", "month"),
             needs_vendor=True,
+            formats=("xlsx", "md", "pptx"),
+            markdown="sed.modules.ops.reports.markdown:render_vendor",
         ),
     ),
     skills=(

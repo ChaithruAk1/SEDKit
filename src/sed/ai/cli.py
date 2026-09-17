@@ -119,6 +119,32 @@ def ai_finish_run(
     )
 
 
+@ai_app.command("packet")
+@handle_errors
+def ai_packet(
+    run_id: Annotated[str, typer.Argument(help="Run id")],
+    batch: Annotated[str | None, typer.Option(help="Only this batch, e.g. batch_0001")] = None,
+    text: Annotated[bool, typer.Option("--text", help="Include the file contents")] = False,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Audit exactly what text a run hands to the agents: run files, sizes and manifest checks (--text: contents)."""
+    from sed.ai.audit import packet_audit
+
+    result = packet_audit(paths_for(profile, data_dir), run_id, batch, text=text)
+
+    def human(p: dict) -> None:
+        for f in p["context"] + [f for b in p["batches"] for f in b["files"]]:
+            state = "ok" if f.get("sha256_ok") is not False and f["exists"] else "CHANGED OR MISSING"
+            console().print(f"{f['file']:<40} {f.get('chars', 0):>8} chars  {state}", markup=False)
+            if text and f.get("text"):
+                console().print(f["text"], markup=False)
+        console().print(f"total {p['total_chars']} chars; {p['note']}", markup=False)
+
+    emit(result, as_json, human)
+
+
 @ai_app.command("runs")
 @handle_errors
 def ai_runs(

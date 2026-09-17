@@ -368,6 +368,88 @@
         "title": "AppsOut",
         "type": "object"
       },
+      "ArtifactRow": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_mode": {
+            "title": "Ai Mode",
+            "type": "string"
+          },
+          "ai_run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ai Run Ids",
+            "type": "array"
+          },
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "built_at": {
+            "title": "Built At",
+            "type": "string"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "omitted": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Omitted",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "report": {
+            "title": "Report",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "vendor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Id"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "report",
+          "period",
+          "vendor_id",
+          "snapshot_id",
+          "format",
+          "ai_mode",
+          "built_at",
+          "file_name",
+          "sha256",
+          "ai_run_ids",
+          "omitted"
+        ],
+        "title": "ArtifactRow",
+        "type": "object"
+      },
       "AttentionOut": {
         "additionalProperties": false,
         "properties": {
@@ -626,6 +708,76 @@
           "flow"
         ],
         "title": "BacklogOut",
+        "type": "object"
+      },
+      "BuildIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_mode": {
+            "default": "approved",
+            "enum": [
+              "approved",
+              "none",
+              "draft"
+            ],
+            "title": "Ai Mode",
+            "type": "string"
+          },
+          "formats": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "xlsx",
+                    "md",
+                    "pptx"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formats"
+          },
+          "period": {
+            "maxLength": 12,
+            "minLength": 4,
+            "title": "Period",
+            "type": "string"
+          },
+          "report": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Report",
+            "type": "string"
+          },
+          "require_complete": {
+            "default": false,
+            "title": "Require Complete",
+            "type": "boolean"
+          },
+          "vendor": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor"
+          }
+        },
+        "required": [
+          "report",
+          "period"
+        ],
+        "title": "BuildIn",
         "type": "object"
       },
       "BulkReviewIn": {
@@ -1619,6 +1771,85 @@
         "title": "JiraRow",
         "type": "object"
       },
+      "JobOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "kind",
+          "status",
+          "created_at",
+          "finished_at",
+          "params",
+          "result",
+          "error"
+        ],
+        "title": "JobOut",
+        "type": "object"
+      },
       "Kpi": {
         "additionalProperties": false,
         "properties": {
@@ -2538,6 +2769,144 @@
         "title": "PeriodsOut",
         "type": "object"
       },
+      "ReadinessOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cited_findings_unapproved": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cited Findings Unapproved",
+            "type": "array"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "report": {
+            "title": "Report",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "sections_approved": {
+            "title": "Sections Approved",
+            "type": "integer"
+          },
+          "sections_required": {
+            "title": "Sections Required",
+            "type": "integer"
+          },
+          "sections_with_drafts": {
+            "title": "Sections With Drafts",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "vendor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Id"
+          }
+        },
+        "required": [
+          "report",
+          "period",
+          "vendor_id",
+          "snapshot_id",
+          "sections_required",
+          "sections_approved",
+          "sections_with_drafts",
+          "cited_findings_unapproved",
+          "complete",
+          "sections"
+        ],
+        "title": "ReadinessOut",
+        "type": "object"
+      },
+      "ReadinessSection": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_status": {
+            "title": "Approved Status",
+            "type": "string"
+          },
+          "draft_status": {
+            "title": "Draft Status",
+            "type": "string"
+          },
+          "finding_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finding Id"
+          },
+          "has_newer_draft": {
+            "title": "Has Newer Draft",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "required",
+          "approved_status",
+          "draft_status",
+          "has_newer_draft",
+          "finding_id",
+          "reasons"
+        ],
+        "title": "ReadinessSection",
+        "type": "object"
+      },
       "RenewalRow": {
         "additionalProperties": false,
         "properties": {
@@ -2709,6 +3078,84 @@
           "items"
         ],
         "title": "RenewalsOut",
+        "type": "object"
+      },
+      "ReportInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "formats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Formats",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "module": {
+            "title": "Module",
+            "type": "string"
+          },
+          "needs_vendor": {
+            "title": "Needs Vendor",
+            "type": "boolean"
+          },
+          "period_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Period Kinds",
+            "type": "array"
+          },
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "module",
+          "title",
+          "period_kinds",
+          "needs_vendor",
+          "formats",
+          "sections"
+        ],
+        "title": "ReportInfo",
+        "type": "object"
+      },
+      "ReportsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRow"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportInfo"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reports",
+          "artifacts"
+        ],
+        "title": "ReportsOut",
         "type": "object"
       },
       "ReviewItem": {
@@ -7625,6 +8072,88 @@
         ]
       }
     },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "operationId": "core_job_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Job Status",
+        "tags": [
+          "core"
+        ]
+      }
+    },
     "/api/labels/correct": {
       "post": {
         "operationId": "core_correct_label",
@@ -10863,6 +11392,294 @@
         "summary": "Vendor Sla Trend",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "operationId": "core_reports",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Reports",
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/reports/build": {
+      "post": {
+        "operationId": "core_build",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing or invalid X-SED-Token"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Build",
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/reports/readiness": {
+      "get": {
+        "operationId": "core_readiness",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "report",
+            "required": true,
+            "schema": {
+              "maxLength": 40,
+              "minLength": 1,
+              "title": "Report",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": true,
+            "schema": {
+              "maxLength": 12,
+              "minLength": 4,
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Readiness",
+        "tags": [
+          "core"
         ]
       }
     },

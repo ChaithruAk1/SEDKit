@@ -42,7 +42,7 @@ bundled and `npm run check` enforces it.
   URL; page-local state (tab, search, page, open ticket) uses `useSearchParam`.
 - `src/components/`: KpiTile, ChartCard, DataTable, Markdown, ProvenanceBadge, SystemDetectedBadge, FindingList,
   FreshnessList, EmptyState, ErrorState, AssignAliasModal, PageHeader, SectionCard, `format.ts`.
-- `src/core/`: platform pages (`#/review`, `#/runs`, `#/runs/:runId`, `#/data`).
+- `src/core/`: platform pages (`#/review`, `#/runs`, `#/runs/:runId`, `#/reports`, `#/data`).
 - `src/modules/<key>/index.ts`: one web module per server module, default-exporting
   `{key, title, routes, filterOptions?} satisfies WebModule<'<key>'>`. Route paths must be `<key>` or `<key>/...`
   (checked at compile time and in `registry.ts`). Pages are lazy (`load: () => import('./pages/XPage')`).

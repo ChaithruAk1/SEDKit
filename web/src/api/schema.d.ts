@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Job Status */
+        get: operations["core_job_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/labels/correct": {
         parameters: {
             query?: never;
@@ -463,6 +480,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reports */
+        get: operations["core_reports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Build */
+        post: operations["core_build"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness */
+        get: operations["core_readiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/review/queue": {
         parameters: {
             query?: never;
@@ -721,6 +789,33 @@ export interface components {
             /** Items */
             items: components["schemas"]["AppRow"][];
         };
+        /** ArtifactRow */
+        ArtifactRow: {
+            /** Ai Mode */
+            ai_mode: string;
+            /** Ai Run Ids */
+            ai_run_ids: string[];
+            /** Artifact Id */
+            artifact_id: string;
+            /** Built At */
+            built_at: string;
+            /** File Name */
+            file_name: string;
+            /** Format */
+            format: string;
+            /** Omitted */
+            omitted: string[];
+            /** Period */
+            period: string;
+            /** Report */
+            report: string;
+            /** Sha256 */
+            sha256: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Vendor Id */
+            vendor_id: string | null;
+        };
         /** AttentionOut */
         AttentionOut: {
             /** As Of */
@@ -789,6 +884,28 @@ export interface components {
             stale_excluded: number;
             /** Total */
             total: number;
+        };
+        /** BuildIn */
+        BuildIn: {
+            /**
+             * Ai Mode
+             * @default approved
+             * @enum {string}
+             */
+            ai_mode: "approved" | "none" | "draft";
+            /** Formats */
+            formats?: ("xlsx" | "md" | "pptx")[] | null;
+            /** Period */
+            period: string;
+            /** Report */
+            report: string;
+            /**
+             * Require Complete
+             * @default false
+             */
+            require_complete: boolean;
+            /** Vendor */
+            vendor?: string | null;
         };
         /** BulkReviewIn */
         BulkReviewIn: {
@@ -1066,6 +1183,34 @@ export interface components {
             /** Summary */
             summary: string | null;
         };
+        /** JobOut */
+        JobOut: {
+            /** Created At */
+            created_at: string;
+            /** Error */
+            error: {
+                [key: string]: unknown;
+            } | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "failed";
+        };
         /** Kpi */
         Kpi: {
             /** Compare */
@@ -1320,6 +1465,48 @@ export interface components {
             /** Weeks */
             weeks: string[];
         };
+        /** ReadinessOut */
+        ReadinessOut: {
+            /** Cited Findings Unapproved */
+            cited_findings_unapproved: string[];
+            /** Complete */
+            complete: boolean;
+            /** Period */
+            period: string;
+            /** Report */
+            report: string;
+            /** Sections */
+            sections: components["schemas"]["ReadinessSection"][];
+            /** Sections Approved */
+            sections_approved: number;
+            /** Sections Required */
+            sections_required: number;
+            /** Sections With Drafts */
+            sections_with_drafts: number;
+            /** Snapshot Id */
+            snapshot_id: string | null;
+            /** Vendor Id */
+            vendor_id: string | null;
+        };
+        /** ReadinessSection */
+        ReadinessSection: {
+            /** Approved Status */
+            approved_status: string;
+            /** Draft Status */
+            draft_status: string;
+            /** Finding Id */
+            finding_id: string | null;
+            /** Has Newer Draft */
+            has_newer_draft: boolean;
+            /** Key */
+            key: string;
+            /** Reasons */
+            reasons: string[];
+            /** Required */
+            required: boolean;
+            /** Title */
+            title: string;
+        };
         /** RenewalRow */
         RenewalRow: {
             /** Annual Value Base */
@@ -1355,6 +1542,30 @@ export interface components {
             days: number;
             /** Items */
             items: components["schemas"]["RenewalRow"][];
+        };
+        /** ReportInfo */
+        ReportInfo: {
+            /** Formats */
+            formats: string[];
+            /** Key */
+            key: string;
+            /** Module */
+            module: string;
+            /** Needs Vendor */
+            needs_vendor: boolean;
+            /** Period Kinds */
+            period_kinds: string[];
+            /** Sections */
+            sections: string[];
+            /** Title */
+            title: string;
+        };
+        /** ReportsOut */
+        ReportsOut: {
+            /** Artifacts */
+            artifacts: components["schemas"]["ArtifactRow"][];
+            /** Reports */
+            reports: components["schemas"]["ReportInfo"][];
         };
         /** ReviewItem */
         ReviewItem: {
@@ -3059,6 +3270,73 @@ export interface operations {
             };
         };
     };
+    core_job_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     core_correct_label: {
         parameters: {
             query?: never;
@@ -4471,6 +4749,220 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VendorTrendsOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_reports: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportsOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_build: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuildIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_readiness: {
+        parameters: {
+            query: {
+                report: string;
+                period: string;
+                vendor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessOut"];
                 };
             };
             /** @description Not found */

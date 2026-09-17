@@ -61,6 +61,7 @@ CORE_SKILLS = ("sed-map-export", "sed-review", "sed-eval")
 CORE_NAV = (
     NavItem("core.review", "Review", "/review", 800, "list-check"),
     NavItem("core.runs", "AI runs", "/runs", 810, "robot"),
+    NavItem("core.reports", "Reports", "/reports", 820, "file-text"),
     NavItem("core.data", "Data", "/data", 900, "database"),
 )
 # First path segment of every core page: module keys must not take them (pages are #/<key>/...).

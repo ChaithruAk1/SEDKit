@@ -8,6 +8,7 @@ import { ApiError, isAbortError } from '../client';
 import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostPathParams, PostResponse } from '../types';
 import * as core from './core';
 import * as ops from './ops';
+import * as reports from './reports';
 import * as review from './review';
 import * as sap from './sap';
 
@@ -30,6 +31,9 @@ const GET_HANDLERS: GetHandlers = {
   '/api/runs': (_, query) => core.runs(query),
   '/api/runs/{run_id}': (params) => review.runDetail(params.run_id, core.allRuns()),
   '/api/review/queue': (_, query) => review.queue(query),
+  '/api/reports': (_, query) => reports.reports(query),
+  '/api/reports/readiness': (_, query) => reports.readiness(query),
+  '/api/jobs/{job_id}': (params) => reports.jobStatus(params.job_id),
   '/api/ops/filters': () => ops.filters(),
   '/api/ops/overview': (_, query) => ops.overview(query),
   '/api/ops/attention': (_, query) => ops.attention(query),
@@ -58,6 +62,7 @@ const POST_HANDLERS: PostHandlers = {
   '/api/runs/{run_id}/verdicts': (body, params) => review.runVerdicts(params.run_id, body),
   '/api/runs/{run_id}/review': (body, params) => review.runReview(params.run_id, body),
   '/api/labels/correct': (body) => review.correctLabel(body),
+  '/api/reports/build': (body) => reports.startBuild(body),
 };
 
 const LATENCY_MS = 150;

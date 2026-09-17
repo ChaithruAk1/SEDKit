@@ -76,7 +76,17 @@ Outputs land in `DATA_DIR\out\<period>\`. Useful follow-ups: `sed alias list --u
 | vendor | quarter or month | `uv run sed report build vendor --period 2026-Q3 --vendor V001 --profile synthetic` |
 | sap-weekly | ISO week | `uv run sed report build sap-weekly --period 2026-W35 --profile synthetic` |
 
-- `--ai approved|none|draft` controls AI content; `none` builds deterministic, shareable files.
+- `--ai approved|none|draft` controls AI content; `none` builds deterministic, shareable files, `draft` stamps DRAFT on
+  every page. Every report has Markdown, and AI-drafted sections (headline, executive summary, asks...) declared under
+  `sections:` in its spec.
+- AI sections: after reviewing findings, run the `sed-report` workflow with `{profile, report, period}` (or the
+  `sed-draft-report` skill): it freezes the snapshot, drafts one section per agent with every number as a fact token,
+  and builds a DRAFT report. Approve the sections in `#/review`, check `uv run sed report readiness monthly --period
+  2026-08`, then build with `--ai approved --require-complete`. A section is left out while a number it cites has
+  changed or a finding it cites is not approved.
+- `#/reports` in the dashboard shows section readiness, builds in the background and lists artifacts to download.
+- `uv run sed ai packet <run_id> --text` shows exactly what a run sends to the agents; `uv run sed report eval <run_id>`
+  scores a drafting run.
 - What each report shows (KPIs, sheets, colour rules, slides) is YAML in `config/ops/reports/`; override it locally in
   `DATA_DIR\config\ops\reports\`.
 - Decks use a template map: `templates/pptx/neutral.map.yaml` by default. A corporate template and map go in
@@ -177,7 +187,7 @@ headless spike): `docs/real-data-onboarding.md`.
 | SAP S0–S4 | SAP module: L3 view, ChaRM changes, IDoc health, SAP subcategories in AI triage | done |
 | M3 | Reality check with real exports | tooling done; real run pending |
 | M4 | Full AI analysis & review | built; AI-run gates (90-day triage, eval slice, real 50-ticket sample) pending |
-| M5 | AI-drafted reports | planned |
+| M5 | AI-drafted reports | built; a real monthly draft (needs Claude usage) pending |
 | M6 | Automation & connectors | planned |
 | M7 | AI-native SDLC: delivery-management module and app factory | to be planned |
 | SAP S5 | SAP connectivity (`sed pull sap`), last wave | planned |

@@ -99,7 +99,7 @@ def create_app(
     allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost"),
 ) -> FastAPI:
     from sed import modules as registry
-    from sed.api import routes_core, routes_review
+    from sed.api import routes_core, routes_reports, routes_review
 
     validate_token(token)
     app = FastAPI(
@@ -116,6 +116,7 @@ def create_app(
     errors.install(app)
     app.include_router(routes_core.router, prefix="/api")
     app.include_router(routes_review.router, prefix="/api")
+    app.include_router(routes_reports.router, prefix="/api")
     mounted = tuple(modules) if modules is not None else registry.enabled(paths)
     for module in mounted:
         if module.api:

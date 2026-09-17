@@ -78,6 +78,7 @@ export function nav(): Schema<'NavOut'> {
       { id: 'sap.idocs', module: 'sap', label: 'SAP IDocs', path: '/sap/idocs', order: 63, icon: 'arrows-exchange' },
       { id: 'core.review', module: 'core', label: 'Review', path: '/review', order: 800, icon: 'list-check' },
       { id: 'core.runs', module: 'core', label: 'AI runs', path: '/runs', order: 810, icon: 'robot' },
+      { id: 'core.reports', module: 'core', label: 'Reports', path: '/reports', order: 820, icon: 'file-text' },
       { id: 'core.data', module: 'core', label: 'Data', path: '/data', order: 900, icon: 'database' },
     ],
   };

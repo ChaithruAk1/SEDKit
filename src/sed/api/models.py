@@ -386,3 +386,80 @@ class LabelCorrectionOut(ApiModel):
     ticket_id: str
     stage: str
     run_id: str
+
+
+# -- reports (M5) --------------------------------------------------------------------------------------------------
+
+
+class ReportInfo(ApiModel):
+    key: str
+    module: str
+    title: str
+    period_kinds: list[str]
+    needs_vendor: bool
+    formats: list[str]
+    sections: list[str]
+
+
+class ArtifactRow(ApiModel):
+    artifact_id: str
+    report: str
+    period: str
+    vendor_id: str | None
+    snapshot_id: str
+    format: str
+    ai_mode: str
+    built_at: str
+    file_name: str
+    sha256: str
+    ai_run_ids: list[str]
+    omitted: list[str]
+
+
+class ReportsOut(ApiModel):
+    reports: list[ReportInfo]
+    artifacts: list[ArtifactRow]
+
+
+class ReadinessSection(ApiModel):
+    key: str
+    title: str
+    required: bool
+    approved_status: str
+    draft_status: str
+    has_newer_draft: bool
+    finding_id: str | None
+    reasons: list[str]
+
+
+class ReadinessOut(ApiModel):
+    report: str
+    period: str
+    vendor_id: str | None
+    snapshot_id: str | None
+    sections_required: int
+    sections_approved: int
+    sections_with_drafts: int
+    cited_findings_unapproved: list[str]
+    complete: bool
+    sections: list[ReadinessSection]
+
+
+class BuildIn(ApiModel):
+    report: str = Field(min_length=1, max_length=40)
+    period: str = Field(min_length=4, max_length=12)
+    vendor: str | None = Field(None, max_length=60)
+    formats: list[Literal["xlsx", "md", "pptx"]] | None = Field(None, max_length=3)
+    ai_mode: Literal["approved", "none", "draft"] = "approved"
+    require_complete: bool = False
+
+
+class JobOut(ApiModel):
+    job_id: str
+    kind: str
+    status: Literal["queued", "running", "done", "failed"]
+    created_at: str
+    finished_at: str | None
+    params: dict[str, Any]
+    result: dict[str, Any] | None
+    error: dict[str, Any] | None

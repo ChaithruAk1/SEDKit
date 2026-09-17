@@ -2,7 +2,8 @@
 
 - **App factory:** `app.create_app(paths, *, token, web_dist=None, modules=None)` builds the app.
   - Core routes are mounted at `/api/...` (`routes_core.py`; review queue, finding decisions, run detail, verdicts,
-    run approval and label corrections in `routes_review.py`).
+    run approval and label corrections in `routes_review.py`; reports, readiness, background builds and artifact
+    downloads in `routes_reports.py`, with the in-memory job worker in `jobs.py`).
   - Each enabled module's router is mounted at `/api/<key>/...`.
 - **Security:** mandatory for every route, including module routers.
   - The host allowlist is 127.0.0.1 and localhost; any other host gets 400. No CORS.

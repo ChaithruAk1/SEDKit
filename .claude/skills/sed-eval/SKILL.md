@@ -12,7 +12,8 @@ print scores only (rates with 95% intervals, per-gate pass or fail) and write `r
 show ticket text or numbers, and you never read ground truth yourself.
 
 ## Inputs
-- Profile: `synthetic` or an `eval-<seed>` profile. Evals refuse the real profile (it has no ground truth).
+- Profile: `synthetic` or an `eval-<seed>` profile. Ground-truth evals refuse the real profile (it has no ground
+  truth); `sed report eval` needs none and also runs on the real profile.
 - A finished run id, or the newest completed run of the skill the user names (from `sed ai runs`).
 
 ## Procedure
@@ -21,7 +22,9 @@ show ticket text or numbers, and you never read ground truth yourself.
 2. Run the eval command for the run's skill:
    - `sed-triage-batch` or `sed-triage-open`: `sed ops eval-triage`, and for SAP subcategories also `sed sap eval-triage`;
    - `sed-find-recurring`: `sed ops eval-recurring`;
-   - `sed-assess-risks`: `sed ops eval-risks`.
+   - `sed-assess-risks`: `sed ops eval-risks`;
+   - `sed-draft-report`: `sed report eval` (no ground truth: tokens, required sections, word limits, bare numbers,
+     citations; works on any profile).
 3. Report per run: `passed`, each check in `checks`, the main rates with their intervals, and the comparison with
    `previous` (earlier eval of the same skill): which checks changed, and whether the skill hash differs.
 4. If a check fails, say which gate and by how much; do not change skills or thresholds yourself unless the user asks.
@@ -39,6 +42,7 @@ uv run sed ops eval-triage <run_id> --profile <profile> --json
 uv run sed sap eval-triage <run_id> --profile <profile> --json
 uv run sed ops eval-recurring <run_id> --profile <profile> --json
 uv run sed ops eval-risks <run_id> --profile <profile> --json
+uv run sed report eval <run_id> --profile <profile> --json
 ```
 
 Exit codes: 0 ok, 2 validation (report it), 3 busy (retry), 4 precondition (wrong profile, unknown run or missing
