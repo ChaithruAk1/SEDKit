@@ -490,6 +490,18 @@
               "is_flag": false,
               "kind": "option",
               "multiple": false,
+              "name": "subject",
+              "opts": [
+                "--subject"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
               "name": "resume",
               "opts": [
                 "--resume"
@@ -1315,6 +1327,85 @@
     },
     {
       "commands": [
+        {
+          "help": "Write approved drafts as files (Jira CSV, Markdown) under DATA_DIR/out/delivery/<project>/. Nothing is sent",
+          "name": "export",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "what",
+              "opts": [
+                "what"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "project",
+              "opts": [
+                "--project"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "period",
+              "opts": [
+                "--period"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
         {
           "help": "Projects with computed health, worst milestone slip, open high RAID items and forecast finish.",
           "name": "portfolio",

@@ -179,6 +179,27 @@ threshold. The reported RAG is shown next to it. Dashboard pages: `#/delivery` (
 `#/delivery/projects/<id>` (plan, burn-up, RAID, requirement and ADR pages, risks). SED never writes to Jira,
 Confluence or the plan tools.
 
+### AI drafts for delivery (stories, ADRs, test plans, release notes)
+
+Four skills draft delivery documents for one project. Each draft waits in `#/review`, and only approved drafts are
+exported as files. SED never writes to Jira, Confluence or a test tool.
+
+| Skill | From | Draft | Export (`sed delivery export ... --project <id>`) |
+|---|---|---|---|
+| `sed-draft-stories` | requirements pages | user stories with acceptance criteria, linked to epics | `stories`: Jira CSV import file |
+| `sed-draft-adr` | requirements, recorded ADRs, approved stories | ADRs (context, options, decision, consequences) | `adr`: one Markdown file per ADR |
+| `sed-draft-test-plan` | approved stories | test cases per story | `test-plan`: Markdown plan and a CSV of cases |
+| `sed-draft-release-notes` | Jira issues resolved in a period | release notes with fact tokens | `release-notes`: Markdown with the numbers filled |
+
+```bash
+uv run sed ai start-run sed-draft-stories --subject PRJ-101 --dry-run --profile synthetic --json
+uv run sed delivery export stories --project PRJ-101 --profile synthetic --json
+```
+
+Exports read the approved text, so reviewer edits reach the file. A test plan can be approved only while its stories
+are approved. Files land in `DATA_DIR\out\delivery\<project>\`. For code review of a module change, the
+`sed-review-module` skill runs the module checks and reports verified findings in chat.
+
 ## AI analysis (Claude Code)
 
 - Triage runs through the `sed-triage-batch` skill (small runs in-session) or the `sed-analyze` workflow (larger runs):
@@ -229,5 +250,5 @@ headless spike): `docs/real-data-onboarding.md`.
 | M4 | Full AI analysis & review | built; AI-run gates (90-day triage, eval slice, real 50-ticket sample) pending |
 | M5 | AI-drafted reports | built; a real monthly draft (needs Claude usage) pending |
 | M6 | Automation & connectors | built; real connector setup and the scheduled run pending |
-| M7 | AI-native SDLC: delivery-management module and app factory | to be planned |
+| M7 | AI-native SDLC: delivery module (D1), AI drafts for stories, ADRs, test plans and release notes (D2), app factory (D3) | D1–D2 built; D3 in progress |
 | SAP S5 | SAP connectivity (`sed pull sap`), last wave | built; SAP services, technical user and reconciliation pending |

@@ -1,4 +1,4 @@
-"""`sed delivery ...`: the delivery portfolio in the terminal."""
+"""`sed delivery ...`: the delivery portfolio in the terminal and exports of approved AI drafts."""
 
 from __future__ import annotations
 
@@ -62,3 +62,29 @@ def portfolio_cmd(
             )
 
     emit({"as_of": day.isoformat(), "projects": rows}, as_json, human)
+
+
+@app.command("export")
+@handle_errors
+def export_cmd(
+    what: Annotated[str, typer.Argument(help="stories | adr | test-plan | release-notes")],
+    project: Annotated[str, typer.Option("--project", help="Delivery project id, e.g. PRJ-101")],
+    period: Annotated[str | None, typer.Option(help="Release notes of one period only, e.g. 2026-08")] = None,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Write approved drafts as files (Jira CSV, Markdown) under DATA_DIR/out/delivery/<project>/. Nothing is sent
+    to Jira or Confluence."""
+    from sed.modules.delivery.ai.export import export
+
+    result = export(paths_for(profile, data_dir), what, project, period=period)
+
+    def human(p: dict) -> None:
+        console().print(
+            f"{p['export']} for {p['project_id']}: {p['drafts']} approved drafts, {p['items']} items", markup=False
+        )
+        for path in p["files"]:
+            console().print(f"  {path}", markup=False)
+
+    emit(result, as_json, human)

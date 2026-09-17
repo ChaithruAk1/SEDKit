@@ -203,21 +203,28 @@ def _supersede_others(conn: sqlite3.Connection, row: sqlite3.Row) -> None:
     )
 
 
-def _check_section_approval(conn: sqlite3.Connection, row: sqlite3.Row, new_body: str | None) -> None:
-    """A report section is approved only when every finding it cites is published (approved, update_pending or
-    rule-origin), and an edit may use only the facts cited when the section was drafted."""
-    data = _payload(row)
-    cited = [str(x) for x in data.get("cited_finding_ids") or []]
+def _check_citations(conn: sqlite3.Connection, row: sqlite3.Row) -> None:
+    """An AI finding that cites other findings (`cited_finding_ids`: report sections, test plans built on approved
+    stories) is approved only while every cited finding is published (approved, update_pending or rule-origin)."""
+    cited = [str(x) for x in _payload(row).get("cited_finding_ids") or []]
     waiting = []
     for fid in cited:
         cited_row = conn.execute("SELECT origin, status FROM finding WHERE finding_id = ?", (fid,)).fetchone()
         if cited_row is None or not (cited_row["origin"] == "rule" or cited_row["status"] in PUBLISHED):
             waiting.append(fid)
     if waiting:
+        noun = "Section" if row["kind"] == "report_section" else "Finding"
         raise PreconditionFailed(
-            f"Section {row['finding_id']} cites unapproved findings ({', '.join(waiting)}); review them first",
+            f"{noun} {row['finding_id']} cites unapproved findings ({', '.join(waiting)}); review them first",
             {"cited_finding_ids": waiting},
         )
+
+
+def _check_section_approval(conn: sqlite3.Connection, row: sqlite3.Row, new_body: str | None) -> None:
+    """A report section is approved only when its cited findings are published (`_check_citations`), and an edit may
+    use only the facts cited when the section was drafted."""
+    data = _payload(row)
+    _check_citations(conn, row)
     if new_body is not None:
         drafted = data.get("facts") if isinstance(data.get("facts"), dict) else {}
         unknown = sorted({t for t in re.findall(r"\{\{f:([A-Za-z0-9_.:\-]{1,120})\}\}", new_body)} - set(drafted))
@@ -284,6 +291,8 @@ def review_finding(
         raise refuse("an AI finding (rule findings take acknowledge or suppress_until)")
     if row["kind"] == "report_section" and action in ("approve", "approve_update", "edit"):
         _check_section_approval(conn, row, body_md if action == "edit" else None)
+    elif action in ("approve", "approve_update", "edit"):
+        _check_citations(conn, row)
     new_status = status
     payload = {"note": note} if note else {}
     if action == "approve":

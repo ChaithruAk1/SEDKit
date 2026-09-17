@@ -1,0 +1,175 @@
+{
+  "additionalProperties": false,
+  "description": "The JSON file the agent writes for the project's design packet.",
+  "properties": {
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "adrs": {
+            "items": {
+              "additionalProperties": false,
+              "description": "One architecture decision record in the MADR shape, status proposed.",
+              "properties": {
+                "chosen_option": {
+                  "description": "The name of one of the options, verbatim",
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "title": "Chosen Option",
+                  "type": "string"
+                },
+                "consequences": {
+                  "description": "Positive and negative consequences",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8,
+                  "minItems": 1,
+                  "title": "Consequences",
+                  "type": "array"
+                },
+                "context": {
+                  "description": "The problem and the forces at play, from the packet only",
+                  "maxLength": 1200,
+                  "minLength": 1,
+                  "title": "Context",
+                  "type": "string"
+                },
+                "drivers": {
+                  "description": "Decision drivers",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 6,
+                  "minItems": 1,
+                  "title": "Drivers",
+                  "type": "array"
+                },
+                "options": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cons": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 6,
+                        "title": "Cons",
+                        "type": "array"
+                      },
+                      "name": {
+                        "description": "Short option name, unique within the ADR",
+                        "maxLength": 80,
+                        "minLength": 1,
+                        "title": "Name",
+                        "type": "string"
+                      },
+                      "pros": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 6,
+                        "title": "Pros",
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "title": "AdrOption",
+                    "type": "object"
+                  },
+                  "maxItems": 4,
+                  "minItems": 2,
+                  "title": "Options",
+                  "type": "array"
+                },
+                "rationale": {
+                  "description": "Why the chosen option wins against the drivers",
+                  "maxLength": 800,
+                  "minLength": 1,
+                  "title": "Rationale",
+                  "type": "string"
+                },
+                "related_page_ids": {
+                  "description": "page_id values of packet pages this ADR relies on",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "title": "Related Page Ids",
+                  "type": "array"
+                },
+                "title": {
+                  "description": "The decision in a few words, e.g. 'Use the integration layer for tax validation'",
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "title": "Title",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "context",
+                "drivers",
+                "options",
+                "chosen_option",
+                "rationale",
+                "consequences"
+              ],
+              "title": "Adr",
+              "type": "object"
+            },
+            "maxItems": 6,
+            "title": "Adrs",
+            "type": "array"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "ref": {
+            "pattern": "^T\\d{3,5}$",
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "confidence"
+        ],
+        "title": "AdrSet",
+        "type": "object"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "BatchMeta",
+      "type": "object"
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "title": "AdrOutput",
+  "type": "object"
+}

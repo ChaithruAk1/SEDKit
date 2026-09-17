@@ -1,0 +1,171 @@
+{
+  "additionalProperties": false,
+  "description": "The JSON file the agent writes for one packet of requirements pages.",
+  "properties": {
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "open_questions": {
+            "description": "What the page leaves unclear; required when stories is empty",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Open Questions",
+            "type": "array"
+          },
+          "ref": {
+            "pattern": "^T\\d{3,5}$",
+            "title": "Ref",
+            "type": "string"
+          },
+          "stories": {
+            "items": {
+              "additionalProperties": false,
+              "description": "One user story drafted from a requirements page.",
+              "properties": {
+                "acceptance_criteria": {
+                  "description": "Testable criteria, ideally 'Given ..., when ..., then ...'",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8,
+                  "minItems": 1,
+                  "title": "Acceptance Criteria",
+                  "type": "array"
+                },
+                "as_a": {
+                  "description": "The role, e.g. 'accounts payable clerk'; never a person's name",
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "title": "As A",
+                  "type": "string"
+                },
+                "epic_key": {
+                  "anyOf": [
+                    {
+                      "pattern": "^[A-Z][A-Z0-9_]{1,19}-\\d{1,7}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "An epic key listed in context.md for this project, or null",
+                  "title": "Epic Key"
+                },
+                "estimate_points": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        1,
+                        2,
+                        3,
+                        5,
+                        8,
+                        13
+                      ],
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Relative size, or null when unknown",
+                  "title": "Estimate Points"
+                },
+                "i_want": {
+                  "description": "What the role wants to do",
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "title": "I Want",
+                  "type": "string"
+                },
+                "priority": {
+                  "default": "medium",
+                  "enum": [
+                    "highest",
+                    "high",
+                    "medium",
+                    "low",
+                    "lowest"
+                  ],
+                  "title": "Priority",
+                  "type": "string"
+                },
+                "so_that": {
+                  "description": "The business benefit",
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "title": "So That",
+                  "type": "string"
+                },
+                "title": {
+                  "description": "Short imperative title, unique within the page; no names",
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "title": "Title",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "as_a",
+                "i_want",
+                "so_that",
+                "acceptance_criteria"
+              ],
+              "title": "Story",
+              "type": "object"
+            },
+            "maxItems": 12,
+            "title": "Stories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ref",
+          "confidence"
+        ],
+        "title": "StorySet",
+        "type": "object"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "BatchMeta",
+      "type": "object"
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "title": "StoriesOutput",
+  "type": "object"
+}

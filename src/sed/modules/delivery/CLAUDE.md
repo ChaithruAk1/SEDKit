@@ -30,7 +30,15 @@ the ops `work_item` and `doc_page` rows, linked through the project register.
 - **Report:** `delivery-status` (month; `reports/status.py`, `reports/markdown.py`) in xlsx, md and pptx. AI sections
   `headline`, `progress`, `risks_and_issues`, `decisions_needed` and `next_steps` are drafted by the generic
   `sed-draft-report` skill; per-project facts `delivery.project.<id>.*` give them exact tokens.
-- **CLI:** `sed delivery portfolio [--as-of]` prints the portfolio with health and reasons.
+- **AI drafts** (`ai/`, M7 D2): skills `sed-draft-stories`, `sed-draft-adr`, `sed-draft-test-plan` and
+  `sed-draft-release-notes`, each run with `sed ai start-run <skill> --subject <project id>`. They write draft findings
+  (`delivery_stories`, `delivery_adr`, `delivery_test_plan`, `delivery_release_notes`) whose `body_md` is the document
+  in the Markdown shape of `ai/documents.py`; exports parse the approved (possibly edited) body back, so the render and
+  parse functions must round-trip. A test plan cites its story sets (`cited_finding_ids`) and is approved only while
+  they are. Release notes use `{{f:delivery.release.<project>.*}}` tokens.
+- **CLI:** `sed delivery portfolio [--as-of]` prints the portfolio with health and reasons; `sed delivery export
+  stories|adr|test-plan|release-notes --project <id> [--period]` writes approved drafts to
+  `DATA_DIR\out\delivery\<project>\` (Jira CSV, Markdown, CSV).
 - **Synthetic data:** `synth.py` writes the register, three plan versions (as of 15, 8 and 1 days before the data date),
   the RAID log, Jira stories and epics (`jira_export_delivery.csv`) and Confluence space exports. Planted patterns: DP1
   PRJ-101 double milestone slip, DP2 PRJ-103 overdue high risk, DP3 PRJ-102 scope growth, DP4 PRJ-102 late forecast;
@@ -38,4 +46,4 @@ the ops `work_item` and `doc_page` rows, linked through the project register.
 - **Tests:** `tests/modules/delivery/`, with the shared fixtures `delivery_profile` / `delivery_profile_rw`
   (`tests/fixtures/delivery_profile.py`: the ops profile plus the delivery data).
 - **Boundary:** core code never imports this package directly (`tests/platform/test_core_boundaries.py`), and neither
-  do ops or sap. SED never writes to Jira, Confluence or the plan tools.
+  do ops or sap. SED never writes to Jira, Confluence or the plan tools; drafts leave SED only as exported files.

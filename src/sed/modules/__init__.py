@@ -59,7 +59,7 @@ CORE_CLI_NAMES = frozenset(
     }
 )
 # Skills that belong to the platform rather than a module (no run handler, no module surface).
-CORE_SKILLS = ("sed-map-export", "sed-review", "sed-eval")
+CORE_SKILLS = ("sed-map-export", "sed-review", "sed-eval", "sed-review-module")
 CORE_NAV = (
     NavItem("core.review", "Review", "/review", 800, "list-check"),
     NavItem("core.runs", "AI runs", "/runs", 810, "robot"),

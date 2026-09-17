@@ -1,0 +1,139 @@
+{
+  "additionalProperties": false,
+  "description": "The JSON file the agent writes for one packet of approved story sets.",
+  "properties": {
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cases": {
+            "items": {
+              "additionalProperties": false,
+              "description": "One manual or automatable test case covering one story.",
+              "properties": {
+                "expected": {
+                  "description": "The observable expected result",
+                  "maxLength": 400,
+                  "minLength": 1,
+                  "title": "Expected",
+                  "type": "string"
+                },
+                "preconditions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 6,
+                  "title": "Preconditions",
+                  "type": "array"
+                },
+                "steps": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12,
+                  "minItems": 1,
+                  "title": "Steps",
+                  "type": "array"
+                },
+                "story": {
+                  "description": "The title of the story it covers, verbatim from the packet",
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "title": "Story",
+                  "type": "string"
+                },
+                "title": {
+                  "description": "What the case checks, unique within the plan",
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "title": "Title",
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "functional",
+                    "negative",
+                    "integration",
+                    "performance",
+                    "security",
+                    "accessibility",
+                    "uat"
+                  ],
+                  "title": "Type",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "story",
+                "type",
+                "steps",
+                "expected"
+              ],
+              "title": "PlanCase",
+              "type": "object"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Cases",
+            "type": "array"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "not_covered": {
+            "description": "Risks or criteria these cases do not cover, and why",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Not Covered",
+            "type": "array"
+          },
+          "ref": {
+            "pattern": "^T\\d{3,5}$",
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "cases",
+          "confidence"
+        ],
+        "title": "CasePlan",
+        "type": "object"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "BatchMeta",
+      "type": "object"
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "title": "CasesOutput",
+  "type": "object"
+}

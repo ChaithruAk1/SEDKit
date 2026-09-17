@@ -36,6 +36,9 @@ def ai_start_run(
     ] = None,
     report: Annotated[str | None, typer.Option(help="Report key for report skills, e.g. monthly")] = None,
     vendor: Annotated[str | None, typer.Option(help="Vendor id for vendor reports")] = None,
+    subject: Annotated[
+        str | None, typer.Option(help="What the run is about for subject skills, e.g. a project id such as PRJ-101")
+    ] = None,
     resume: Annotated[str | None, typer.Option(help="Resume a run: only batches not yet ingested")] = None,
     invoked_via: Annotated[
         str, typer.Option("--invoked-via", help="interactive | workflow | headless")
@@ -63,6 +66,7 @@ def ai_start_run(
             only=only,
             report=report,
             vendor=vendor,
+            subject=subject,
             resume=resume,
             invoked_via=invoked_via,
             model_arg=model,

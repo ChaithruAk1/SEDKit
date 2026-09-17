@@ -1,0 +1,149 @@
+{
+  "additionalProperties": false,
+  "description": "The JSON file the agent writes for the release packet.",
+  "properties": {
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "facts_cited": {
+            "description": "Packet fact keys used as tokens",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Facts Cited",
+            "type": "array"
+          },
+          "known_issues": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Known Issues",
+            "type": "array"
+          },
+          "ref": {
+            "pattern": "^T\\d{3,5}$",
+            "title": "Ref",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "entries": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "issue_keys": {
+                        "description": "Packet issue keys this entry covers",
+                        "items": {
+                          "type": "string"
+                        },
+                        "maxItems": 20,
+                        "minItems": 1,
+                        "title": "Issue Keys",
+                        "type": "array"
+                      },
+                      "text": {
+                        "description": "One user-facing change in plain words; numbers only as {{f:<fact_key>}} tokens",
+                        "maxLength": 300,
+                        "minLength": 1,
+                        "title": "Text",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "text",
+                      "issue_keys"
+                    ],
+                    "title": "ReleaseEntry",
+                    "type": "object"
+                  },
+                  "maxItems": 30,
+                  "minItems": 1,
+                  "title": "Entries",
+                  "type": "array"
+                },
+                "heading": {
+                  "description": "e.g. 'New features', 'Improvements', 'Fixes'",
+                  "maxLength": 60,
+                  "minLength": 1,
+                  "title": "Heading",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "heading",
+                "entries"
+              ],
+              "title": "ReleaseSection",
+              "type": "object"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Sections",
+            "type": "array"
+          },
+          "summary_md": {
+            "description": "Two to four sentences; numbers only as {{f:<fact_key>}} tokens",
+            "maxLength": 800,
+            "minLength": 1,
+            "title": "Summary Md",
+            "type": "string"
+          },
+          "title": {
+            "description": "e.g. 'Release notes – partner portal, August'; no numbers",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "title",
+          "summary_md",
+          "sections",
+          "confidence"
+        ],
+        "title": "ReleaseNotes",
+        "type": "object"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "BatchMeta",
+      "type": "object"
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "title": "ReleaseNotesOutput",
+  "type": "object"
+}

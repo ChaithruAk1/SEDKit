@@ -204,17 +204,31 @@ def progress(
     return Progress(len(rows), total, done, added, growth, velocity, forecast, weekly)
 
 
+def page_kind(title: str | None, labels_json: str | None) -> str:
+    """requirements | adr | other, from the page labels or the title prefix."""
+    try:
+        raw = json.loads(labels_json or "[]")
+    except ValueError:
+        raw = []
+    labels = [str(x).lower() for x in raw] if isinstance(raw, list) else []
+    title = title or ""
+    if "adr" in labels or title.upper().startswith("ADR"):
+        return "adr"
+    if "requirements" in labels or title.lower().startswith("requirements"):
+        return "requirements"
+    return "other"
+
+
 def documents(conn: sqlite3.Connection, space: str | None, as_of: date) -> dict[str, Any]:
     if not space:
         return {"requirements": 0, "adrs": 0, "pages": 0, "last_updated": None, "items": []}
     items = []
     for r in conn.execute(
-        "SELECT page_id, title, labels_json, last_updated FROM doc_page WHERE space_key = ? ORDER BY title", (space,)
+        "SELECT page_id, title, labels_json, last_updated FROM doc_page WHERE space_key = ? AND is_deleted = 0 "
+        "ORDER BY title",
+        (space,),
     ):
-        labels = [str(x).lower() for x in json.loads(r["labels_json"] or "[]")]
-        kind = "adr" if "adr" in labels or r["title"].upper().startswith("ADR") else (
-            "requirements" if "requirements" in labels or r["title"].lower().startswith("requirements") else "other"
-        )  # fmt: skip
+        kind = page_kind(r["title"], r["labels_json"])
         items.append({"page_id": r["page_id"], "title": r["title"], "kind": kind, "last_updated": r["last_updated"]})
     updated = [i["last_updated"] for i in items if i["last_updated"]]
     return {

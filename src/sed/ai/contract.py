@@ -43,6 +43,8 @@ class StartParams(StrictModel):
     # Report skills (sed-draft-report): the report key and, for vendor reports, the vendor id.
     report: str | None = Field(None, pattern=r"^[a-z][a-z0-9-]{1,39}$")
     vendor: str | None = Field(None, pattern=r"^[A-Za-z0-9_.:-]{1,60}$")
+    # Subject skills (e.g. the delivery drafts): the entity the run is about, such as a project id.
+    subject: str | None = Field(None, pattern=r"^[A-Za-z0-9_.:-]{1,60}$")
     resume: str | None = None
     invoked_via: InvokedVia = "interactive"
     model_arg: str | None = None

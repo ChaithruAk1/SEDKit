@@ -117,6 +117,16 @@ def _ref_errors(raw: Any, refs: dict[str, WorkItem]) -> list[IngestError]:
     return errors
 
 
+def _packet_payloads(packet: bytes) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for line in packet.decode("utf-8").splitlines():
+        if line.strip():
+            data = json.loads(line)
+            if isinstance(data, dict) and isinstance(data.get("ref"), str):
+                out[data["ref"]] = {k: v for k, v in data.items() if k != "ref"}
+    return out
+
+
 def ingest_file(paths: Paths, run_id: str, file: str | Path) -> dict[str, Any]:
     settings = load_settings(paths)
     conn = open_db(paths)
@@ -158,9 +168,10 @@ def ingest_file(paths: Paths, run_id: str, file: str | Path) -> dict[str, Any]:
             }
         packet = paths.runs / run_id / batch["packet_path"]
         try:
-            packet_sha = sha256_bytes(packet.read_bytes())
+            packet_bytes = packet.read_bytes()
         except OSError:
-            packet_sha = None
+            packet_bytes = None
+        packet_sha = sha256_bytes(packet_bytes) if packet_bytes is not None else None
         if packet_sha != batch["packet_sha"]:
             raise _reject(
                 conn, batch_id, [IngestError("packet", f"packet {batch['packet_path']} changed or is missing")]
@@ -170,8 +181,10 @@ def ingest_file(paths: Paths, run_id: str, file: str | Path) -> dict[str, Any]:
             raise _reject(
                 conn, batch_id, [IngestError("packet", f"run input changed or is missing: {', '.join(changed)}")]
             )
+        # Each ref's payload is its line in the verified packet: what the agent read (text fields may be truncated).
+        lines = _packet_payloads(packet_bytes or b"")
         refs = {
-            r["ref"]: WorkItem(r["item_id"], r["stage"], r["input_hash"], {})
+            r["ref"]: WorkItem(r["item_id"], r["stage"], r["input_hash"], lines.get(r["ref"], {}))
             for r in conn.execute(
                 "SELECT ref, item_id, stage, input_hash FROM ai_batch_item WHERE batch_id = ? ORDER BY ref", (batch_id,)
             )
