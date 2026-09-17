@@ -2276,6 +2276,127 @@
     {
       "commands": [
         {
+          "help": "Group similar incidents per application (TF-IDF, no AI): size, periodicity, bursts, changes before onset.",
+          "name": "candidates",
+          "params": [
+            {
+              "default": 12,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "months",
+              "opts": [
+                "--months"
+              ],
+              "required": false,
+              "type": "int range"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_of",
+              "opts": [
+                "--as-of"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": true,
+              "name": "app_id",
+              "opts": [
+                "--app"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": 5,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "min_size",
+              "opts": [
+                "--min-size"
+              ],
+              "required": false,
+              "type": "int range"
+            },
+            {
+              "default": 0.6,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "threshold",
+              "opts": [
+                "--threshold"
+              ],
+              "required": false,
+              "type": "float range"
+            },
+            {
+              "default": 50,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "limit",
+              "opts": [
+                "--limit"
+              ],
+              "required": false,
+              "type": "int range"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Application operations (recurring-issue candidates)",
+      "name": "ops"
+    },
+    {
+      "commands": [
+        {
           "help": "Build a report from a fresh frozen snapshot.",
           "name": "build",
           "params": [

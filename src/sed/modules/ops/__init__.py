@@ -9,6 +9,7 @@ from __future__ import annotations
 from sed.modules.contract import (
     AliasKind,
     ApiMount,
+    CliMount,
     EntityRef,
     Module,
     NavItem,
@@ -21,6 +22,7 @@ MODULE = Module(
     key="ops",
     title="Application operations",
     description="ITSM tickets, SLA, backlog, costs, licenses, vendors and recurring ops reports",
+    cli=(CliMount("ops", "sed.modules.ops.cli:app"),),
     legacy_cli=("metrics", "attention", "analytics"),
     api=ApiMount("sed.modules.ops.api:router"),
     nav=(
