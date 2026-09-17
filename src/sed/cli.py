@@ -25,7 +25,7 @@ from sed.cli_common import (
     parse_date,
     paths_for,
 )
-from sed.errors import EXIT_PRECONDITION, PreconditionFailed, SedError, ValidationFailed
+from sed.errors import EXIT_PRECONDITION, PreconditionFailed, ValidationFailed
 from sed.output import console, emit, ensure_utf8_stdio
 from sed.salt import fingerprint, read_salt
 
@@ -223,6 +223,8 @@ inbox_app = typer.Typer(no_args_is_help=True, help="Inbox housekeeping")
 app.add_typer(mappings_app, name="mappings")
 app.add_typer(alias_app, name="alias")
 app.add_typer(inbox_app, name="inbox")
+config_app = typer.Typer(no_args_is_help=True, help="Validated DATA_DIR config overrides")
+app.add_typer(config_app, name="config")
 
 
 @app.command()
@@ -352,35 +354,90 @@ def mappings_check(
     as_json: JsonOpt = False,
 ) -> None:
     """Score a file against every mapping and show missing required fields."""
-    from sed.ingest.mapping import (
-        glob_matches,
-        header_match_score,
-        load_all_mappings,
-        read_for_mapping,
-        resolve_columns,
-    )
+    from sed.ingest.onboarding import candidates
 
     paths = _paths(profile, data_dir)
-    out = []
-    for spec in load_all_mappings(paths).values():
-        try:
-            table = read_for_mapping(file, spec)
-        except SedError as exc:
-            out.append({"mapping": spec.name, "error": exc.message})
-            continue
-        index, missing = resolve_columns(spec, table.columns)
-        out.append(
-            {
-                "mapping": spec.name,
-                "glob_match": glob_matches(spec, file.name),
-                "score": round(header_match_score(spec, table.columns), 3),
-                "missing_required": missing,
-                "unmapped_columns": [c for i, c in enumerate(table.columns) if i not in index.values()][:30],
-                "reader_warnings": table.warnings,
-            }
-        )
-    out.sort(key=lambda r: (not r.get("glob_match", False), -r.get("score", 0)))
-    emit({"file": str(file), "candidates": out}, as_json)
+    emit({"file": str(file), "candidates": candidates(file, paths)}, as_json)
+
+
+@mappings_app.command("draft")
+@handle_errors
+def mappings_draft(
+    file: Annotated[Path, typer.Argument(help="Export file that needs a new or adjusted mapping")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Profile a file (headers, fill rates, value shapes, safe categories) into runs/map-*/in/ for a mapping draft."""
+    from sed.ingest.onboarding import new_draft
+
+    emit(new_draft(file, _paths(profile, data_dir)), as_json)
+
+
+@mappings_app.command("try")
+@handle_errors
+def mappings_try(
+    file: Annotated[Path, typer.Argument(help="Export file to map")],
+    draft: Annotated[Path, typer.Option("--from", help="Draft mapping YAML (e.g. runs/map-*/out/<name>.yaml)")],
+    rows: Annotated[int, typer.Option("--rows", min=1, max=50, help="Sample rows to show (after PII rules)")] = 10,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Dry-run import of a file with a draft mapping: coverage, transform errors, rejects and scrubbed samples."""
+    from sed.ingest.loader import ImportOptions, run_import
+    from sed.ingest.onboarding import load_mapping_draft
+
+    paths = _paths(profile, data_dir)
+    spec = load_mapping_draft(draft, paths)
+    opts = ImportOptions(
+        files=[file],
+        mapping=spec.name,
+        dry_run=True,
+        force=True,  # a try reports dq.would_soft_delete instead of stopping at the full-snapshot guard
+        allow_unmanifested=True,
+        move_files=False,
+        sample_rows=rows,
+        extra_mappings={spec.name: spec},
+    )
+    result = run_import(paths, opts)
+    emit({"mapping": spec.name, "required_fields": spec.required_fields(), **result}, as_json)
+
+
+@mappings_app.command("save-override")
+@handle_errors
+def mappings_save_override(
+    draft: Annotated[Path, typer.Option("--from", help="Draft mapping YAML to save")],
+    module: Annotated[str | None, typer.Option(help="Module folder for a new mapping (ops, sap, ...)")] = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Validate and show the diff without saving")] = False,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Validate a draft mapping and save it as DATA_DIR/config/<module>/mappings/<name>.yaml (restored on failure)."""
+    from sed.ingest.onboarding import save_mapping_override
+
+    result = save_mapping_override(_paths(profile, data_dir), draft, module=module, dry_run=dry_run)
+    emit(result, as_json, lambda p: console().print(p["diff"] or "(no change)", markup=False))
+
+
+@config_app.command("save-override")
+@handle_errors
+def config_save_override(
+    rel_path: Annotated[str, typer.Argument(help="Config path, e.g. sap/scope.yaml, settings.yaml, ops/sla.yaml")],
+    draft: Annotated[Path, typer.Option("--from", help="Draft YAML to save as the override")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Validate the YAML and show the diff without saving")
+    ] = False,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Save DATA_DIR/config/<rel_path> from a draft, validate the effective config, restore the old file on failure."""
+    from sed.ingest.onboarding import save_config_override
+
+    result = save_config_override(_paths(profile, data_dir), rel_path, draft, dry_run=dry_run)
+    emit(result, as_json, lambda p: console().print(p["diff"] or "(no change)", markup=False))
 
 
 @alias_app.command("list")
@@ -594,6 +651,93 @@ def metrics_show(
     finally:
         conn.close()
     emit({"metric": name, "period": p.label, "as_of": ref.isoformat(), "result": result}, as_json)
+
+
+@metrics_app.command("reconcile")
+@handle_errors
+def metrics_reconcile(
+    period: Annotated[str, typer.Option(help="Reported period, e.g. 2026-08")],
+    opened: Annotated[int | None, typer.Option(help="Incidents opened, from the trusted report")] = None,
+    resolved: Annotated[int | None, typer.Option(help="Incidents resolved, from the trusted report")] = None,
+    p1: Annotated[int | None, typer.Option("--p1", help="P1 incidents opened, from the trusted report")] = None,
+    backlog: Annotated[int | None, typer.Option(help="Open incidents at period end, from the trusted report")] = None,
+    sla_pct: Annotated[
+        float | None, typer.Option("--sla-pct", help="Resolution SLA met %, from the trusted report")
+    ] = None,
+    tolerance_pct: Annotated[float, typer.Option("--tolerance-pct", help="Allowed count difference in %")] = 2.0,
+    sla_tolerance_pp: Annotated[float, typer.Option("--sla-tolerance-pp", help="Allowed SLA difference in pp")] = 1.0,
+    min_app_link_pct: Annotated[
+        float, typer.Option("--min-app-link-pct", help="Minimum share of incidents linked to an application")
+    ] = 98.0,
+    group: Annotated[str | None, typer.Option(help="Only this assignment group (when the report is scoped)")] = None,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Compare SED's incident numbers for a period with a trusted ServiceNow report (the M3 reconciliation gate)."""
+    from sed import metrics
+    from sed.calendar import parse_period
+    from sed.settings import load_settings
+
+    paths = _paths(profile, data_dir)
+    settings = load_settings(paths)
+    p = parse_period(period, settings.reporting_tz, settings.fiscal_year_start)
+    f = metrics.Filters(kind="incident", group=group)
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        volume = metrics.volume_trend(conn, f, [p])[0]
+        p1_opened = metrics.volume_trend(conn, metrics.Filters(kind="incident", group=group, priorities=[1]), [p])[0]
+        backlog_all = metrics.backlog(conn, f, p.end_utc, exclude_stale=False)["total"]
+        backlog_fresh = metrics.backlog(conn, f, p.end_utc)["total"]
+        sla = metrics.sla(conn, f, p)
+        where, params = f.where("t")
+        total, linked = conn.execute(
+            f"SELECT COUNT(*), COUNT(t.app_id) FROM ticket t WHERE {where} AND t.opened_at >= ? AND t.opened_at < ?",
+            [*params, p.start_iso, p.end_iso],
+        ).fetchone()
+    finally:
+        conn.close()
+    link_pct = round(100.0 * linked / total, 2) if total else None
+
+    def row(key: str, ours: float | None, expected: float | None, *, pp: bool = False) -> dict[str, Any]:
+        if expected is None:
+            return {"metric": key, "sed": ours, "expected": None, "difference": None, "ok": None}
+        diff = None if ours is None else round(ours - expected, 2)
+        if pp:
+            ok = diff is not None and abs(diff) <= sla_tolerance_pp
+        else:
+            ok = diff is not None and (abs(diff) <= expected * tolerance_pct / 100 if expected else diff == 0)
+        pct = round(100.0 * diff / expected, 2) if diff is not None and expected and not pp else None
+        return {"metric": key, "sed": ours, "expected": expected, "difference": diff, "difference_pct": pct, "ok": ok}
+
+    rows = [
+        row("incidents_opened", volume["opened"], opened),
+        row("incidents_resolved", volume["resolved"], resolved),
+        row("p1_opened", p1_opened["opened"], p1),
+        row("backlog_at_period_end", backlog_all, backlog),
+        row("sla_pct", sla["pct"], sla_pct, pp=True),
+        {
+            "metric": "incidents_linked_to_app_pct",
+            "sed": link_pct,
+            "expected": f">= {min_app_link_pct}",
+            "difference": None,
+            "ok": None if link_pct is None else link_pct >= min_app_link_pct,
+        },
+    ]
+    checked = [r for r in rows if r["ok"] is not None]
+    emit(
+        {
+            "period": p.label,
+            "group": group,
+            "sla_source": sla["source"],
+            "backlog_excluding_stale": backlog_fresh,
+            "tolerance_pct": tolerance_pct,
+            "sla_tolerance_pp": sla_tolerance_pp,
+            "rows": rows,
+            "passed": bool(checked) and all(r["ok"] for r in checked),
+        },
+        as_json,
+    )
 
 
 @app.command()

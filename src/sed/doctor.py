@@ -208,9 +208,15 @@ def _module_checks(paths: Paths, root: Path, add) -> None:
 
     skills_dir = root / ".claude" / "skills"
     folders = sorted(p.name for p in skills_dir.iterdir() if p.is_dir()) if skills_dir.is_dir() else []
-    declared = [s.name for m in modules.installed() for s in m.skills]
+    declared = [s.name for m in modules.installed() for s in m.skills] + list(modules.CORE_SKILLS)
     unclaimed = [f for f in folders if f.startswith("sed-") and declared.count(f) != 1]
-    add(_check("skills_claimed", not unclaimed, ", ".join(unclaimed) or "every sed-* skill belongs to one module"))
+    add(
+        _check(
+            "skills_claimed",
+            not unclaimed,
+            ", ".join(unclaimed) or "every sed-* skill belongs to one module or the core",
+        )
+    )
     for check in modules.doctor_checks(paths):
         add(check)
 

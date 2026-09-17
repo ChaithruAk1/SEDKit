@@ -11,7 +11,11 @@
     ],
     "ask": [
       "Bash(uv run sed review:*)",
-      "PowerShell(uv run sed review:*)"
+      "PowerShell(uv run sed review:*)",
+      "Bash(uv run sed mappings save-override:*)",
+      "PowerShell(uv run sed mappings save-override:*)",
+      "Bash(uv run sed config save-override:*)",
+      "PowerShell(uv run sed config save-override:*)"
     ],
     "deny": [
       "WebFetch",

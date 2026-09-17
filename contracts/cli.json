@@ -823,6 +823,91 @@
     {
       "commands": [
         {
+          "help": "Save DATA_DIR/config/<rel_path> from a draft, validate the effective config, restore the old file on failure.",
+          "name": "save-override",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "rel_path",
+              "opts": [
+                "rel_path"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "draft",
+              "opts": [
+                "--from"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "dry_run",
+              "opts": [
+                "--dry-run"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Validated DATA_DIR config overrides",
+      "name": "config"
+    },
+    {
+      "commands": [
+        {
           "help": "Copy the whole data root (every profile) to a new folder, verify it and mark the old one as moved.",
           "name": "move",
           "params": [
@@ -1462,9 +1547,222 @@
           ]
         },
         {
+          "help": "Profile a file (headers, fill rates, value shapes, safe categories) into runs/map-*/in/ for a mapping draft.",
+          "name": "draft",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "file",
+              "opts": [
+                "file"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
           "help": "List effective mappings (repo defaults + DATA_DIR overrides).",
           "name": "list",
           "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Validate a draft mapping and save it as DATA_DIR/config/<module>/mappings/<name>.yaml (restored on failure).",
+          "name": "save-override",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "draft",
+              "opts": [
+                "--from"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "module",
+              "opts": [
+                "--module"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "dry_run",
+              "opts": [
+                "--dry-run"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Dry-run import of a file with a draft mapping: coverage, transform errors, rejects and scrubbed samples.",
+          "name": "try",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "file",
+              "opts": [
+                "file"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "draft",
+              "opts": [
+                "--from"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": 10,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "rows",
+              "opts": [
+                "--rows"
+              ],
+              "required": false,
+              "type": "int range"
+            },
             {
               "default": null,
               "is_flag": false,
@@ -1510,6 +1808,169 @@
     },
     {
       "commands": [
+        {
+          "help": "Compare SED's incident numbers for a period with a trusted ServiceNow report (the M3 reconciliation gate).",
+          "name": "reconcile",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "period",
+              "opts": [
+                "--period"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "opened",
+              "opts": [
+                "--opened"
+              ],
+              "required": false,
+              "type": "int"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "resolved",
+              "opts": [
+                "--resolved"
+              ],
+              "required": false,
+              "type": "int"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "p1",
+              "opts": [
+                "--p1"
+              ],
+              "required": false,
+              "type": "int"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "backlog",
+              "opts": [
+                "--backlog"
+              ],
+              "required": false,
+              "type": "int"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "sla_pct",
+              "opts": [
+                "--sla-pct"
+              ],
+              "required": false,
+              "type": "float"
+            },
+            {
+              "default": 2.0,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "tolerance_pct",
+              "opts": [
+                "--tolerance-pct"
+              ],
+              "required": false,
+              "type": "float"
+            },
+            {
+              "default": 1.0,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "sla_tolerance_pp",
+              "opts": [
+                "--sla-tolerance-pp"
+              ],
+              "required": false,
+              "type": "float"
+            },
+            {
+              "default": 98.0,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "min_app_link_pct",
+              "opts": [
+                "--min-app-link-pct"
+              ],
+              "required": false,
+              "type": "float"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "group",
+              "opts": [
+                "--group"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
         {
           "help": "Compute one metric family from the store.",
           "name": "show",

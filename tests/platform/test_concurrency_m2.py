@@ -58,8 +58,10 @@ while not stop_file.exists() and time.monotonic() < deadline:
         if response.status_code != 200:
             result["errors"].append(f"{url} {response.status_code} {response.text[:200]}")
         result["ops"] += 1
-    if wal.exists():
+    try:  # a checkpoint may remove the WAL between any existence check and stat()
         result["max_wal"] = max(result["max_wal"], wal.stat().st_size)
+    except FileNotFoundError:
+        pass
 print(json.dumps(result))
 """
 

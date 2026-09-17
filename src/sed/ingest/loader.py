@@ -54,6 +54,8 @@ class ImportOptions:
     allow_unmanifested: bool = False
     move_files: bool = True
     sample_rows: int = 20
+    # Draft mappings tried without saving them (`sed mappings try`); only allowed on a dry run.
+    extra_mappings: dict[str, MappingSpec] = field(default_factory=dict)
 
 
 @dataclass
@@ -377,7 +379,9 @@ def _run(conn, paths: Paths, opts: ImportOptions) -> dict[str, Any]:
     settings = load_settings(paths)
     pii_cfg = PiiConfig.from_dict(load_layered("pii.yaml", paths))
     fx = {k.upper(): float(v) for k, v in (load_layered("fx.yaml", paths).get("rates") or {}).items()}
-    mappings = load_all_mappings(paths)
+    if opts.extra_mappings and not opts.dry_run:
+        raise ValidationFailed("Draft mappings can only be tried on a dry run")
+    mappings = {**load_all_mappings(paths), **opts.extra_mappings}
     targets: dict[str, Target] = registry.ingest_targets(paths)
     hooks = registry.ingest_hooks(paths)
     pii_mode = meta.get("pii_mode", "pseudonymize")

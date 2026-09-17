@@ -151,6 +151,12 @@ Metrics stay at group (area), system and partner level, never per person.
 - Approved labels appear in reports with their sample accuracy and confidence interval. See
   `docs/ai/walking-skeleton-runbook.md`.
 
+## Real data
+
+Onboarding real exports on the `real` profile (profile creation, export list, mapping overrides with the
+`sed-map-export` skill, config overrides, reconciliation with `sed metrics reconcile`, reports without AI and the
+headless spike): `docs/real-data-onboarding.md`.
+
 ## Status
 
 | Milestone | Scope | Status |
@@ -158,7 +164,10 @@ Metrics stay at group (area), system and partner level, never per person.
 | M0 | Skeleton & guardrails | done |
 | M1 | Synthetic data, import, metrics, weekly Excel | done |
 | M2 | Modular platform, AI walking skeleton, all decks, API and dashboard core | done |
-| M3 | Reality check with real exports | planned |
+| SAP S0–S4 | SAP module: L3 view, ChaRM changes, IDoc health, SAP subcategories in AI triage | done |
+| M3 | Reality check with real exports | tooling done; real run pending |
 | M4 | Full AI analysis & review | planned |
 | M5 | AI-drafted reports | planned |
+| M6 | Automation & connectors | planned |
 | M7 | AI-native SDLC: delivery-management module and app factory | to be planned |
+| SAP S5 | SAP connectivity (`sed pull sap`), last wave | planned |

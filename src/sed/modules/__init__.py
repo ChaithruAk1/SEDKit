@@ -53,8 +53,11 @@ CORE_CLI_NAMES = frozenset(
         "ai",
         "review",
         "serve",
+        "config",
     }
 )
+# Skills that belong to the platform rather than a module (no run handler, no module surface).
+CORE_SKILLS = ("sed-map-export",)
 CORE_NAV = (NavItem("core.data", "Data", "/data", 900, "database"),)
 CORE_TABLES = (
     "meta",
@@ -462,6 +465,7 @@ __all__ = [
     "BUILTIN",
     "CORE_CLI_NAMES",
     "CORE_NAV",
+    "CORE_SKILLS",
     "CORE_TABLES",
     "EXTRA_ENV",
     "PORTFOLIO_TABLES",

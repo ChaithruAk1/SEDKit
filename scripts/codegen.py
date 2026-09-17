@@ -121,6 +121,11 @@ def main(argv: list[str] | None = None) -> int:
         from sed.ai.codegen import export_all
 
         drifted += export_all(REPO, check=args.check)
+    if "skills" in parts and _has_module("sed.ingest.onboarding"):
+        from sed.ingest.onboarding import canonical_fields_markdown
+
+        reference = REPO / ".claude" / "skills" / "sed-map-export" / "reference" / "canonical_fields.md"
+        _write_or_check(reference, canonical_fields_markdown(), args.check, drifted)
     if "web" in parts and (REPO / "web" / "node_modules").is_dir() and shutil.which("npm"):
         script = "gen:api:check" if args.check else "gen:api"
         proc = subprocess.run([shutil.which("npm") or "npm", "--prefix", "web", "run", script], cwd=REPO, check=False)
