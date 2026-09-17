@@ -40,7 +40,7 @@ def _keyring(name: str) -> str | None:
 
 
 def _file(paths: Any, name: str) -> str | None:
-    path = paths.credential / "connectors" / name
+    path = paths.secret / "connectors" / name
     if not path.is_file():
         return None
     lines = path.read_text(encoding="utf-8").splitlines()
