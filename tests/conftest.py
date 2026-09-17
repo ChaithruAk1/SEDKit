@@ -49,8 +49,12 @@ def repo() -> Path:
 
 def load_script(name: str):
     """Import a module from scripts/ (not a package)."""
-    path = REPO / "scripts" / f"{name}.py"
-    spec = importlib.util.spec_from_file_location(f"scripts_{name}", path)
+    return load_module(REPO / "scripts" / f"{name}.py")
+
+
+def load_module(path: Path):
+    """Import a standalone file that is not part of a package (scripts/, .claude/hooks/)."""
+    spec = importlib.util.spec_from_file_location(f"sed_file_{path.stem}", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

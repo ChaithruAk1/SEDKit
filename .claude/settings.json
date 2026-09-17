@@ -21,5 +21,19 @@
       "WebFetch",
       "WebSearch"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Read|Edit|Write|NotebookEdit|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-sync python -c \"import os,runpy,sys;h=os.path.join(os.environ.get('CLAUDE_PROJECT_DIR') or os.getcwd(),'.claude/hooks/guard_data_dir.py');sys.exit(runpy.run_path(h,run_name='__main__') if os.path.isfile(h) else 0)\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }

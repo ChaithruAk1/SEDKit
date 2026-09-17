@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -306,6 +307,14 @@ def _claude_checks(paths: Paths, add) -> None:
     except SedError:
         rule_ok = False
     add(_check("prefix_allow_rule", rule_ok, f"allow rule for '{agent.command_prefix}'"))
+    surface_problems = project_surface_problems(repo_root())
+    add(
+        _check(
+            "claude_project_surfaces",
+            not surface_problems,
+            ", ".join(surface_problems) or "skills, commands, agents and the PreToolUse guard hook",
+        )
+    )
 
 
 def _git_local_email(root: Path) -> str | None:
@@ -316,6 +325,24 @@ def _git_local_email(root: Path) -> str | None:
     except FileNotFoundError:
         return None
     return out.stdout.strip() or None
+
+
+def project_surface_problems(root: Path) -> list[str]:
+    """The project's Claude Code surfaces: skills, commands and agents present, and the guard hook wired and there."""
+    surfaces = ("skills", "commands", "agents", "hooks")
+    problems = [f"no .claude/{kind}" for kind in surfaces if not (root / ".claude" / kind).is_dir()]
+    settings = root / ".claude" / "settings.json"
+    try:
+        data = json.loads(settings.read_bytes().decode("utf-8-sig")) if settings.is_file() else {}
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return [*problems, f"{settings} is not valid JSON"]
+    entries = data.get("hooks", {}).get("PreToolUse", []) if isinstance(data, dict) else []
+    commands = [h.get("command", "") for entry in entries for h in entry.get("hooks", [])]
+    scripts = [name for command in commands for name in re.findall(r"\.claude/hooks/[\w.-]+", command)]
+    if not scripts:
+        problems.append("no PreToolUse hook in .claude/settings.json")
+    problems += [f"missing hook script {name}" for name in scripts if not (root / name).is_file()]
+    return problems
 
 
 def skill_name_problems(root: Path) -> tuple[list[str], list[str]]:

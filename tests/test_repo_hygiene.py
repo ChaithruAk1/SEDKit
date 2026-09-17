@@ -1,19 +1,22 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 from sed import claude_setup
-from sed.doctor import skill_name_problems
+from sed.doctor import project_surface_problems, skill_name_problems
 from sed.settings import load_agent_config
-from tests.conftest import REPO, load_script
+from tests.conftest import REPO, load_module, load_script
 
 guard = load_script("guard_confidential")
+hook = load_module(REPO / ".claude" / "hooks" / "guard_data_dir.py")
 CORP = "se" + ".com"
 TENANT = "acmecorp" + ".service-now.com"
 
@@ -150,8 +153,6 @@ def test_claude_md_prefix_block_matches_repo_agent_config(monkeypatch: pytest.Mo
 
 
 def test_committed_settings_allow_both_shell_tools():
-    import json
-
     data = json.loads((REPO / ".claude" / "settings.json").read_text(encoding="utf-8"))
     allow = data["permissions"]["allow"]
     assert "Bash(uv run sed:*)" in allow and "PowerShell(uv run sed:*)" in allow
@@ -200,6 +201,100 @@ def test_project_commands_and_agents_follow_the_conventions(kind: str):
         assert 0 < len(meta["description"]) <= 1024, path.name
         if kind == "agents":
             assert meta["name"] == path.stem, path.name
+
+
+@pytest.mark.parametrize(
+    ("tool", "field", "value", "blocked"),
+    [
+        ("Read", "file_path", "{root}/synthetic/inbox/incident_2026-08.csv", True),
+        ("Bash", "command", 'ls "{root}\\synthetic\\secret"', True),
+        ("Grep", "path", "{root}/real/ground_truth", True),
+        ("Bash", "command", "sqlite3 {root}/synthetic/sed.db .tables", True),
+        ("Read", "file_path", "{root}/guard/denylist.txt", True),
+        ("Write", "file_path", "contracts/api.ts", True),
+        ("Edit", "file_path", ".claude/skills/sed-triage-batch/output_schema.json", True),
+        # The CLI is the way in, and the repo's own config/ and contracts/ stay readable.
+        ("Bash", "command", "uv run sed import --inbox --profile synthetic --json", False),
+        ("Bash", "command", "cat config/settings.yaml", False),
+        ("Bash", "command", "cat contracts/api.ts", False),
+        ("Read", "file_path", "{root}/synthetic/runs/r1/in/batch_0001.jsonl", False),
+        ("Read", "file_path", "{root}/synthetic/out/2026-W35/weekly.xlsx", False),
+    ],
+)
+def test_pretooluse_hook_enforces_the_data_folder_contract(
+    data_root: Path, tool: str, field: str, value: str, blocked: bool
+):
+    event = {"hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": {field: value.format(root=data_root)}}
+    assert bool(hook.decide(event)) is blocked, value
+
+
+def test_pretooluse_hook_handles_git_bash_and_junk_without_raising():
+    assert hook.normalise("//c/Users/me/x") == "c:/users/me/x"
+    assert hook.normalise("/c/Users/me/x") == "c:/users/me/x"
+    assert hook.normalise("/usr/local/bin") == "/usr/local/bin"
+    for event in ({}, {"tool_name": "Bash"}, {"tool_name": "Bash", "tool_input": "not a dict"}):
+        assert hook.decide(event) is None
+
+
+def test_pretooluse_hook_exits_2_only_when_it_blocks(data_root: Path):
+    script = str(REPO / ".claude" / "hooks" / "guard_data_dir.py")
+    for tool_input, expected in (({"file_path": f"{data_root}/synthetic/inbox/x.csv"}, 2), ({"command": "ls"}, 0)):
+        event = {"hook_event_name": "PreToolUse", "tool_name": "Read", "tool_input": tool_input}
+        done = subprocess.run(
+            [sys.executable, script], input=json.dumps(event), capture_output=True, text=True, check=False
+        )
+        assert done.returncode == expected, done.stderr
+
+
+def test_pretooluse_hook_command_survives_a_moved_working_directory(data_root: Path):
+    """The wiring resolves the script through CLAUDE_PROJECT_DIR and fails open.
+
+    Python exits 2 when it cannot open a file, and 2 is exactly what Claude Code reads as "block this call": a hook
+    wired by a path relative to the working directory refuses every tool in the session as soon as the shell moves.
+    """
+    settings = json.loads((REPO / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    command = settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    assert "CLAUDE_PROJECT_DIR" in command, command
+    event = {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Read",
+        "tool_input": {"file_path": str(data_root / "synthetic" / "inbox" / "incident.csv")},
+    }
+
+    def run(cwd: Path, project_dir: Path | None) -> int:
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        if project_dir is not None:
+            env["CLAUDE_PROJECT_DIR"] = str(project_dir)
+        done = subprocess.run(
+            command, shell=True, cwd=cwd, env=env, input=json.dumps(event), capture_output=True, text=True, check=False
+        )
+        return done.returncode
+
+    assert run(REPO / "src", REPO) == 2, "the guard must block from any working directory"
+    assert run(REPO, REPO / "src") == 0, "a hook that cannot find its script must let the call through"
+
+
+def test_pretooluse_hook_is_wired_into_committed_settings():
+    settings = json.loads((REPO / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    entries = settings["hooks"]["PreToolUse"]
+    commands = [h["command"] for entry in entries for h in entry["hooks"]]
+    script = ".claude/hooks/guard_data_dir.py"
+    assert any(script in command for command in commands), commands
+    assert (REPO / script).is_file()
+    matcher = entries[0]["matcher"]
+    assert {"Bash", "Read", "Edit", "Write"} <= set(matcher.split("|")), matcher
+
+
+def test_doctor_reports_missing_claude_surfaces(tmp_path: Path):
+    assert project_surface_problems(REPO) == []
+    for kind in ("skills", "commands", "agents", "hooks"):
+        (tmp_path / ".claude" / kind).mkdir(parents=True)
+    (tmp_path / ".claude" / "settings.json").write_text(
+        '{"hooks": {"PreToolUse": [{"hooks": [{"command": "python .claude/hooks/gone.py"}]}]}}', encoding="utf-8"
+    )
+    assert project_surface_problems(tmp_path) == ["missing hook script .claude/hooks/gone.py"]
+    (tmp_path / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    assert "no PreToolUse hook in .claude/settings.json" in project_surface_problems(tmp_path)
 
 
 def test_github_ci_workflow_runs_the_single_check_entry_point():

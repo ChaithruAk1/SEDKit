@@ -64,7 +64,7 @@ config/           synthetic defaults, overridable file by file from the data fol
 contracts/        generated API contract and schemas (scripts/codegen.py; never hand-edited)
 docs/             architecture, data model, export specs, playbooks, runbooks
 evals/  templates/  tests/  scripts/
-.claude/          Claude Code configuration: settings, skills, commands, agents, workflows
+.claude/          Claude Code configuration: settings, skills, commands, agents, workflows, hooks
 .github/workflows/  CI
 CLAUDE.md         the agent contract for this repository (web/ and each module carry their own)
 ```
