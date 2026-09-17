@@ -6,3 +6,21 @@ sap-triage:
   min_scored: 50               # SAP tickets with ground truth in the run
   min_category_accuracy: 0.85  # am_category
   min_subcategory_accuracy: 0.80  # am_subcategory, exact (SAP subcategory codes)
+
+# `sed ops eval-triage <run>`: sed-triage-batch or sed-triage-open labels against ground_truth/ticket_truth.csv.
+ops-triage:
+  min_scored: 50
+  min_category_accuracy: 0.85
+  min_misfiled_items: 20          # misfiled gates apply only with at least this many planted request tickets scored
+  min_misfiled_precision: 0.80
+  min_misfiled_recall: 0.80
+  min_symptom_key_consistency: 0.80  # share of planted symptoms whose tickets use at most 2 AI symptom keys
+
+# `sed ops eval-recurring <run>`: sed-find-recurring clusters against the planted P1, P5 and P7 patterns.
+ops-recurring:
+  min_coverage: 0.60   # share of a pattern's tickets inside its best cluster
+  min_precision: 0.60  # share of that cluster's tickets that belong to the pattern
+
+# `sed ops eval-risks <run>`: sed-assess-risks findings against P2 (vendor SLA decline) and P4 (auto-renewals).
+ops-risks:
+  min_p4_auto_renew_high: 1.0

@@ -11,7 +11,7 @@ from sed.cli_common import DataDirOpt, JsonOpt, ProfileOpt, handle_errors, paths
 from sed.errors import ValidationFailed
 from sed.output import console, emit
 
-app = typer.Typer(no_args_is_help=True, help="Application operations (recurring-issue candidates)")
+app = typer.Typer(no_args_is_help=True, help="Application operations (recurring-issue candidates, AI evals)")
 
 
 @app.command("candidates")
@@ -72,3 +72,53 @@ def candidates(
         as_json,
         human,
     )
+
+
+def _eval(kind: str, run_id: str, profile: str | None, data_dir: Any, as_json: bool) -> None:
+    from sed.modules.ops import evals
+
+    function = {"triage": evals.evaluate_triage, "recurring": evals.evaluate_recurring, "risks": evals.evaluate_risks}
+    result = function[kind](paths_for(profile, data_dir), run_id)
+
+    def human(p: dict[str, Any]) -> None:
+        console().print(f"run {p['run_id']} ({p['skill']}): {'PASSED' if p['passed'] else 'FAILED'}", markup=False)
+        for name, ok in p["checks"].items():
+            console().print(f"  {'ok  ' if ok else 'FAIL'} {name}", markup=False)
+
+    emit(result, as_json, human)
+
+
+@app.command("eval-triage")
+@handle_errors
+def eval_triage(
+    run_id: Annotated[str, typer.Argument(help="A sed-triage-batch or sed-triage-open run id")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Score triage labels against the synthetic ground truth (scores only; also runs/<run>/eval.json)."""
+    _eval("triage", run_id, profile, data_dir, as_json)
+
+
+@app.command("eval-recurring")
+@handle_errors
+def eval_recurring(
+    run_id: Annotated[str, typer.Argument(help="A sed-find-recurring run id")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Score issue clusters against the planted P1, P5 and P7 patterns (scores only)."""
+    _eval("recurring", run_id, profile, data_dir, as_json)
+
+
+@app.command("eval-risks")
+@handle_errors
+def eval_risks(
+    run_id: Annotated[str, typer.Argument(help="A sed-assess-risks run id")],
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Score risk findings against the planted P2 and P4 patterns and the noisy-vendor control (scores only)."""
+    _eval("risks", run_id, profile, data_dir, as_json)
