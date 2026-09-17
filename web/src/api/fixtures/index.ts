@@ -31,6 +31,7 @@ const GET_HANDLERS: GetHandlers = {
   '/api/runs': (_, query) => core.runs(query),
   '/api/runs/{run_id}': (params) => review.runDetail(params.run_id, core.allRuns()),
   '/api/review/queue': (_, query) => review.queue(query),
+  '/api/ai/review-rates': (_, query) => review.reviewRates(query),
   '/api/reports': (_, query) => reports.reports(query),
   '/api/reports/readiness': (_, query) => reports.readiness(query),
   '/api/jobs/{job_id}': (params) => reports.jobStatus(params.job_id),

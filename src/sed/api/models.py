@@ -463,3 +463,30 @@ class JobOut(ApiModel):
     params: dict[str, Any]
     result: dict[str, Any] | None
     error: dict[str, Any] | None
+
+
+# -- review rates (M6) ---------------------------------------------------------------------------------------------
+
+
+class ReviewRateRow(ApiModel):
+    skill: str
+    skill_hash: str
+    month: str
+    runs: int
+    approved_runs: int
+    rejected_runs: int
+    sample_accuracy: float | None
+    findings_drafted: int
+    findings_approved: int
+    findings_edited: int
+    findings_rejected: int
+    findings_open: int
+    approval_rate: float | None
+    edit_rate: float | None
+    reject_rate: float | None
+    first_run: str
+    last_run: str
+
+
+class ReviewRatesOut(ApiModel):
+    rows: list[ReviewRateRow]

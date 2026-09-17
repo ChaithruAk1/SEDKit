@@ -54,6 +54,8 @@ CORE_CLI_NAMES = frozenset(
         "review",
         "serve",
         "config",
+        "pull",
+        "schedule",
     }
 )
 # Skills that belong to the platform rather than a module (no run handler, no module surface).

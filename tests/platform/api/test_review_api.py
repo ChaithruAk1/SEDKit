@@ -87,6 +87,11 @@ def test_queue_and_finding_decisions(ops_profile_rw):
     assert len(reviewers) == 1 and None not in reviewers
     assert client.get("/api/review/queue?include_rule=false").json()["items"] == []
 
+    rates = client.get("/api/ai/review-rates?skill=sed-find-recurring").json()["rows"]
+    assert len(rates) == 1 and rates[0]["skill_hash"] == "h" and rates[0]["month"] == "2026-09"
+    counts = [rates[0][k] for k in ("findings_drafted", "findings_approved", "findings_edited", "findings_rejected")]
+    assert counts == [3, 1, 1, 1] and rates[0]["approval_rate"] == round(1 / 3, 4) and rates[0]["findings_open"] == 0
+
 
 def test_rule_findings_take_suppress_until_through_the_api(ops_profile_rw):
     paths = ops_profile_rw.paths

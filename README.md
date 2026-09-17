@@ -171,6 +171,18 @@ Metrics stay at group (area), system and partner level, never per person.
   (recurring issues, risks) appear in the weekly report (AI findings sheet and slide); `--ai none` leaves both out.
   See `docs/ai/walking-skeleton-runbook.md`.
 
+## Automation and connectors
+
+- `uv run sed pull servicenow|jira|sharepoint|confluence --profile real` reads the APIs with a read-only account and
+  writes export-shaped files into the inbox; `sed import --inbox` runs unchanged. Secrets live in the Windows Credential
+  Manager, an environment variable or the profile's `secret` folder, never in config. `sed pull status` and
+  `sed doctor` check the setup without calling the API.
+- `uv run sed schedule write --profile real` writes a weekly script and a Task Scheduler definition into the data
+  folder (pull, import, rule findings, headless `sed-analyze`); you register it yourself. Nothing unattended approves
+  anything.
+- `uv run sed ai review-rates` (and `#/runs`) shows how reviewers decided per skill version.
+- Details: `docs/automation.md`.
+
 ## Real data
 
 Onboarding real exports on the `real` profile (profile creation, export list, mapping overrides with the
@@ -188,6 +200,6 @@ headless spike): `docs/real-data-onboarding.md`.
 | M3 | Reality check with real exports | tooling done; real run pending |
 | M4 | Full AI analysis & review | built; AI-run gates (90-day triage, eval slice, real 50-ticket sample) pending |
 | M5 | AI-drafted reports | built; a real monthly draft (needs Claude usage) pending |
-| M6 | Automation & connectors | planned |
+| M6 | Automation & connectors | built; real connector setup and the scheduled run pending |
 | M7 | AI-native SDLC: delivery-management module and app factory | to be planned |
 | SAP S5 | SAP connectivity (`sed pull sap`), last wave | planned |

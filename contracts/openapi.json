@@ -3393,6 +3393,145 @@
         "title": "ReviewQueueOut",
         "type": "object"
       },
+      "ReviewRateRow": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Rate"
+          },
+          "approved_runs": {
+            "title": "Approved Runs",
+            "type": "integer"
+          },
+          "edit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edit Rate"
+          },
+          "findings_approved": {
+            "title": "Findings Approved",
+            "type": "integer"
+          },
+          "findings_drafted": {
+            "title": "Findings Drafted",
+            "type": "integer"
+          },
+          "findings_edited": {
+            "title": "Findings Edited",
+            "type": "integer"
+          },
+          "findings_open": {
+            "title": "Findings Open",
+            "type": "integer"
+          },
+          "findings_rejected": {
+            "title": "Findings Rejected",
+            "type": "integer"
+          },
+          "first_run": {
+            "title": "First Run",
+            "type": "string"
+          },
+          "last_run": {
+            "title": "Last Run",
+            "type": "string"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "reject_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reject Rate"
+          },
+          "rejected_runs": {
+            "title": "Rejected Runs",
+            "type": "integer"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "sample_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Accuracy"
+          },
+          "skill": {
+            "title": "Skill",
+            "type": "string"
+          },
+          "skill_hash": {
+            "title": "Skill Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill",
+          "skill_hash",
+          "month",
+          "runs",
+          "approved_runs",
+          "rejected_runs",
+          "sample_accuracy",
+          "findings_drafted",
+          "findings_approved",
+          "findings_edited",
+          "findings_rejected",
+          "findings_open",
+          "approval_rate",
+          "edit_rate",
+          "reject_rate",
+          "first_run",
+          "last_run"
+        ],
+        "title": "ReviewRateRow",
+        "type": "object"
+      },
+      "ReviewRatesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewRateRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "ReviewRatesOut",
+        "type": "object"
+      },
       "ReviewResult": {
         "additionalProperties": false,
         "properties": {
@@ -7237,6 +7376,96 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/ai/review-rates": {
+      "get": {
+        "operationId": "core_review_rates",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "skill",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Skill"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRatesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Review Rates",
+        "tags": [
+          "core"
+        ]
+      }
+    },
     "/api/alias-targets": {
       "get": {
         "operationId": "core_alias_targets",

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/ai/review-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review Rates */
+        get: operations["core_review_rates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/alias-targets": {
         parameters: {
             query?: never;
@@ -1622,6 +1639,48 @@ export interface components {
             /** Items */
             items: components["schemas"]["ReviewItem"][];
         };
+        /** ReviewRateRow */
+        ReviewRateRow: {
+            /** Approval Rate */
+            approval_rate: number | null;
+            /** Approved Runs */
+            approved_runs: number;
+            /** Edit Rate */
+            edit_rate: number | null;
+            /** Findings Approved */
+            findings_approved: number;
+            /** Findings Drafted */
+            findings_drafted: number;
+            /** Findings Edited */
+            findings_edited: number;
+            /** Findings Open */
+            findings_open: number;
+            /** Findings Rejected */
+            findings_rejected: number;
+            /** First Run */
+            first_run: string;
+            /** Last Run */
+            last_run: string;
+            /** Month */
+            month: string;
+            /** Reject Rate */
+            reject_rate: number | null;
+            /** Rejected Runs */
+            rejected_runs: number;
+            /** Runs */
+            runs: number;
+            /** Sample Accuracy */
+            sample_accuracy: number | null;
+            /** Skill */
+            skill: string;
+            /** Skill Hash */
+            skill_hash: string;
+        };
+        /** ReviewRatesOut */
+        ReviewRatesOut: {
+            /** Rows */
+            rows: components["schemas"]["ReviewRateRow"][];
+        };
         /** ReviewResult */
         ReviewResult: {
             /** Action */
@@ -2692,6 +2751,73 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    core_review_rates: {
+        parameters: {
+            query?: {
+                skill?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewRatesOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     core_alias_targets: {
         parameters: {
             query: {

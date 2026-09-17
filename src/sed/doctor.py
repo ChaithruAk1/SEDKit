@@ -116,6 +116,7 @@ def run_checks(paths: Paths, *, skip: set[str] | None = None) -> list[Check]:
     add(_check("skill_names_valid", not bad_names, ", ".join(bad_names) or "all sed-* with matching frontmatter name"))
     add(_check("skill_names_no_personal_clash", not clashes, ", ".join(clashes) or "no clashes with ~/.claude/skills"))
     _module_checks(paths, root, add)
+    _connector_checks(paths, add)
 
     if paths.data_class == "real":
         add(
@@ -219,6 +220,47 @@ def _module_checks(paths: Paths, root: Path, add) -> None:
     )
     for check in modules.doctor_checks(paths):
         add(check)
+
+
+def _connector_checks(paths: Paths, add) -> None:
+    """connectors.yaml is valid; enabled connectors have their secret; their watermarks are recent (no network)."""
+    from datetime import UTC, datetime
+
+    from sed.connectors.pull import status
+
+    try:
+        report = status(paths)
+    except SedError as exc:
+        add(Check("connectors_valid", "fail", f"{exc.message}: {exc.details}" if exc.details else exc.message))
+        return
+    enabled = [c for c in report["connectors"] if c["enabled"]]
+    add(Check("connectors_valid", "ok", "enabled: " + (", ".join(c["connector"] for c in enabled) or "none")))
+    if not enabled:
+        return
+    missing = [f"{c['connector']} (secret '{c['credential']}')" for c in enabled if not c["credential_found_in"]]
+    add(
+        _check(
+            "connector_credentials",
+            not missing,
+            "missing: " + ", ".join(missing) if missing else "every enabled connector has its secret",
+            severity="fail" if paths.data_class == "real" else "warn",
+        )
+    )
+    now = datetime.now(UTC)
+    stale = []
+    for c in enabled:
+        for s in c["sources"]:
+            mark = s["watermark"]
+            if mark is None or (now - datetime.fromisoformat(mark)).days > 14:
+                stale.append(f"{c['connector']}/{s['source']} ({mark or 'never pulled'})")
+    add(
+        _check(
+            "connector_watermarks_fresh",
+            not stale,
+            "older than 14 days: " + ", ".join(stale) if stale else "every source pulled within 14 days",
+            severity="warn",
+        )
+    )
 
 
 def _salt_checks(paths: Paths, meta: dict[str, str], add) -> None:

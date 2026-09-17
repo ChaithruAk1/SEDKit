@@ -1,0 +1,57 @@
+# API connectors for `sed pull <connector>` (read-only). Placeholders only: real instance URLs, source filters and
+# secret NAMES go in DATA_DIR\config\connectors.yaml (a whole-file override is simplest). Secret VALUES never go in
+# any config file: see src/sed/connectors/credentials.py (environment variable, Windows Credential Manager, or
+# DATA_DIR\secret\connectors\<name>). Every connector stays disabled until enabled in the profile's override.
+
+defaults:
+  page_size: 500          # rows per API call
+  max_rows: 50000         # stop a source after this many rows (the watermark resumes from there next time)
+  max_pages: 500          # hard stop on API calls per pull
+  pause_seconds: 0.5      # between calls, to stay polite with the instance
+  overlap_minutes: 60     # re-read this much before the watermark so late updates are not missed
+  timeout_seconds: 60
+
+servicenow:
+  enabled: false
+  base_url: https://instance.example.invalid
+  auth: basic
+  user: sed_readonly
+  credential: servicenow
+  sources:
+    - key: incident
+      table: incident
+      file_prefix: incident          # incident_pull_<stamp>.csv matches the servicenow_incident mapping
+      filter: ""                     # optional encoded query ANDed with the watermark, e.g. assignment_groupSTARTSWITH...
+      source_tz: Europe/Paris        # the time zone the mapping expects (dates are converted from UTC)
+      datetime_fields: [opened_at, sys_updated_on, resolved_at, closed_at]
+      fields: [number, sys_id, opened_at, sys_updated_on, resolved_at, closed_at, state, priority, impact, urgency,
+               category, subcategory, short_description, description, close_code, close_notes, caller_id,
+               assigned_to, assignment_group, business_service, cmdb_ci, made_sla, reassignment_count, reopen_count,
+               problem_id, caused_by, parent_incident]
+
+jira:
+  enabled: false
+  base_url: https://jira.example.invalid
+  auth: bearer
+  credential: jira
+  sources:
+    - key: issues
+      jql: project in (DEMO)
+      file_prefix: jira_pull
+      story_points_field: null       # e.g. customfield_10016 on the real instance
+      sprint_field: null
+      source_tz: Europe/Paris
+
+sharepoint:
+  enabled: false
+  base_url: https://graph.example.invalid/v1.0
+  auth: bearer
+  credential: graph
+  sources: []
+
+confluence:
+  enabled: false
+  base_url: https://confluence.example.invalid
+  auth: bearer
+  credential: confluence
+  sources: []

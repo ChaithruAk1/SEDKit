@@ -1,7 +1,7 @@
 import { Anchor, Badge, Code, SegmentedControl, SimpleGrid, Stack, Text } from '@mantine/core';
 import { Link, useNavigate } from 'react-router';
 
-import type { RunRow } from '../../api/types';
+import type { RunRow, Schema } from '../../api/types';
 import { useApi } from '../../api/useApi';
 import { useShell } from '../../app/ShellContext';
 import { type Column, DataTable } from '../../components/DataTable';
@@ -55,12 +55,37 @@ const COLUMNS: Column<RunRow>[] = [
   { key: 'reviewed_by', header: 'Reviewed by', value: (r) => r.reviewed_by },
 ];
 
+type RateRow = Schema<'ReviewRateRow'>;
+
+const RATE_COLUMNS: Column<RateRow>[] = [
+  { key: 'month', header: 'Month', value: (r) => r.month, nowrap: true },
+  { key: 'skill', header: 'Skill', value: (r) => r.skill },
+  {
+    key: 'skill_hash',
+    header: 'Version',
+    value: (r) => r.skill_hash,
+    render: (r) => (
+      <Text size="xs" ff="monospace" title={r.skill_hash}>
+        {r.skill_hash.slice(0, 12)}
+      </Text>
+    ),
+  },
+  { key: 'runs', header: 'Runs', value: (r) => r.runs, render: (r) => formatInt(r.runs), align: 'right' },
+  { key: 'sample_accuracy', header: 'Sample accuracy', value: (r) => r.sample_accuracy, render: (r) => formatRatio(r.sample_accuracy), align: 'right' },
+  { key: 'findings_drafted', header: 'Findings', value: (r) => r.findings_drafted, render: (r) => formatInt(r.findings_drafted), align: 'right' },
+  { key: 'approval_rate', header: 'Approved', value: (r) => r.approval_rate, render: (r) => formatRatio(r.approval_rate), align: 'right' },
+  { key: 'edit_rate', header: 'Edited', value: (r) => r.edit_rate, render: (r) => formatRatio(r.edit_rate), align: 'right' },
+  { key: 'reject_rate', header: 'Rejected', value: (r) => r.reject_rate, render: (r) => formatRatio(r.reject_rate), align: 'right' },
+  { key: 'findings_open', header: 'Open', value: (r) => r.findings_open, render: (r) => formatInt(r.findings_open), align: 'right' },
+];
+
 export default function RunsPage() {
   const { meta } = useShell();
   const navigate = useNavigate();
   const [status, setStatus] = useSearchParam('status', 'all');
   const runs = useApi('/api/runs', { query: { status: status === 'all' ? null : status, limit: 200 } });
   const profile = meta.data?.profile ?? '<profile>';
+  const rates = useApi('/api/ai/review-rates');
 
   return (
     <Stack gap="md">
@@ -90,6 +115,24 @@ export default function RunsPage() {
           serverOrdered
           pageSize={50}
           minWidth={1100}
+        />
+      </SectionCard>
+      <SectionCard
+        title="Review rates by skill version"
+        description="How reviewers decided per skill hash and month: a new version that is edited or rejected more shows up here"
+        count={rates.data?.rows.length ?? null}
+      >
+        <DataTable
+          rows={rates.data?.rows}
+          columns={RATE_COLUMNS}
+          rowKey={(r) => `${r.skill}|${r.skill_hash}|${r.month}`}
+          loading={rates.loading}
+          error={rates.error}
+          onRetry={rates.reload}
+          emptyText="No reviewed runs yet"
+          serverOrdered
+          pageSize={25}
+          minWidth={900}
         />
       </SectionCard>
       <SectionCard title="Start or inspect runs in Claude Code" description="The dashboard never calls an AI model; runs start in Claude Code">

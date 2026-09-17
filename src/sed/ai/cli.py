@@ -145,6 +145,38 @@ def ai_packet(
     emit(result, as_json, human)
 
 
+@ai_app.command("review-rates")
+@handle_errors
+def ai_review_rates(
+    skill: Annotated[str | None, typer.Option(help="Only this skill")] = None,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """How reviewers decided per skill version (skill hash) and month: approved, edited, rejected, sample accuracy."""
+    from sed import db
+    from sed.ai.rates import review_rates
+
+    paths = paths_for(profile, data_dir)
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        result = review_rates(conn, skill=skill)
+    finally:
+        conn.close()
+
+    def human(p: dict) -> None:
+        for r in p["rows"]:
+            console().print(
+                f"{r['month']} {r['skill']:<20} {r['skill_hash'][:12]} runs={r['runs']} "
+                f"drafted={r['findings_drafted']} "
+                f"approved={r['findings_approved']} edited={r['findings_edited']} rejected={r['findings_rejected']} "
+                f"accuracy={r['sample_accuracy']}",
+                markup=False,
+            )
+
+    emit(result, as_json, human)
+
+
 @ai_app.command("runs")
 @handle_errors
 def ai_runs(

@@ -362,3 +362,32 @@ export function correctLabel(body: PostBody<'/api/labels/correct'>): Schema<'Lab
   }
   return { ticket_id: body.ticket_id, stage: body.stage, run_id: `manual-${AS_OF.replaceAll('-', '')}` };
 }
+
+// -- review rates per skill version ----------------------------------------------------------------------------------
+
+export function reviewRates(query: GetQuery<'/api/ai/review-rates'> | undefined): Schema<'ReviewRatesOut'> {
+  const row = (over: Partial<Schema<'ReviewRateRow'>> & Pick<Schema<'ReviewRateRow'>, 'skill' | 'skill_hash' | 'month'>): Schema<'ReviewRateRow'> => ({
+    runs: 1,
+    approved_runs: 0,
+    rejected_runs: 0,
+    sample_accuracy: null,
+    findings_drafted: 0,
+    findings_approved: 0,
+    findings_edited: 0,
+    findings_rejected: 0,
+    findings_open: 0,
+    approval_rate: null,
+    edit_rate: null,
+    reject_rate: null,
+    first_run: isoAt(addDays(AS_OF, -20), 8, 0),
+    last_run: isoAt(AS_OF, 8, 0),
+    ...over,
+  });
+  const rows = [
+    row({ skill: 'sed-triage-batch', skill_hash: 'triage-version-a', month: '2026-08', runs: 3, approved_runs: 3, sample_accuracy: 0.91 }),
+    row({ skill: 'sed-triage-batch', skill_hash: 'triage-version-b', month: '2026-09', runs: 1, approved_runs: 1, sample_accuracy: 0.95 }),
+    row({ skill: 'sed-find-recurring', skill_hash: 'recurring-version-a', month: '2026-09', runs: 2, findings_drafted: 9, findings_approved: 5, findings_edited: 2, findings_rejected: 1, findings_open: 1, approval_rate: 0.625, edit_rate: 0.25, reject_rate: 0.125 }),
+    row({ skill: 'sed-draft-report', skill_hash: 'draft-version-a', month: '2026-09', runs: 1, findings_drafted: 5, findings_approved: 3, findings_edited: 1, findings_open: 1, approval_rate: 0.75, edit_rate: 0.25, reject_rate: 0 }),
+  ];
+  return { rows: rows.filter((r) => !query?.skill || r.skill === query.skill) };
+}

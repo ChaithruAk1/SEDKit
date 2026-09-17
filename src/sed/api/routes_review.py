@@ -27,6 +27,7 @@ from sed.api.models import (
     LabelCorrectionOut,
     ReviewItem,
     ReviewQueueOut,
+    ReviewRatesOut,
     ReviewResult,
     RunDetailOut,
     RunReviewIn,
@@ -251,3 +252,14 @@ def correct_label(body: LabelCorrectionIn, request: Request) -> LabelCorrectionO
     }
     result = correct(request.app.state.paths, body.ticket_id, body.stage, correction, _reviewer(), skill=body.skill)
     return LabelCorrectionOut(ticket_id=result["ticket_id"], stage=result["stage"], run_id=result["run_id"])
+
+
+@router.get("/ai/review-rates", response_model=ReviewRatesOut)
+def review_rates(
+    skill: str | None = Query(None, max_length=60),
+    conn: sqlite3.Connection = Depends(read_conn),
+) -> ReviewRatesOut:
+    # How reviewers decided on each skill version (skill hash) per month.
+    from sed.ai.rates import review_rates as rates
+
+    return ReviewRatesOut(**rates(conn, skill=skill))
