@@ -173,7 +173,7 @@ Metrics stay at group (area), system and partner level, never per person.
 
 ## Automation and connectors
 
-- `uv run sed pull servicenow|jira|sharepoint|confluence --profile real` reads the APIs with a read-only account and
+- `uv run sed pull servicenow|jira|sharepoint|confluence|sap --profile real` reads the APIs with a read-only account and
   writes export-shaped files into the inbox; `sed import --inbox` runs unchanged. Secrets live in the Windows Credential
   Manager, an environment variable or the profile's `secret` folder, never in config. `sed pull status` and
   `sed doctor` check the setup without calling the API.
@@ -202,4 +202,4 @@ headless spike): `docs/real-data-onboarding.md`.
 | M5 | AI-drafted reports | built; a real monthly draft (needs Claude usage) pending |
 | M6 | Automation & connectors | built; real connector setup and the scheduled run pending |
 | M7 | AI-native SDLC: delivery-management module and app factory | to be planned |
-| SAP S5 | SAP connectivity (`sed pull sap`), last wave | planned |
+| SAP S5 | SAP connectivity (`sed pull sap`), last wave | built; SAP services, technical user and reconciliation pending |

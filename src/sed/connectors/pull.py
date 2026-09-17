@@ -93,17 +93,31 @@ def pull(
         if not wanted:
             raise ValidationFailed(f"Connector '{connector}' has no source '{source}'")
         defaults = config.defaults
-        client = Client(
-            transport or HttpTransport(defaults.timeout_seconds),
-            cfg.base_url,
-            _headers(paths, cfg),
-            pause_seconds=defaults.pause_seconds,
-            max_pages=defaults.max_pages,
-            **({"sleep": sleep} if sleep is not None else {}),
-        )
+        http = transport or HttpTransport(defaults.timeout_seconds)
+        extra = {"sleep": sleep} if sleep is not None else {}
+
+        def client_for(src: Any) -> Client:
+            # A source may name its own gateway and account (SAP systems); otherwise the connector's.
+            overrides = {k: getattr(src, k) for k in ("base_url", "user", "credential") if getattr(src, k, None)}
+            effective = cfg.model_copy(update=overrides) if overrides else cfg
+            return Client(
+                http,
+                effective.base_url,
+                _headers(paths, effective),
+                pause_seconds=defaults.pause_seconds,
+                max_pages=defaults.max_pages,
+                **extra,
+            )
+
+        clients: dict[tuple[str, str], Client] = {}
         stamp = (now or datetime.now(UTC)).strftime("%Y%m%dT%H%M%S")
         results = []
         for src in wanted:
+            identity = (
+                getattr(src, "base_url", None) or cfg.base_url,
+                getattr(src, "credential", None) or cfg.credential,
+            )
+            client = clients.setdefault(identity, client_for(src))
             key = watermark_key(connector, src.key)
             stored = db.get_meta(conn, key)
             start: datetime | None = None
@@ -122,7 +136,7 @@ def pull(
                     _write(target, text)
                 written = target.name
             advanced = None
-            if not dry_run and fetched.newest is not None and connector != "sharepoint":
+            if not dry_run and fetched.newest is not None:
                 advanced = fetched.newest.astimezone(UTC).isoformat()
                 if stored is None or advanced > stored:
                     with db.write_tx(conn):
@@ -148,7 +162,7 @@ def pull(
         "connector": connector,
         "profile": paths.profile,
         "sources": results,
-        "pages": client.pages,
+        "pages": sum(c.pages for c in clients.values()),
         "next": "uv run sed import --inbox" if any(r["file"] for r in results) else None,
     }
 
@@ -161,6 +175,10 @@ def _fetch(client, connector, cfg, src, start, defaults, paths, stamp) -> tuple[
     if connector == "jira":
         fetched = fetchers.fetch_jira(client, cfg.api_path, src, start, defaults.page_size, defaults.max_rows)
         return fetched, inbox / f"{src.file_prefix}_{stamp}.csv", _csv_text(fetched.headers, fetched.rows)
+    if connector == "sap":
+        fetched = fetchers.fetch_sap(client, cfg.odata_version, src, start, defaults.page_size, defaults.max_rows)
+        target = inbox / f"{src.file_prefix}_pull_{src.key}_{stamp}.csv"
+        return fetched, target, _csv_text(fetched.headers, fetched.rows)
     if connector == "sharepoint":
         fetched = fetchers.fetch_sharepoint(client, src, defaults.page_size, defaults.max_rows)
         return fetched, inbox / f"{src.file_prefix}_pull_{stamp}.csv", _csv_text(fetched.headers, fetched.rows)
@@ -209,6 +227,11 @@ def status(paths: Paths) -> dict[str, Any]:
                         {
                             "source": s.key,
                             "watermark": db.get_meta(conn, watermark_key(name, s.key)) if conn else None,
+                            **(
+                                {"credential": s.credential, "credential_found_in": describe(paths, s.credential)}
+                                if getattr(s, "credential", None)
+                                else {}
+                            ),
                         }
                         for s in cfg.sources
                     ],

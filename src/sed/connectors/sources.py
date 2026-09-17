@@ -7,13 +7,14 @@ through `Client.get`; the orchestration in `pull.py` writes files and watermarks
 from __future__ import annotations
 
 import html
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
-from sed.connectors.config import ConfluenceSource, JiraSource, ServiceNowSource, SharePointSource
+from sed.connectors.config import ConfluenceSource, JiraSource, SapSource, ServiceNowSource, SharePointSource
 from sed.connectors.http import Client
 from sed.errors import PreconditionFailed
 
@@ -283,3 +284,73 @@ def confluence_page_html(space: str, page: dict[str, Any]) -> str:
         f'<div id="main-content" class="wiki-content">{page["body"]}</div>\n'
         "</body></html>\n"
     )
+
+
+# -- SAP Gateway OData ------------------------------------------------------------------------------------------------
+
+_ODATA_V2_DATE = re.compile(r"^/Date\((-?\d+)([+-]\d{4})?\)/$")
+
+
+def odata_time(value: Any) -> datetime | None:
+    """Edm.DateTime(Offset) as OData v2 JSON (`/Date(ms)/`, UTC) or ISO 8601 (v4; no offset means UTC)."""
+    if value in (None, ""):
+        return None
+    text = str(value)
+    match = _ODATA_V2_DATE.match(text)
+    if match:
+        return datetime.fromtimestamp(int(match.group(1)) / 1000, tz=UTC)
+    try:
+        moment = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
+
+
+def fetch_sap(
+    client: Client, version: int, source: SapSource, since: datetime | None, page_size: int, max_rows: int
+) -> Fetched:
+    """GET an OData entity set with $select/$top/$skip, oldest change first when `updated_property` is set (delta from
+    the watermark); dates are written in the mapping's time zone and `constants` are added as fixed columns."""
+    params: dict[str, Any] = {"$select": ",".join(dict.fromkeys(source.columns.values()))}
+    if version == 2:
+        params["$format"] = "json"
+    prop = source.updated_property
+    if prop:
+        params["$orderby"] = f"{prop} asc"
+        if since:
+            moment = since.astimezone(UTC)
+            params["$filter"] = (
+                f"{prop} ge datetime'{moment:%Y-%m-%dT%H:%M:%S}'"
+                if version == 2
+                else f"{prop} ge {moment:%Y-%m-%dT%H:%M:%SZ}"
+            )
+    out = Fetched(headers=[*source.columns, *source.constants], rows=[])
+    skip = 0
+    while True:
+        body = client.get(source.service_path, {**params, "$top": page_size, "$skip": skip}) or {}
+        if version == 2:
+            data = body.get("d")
+            results = data.get("results") if isinstance(data, dict) else data
+        else:
+            results = body.get("value")
+        if not isinstance(results, list):
+            raise PreconditionFailed(f"SAP OData {source.key}: unexpected response (no result list)")
+        for record in results:
+            row = []
+            for header, name in source.columns.items():
+                value = record.get(name)
+                if header in source.datetime_columns:
+                    moment = odata_time(value)
+                    row.append(_local(moment, source.source_tz) if moment else "")
+                else:
+                    row.append("" if value is None else str(value))
+            row += list(source.constants.values())
+            if prop:
+                out.newest = _newest(out.newest, odata_time(record.get(prop)))
+            out.rows.append(row)
+            if len(out.rows) >= max_rows:
+                out.capped = True
+                return out
+        if len(results) < page_size:
+            return out
+        skip += len(results)

@@ -6,7 +6,7 @@ drafts AI results that wait in the review queue.
 
 ## Connectors (`sed pull`)
 
-`sed pull servicenow|jira|sharepoint|confluence` reads an API with a read-only account and writes the same files a
+`sed pull servicenow|jira|sharepoint|confluence|sap` reads an API with a read-only account and writes the same files a
 manual export would produce into the profile's inbox. `sed import --inbox` then runs unchanged: same mappings, PII
 scrubbing, aliases, rule findings and reports.
 
@@ -16,6 +16,7 @@ scrubbing, aliases, rule findings and reports.
 | jira | REST search with the source JQL | `jira_pull_<stamp>.csv` with "all fields" headers (repeated Labels, Sprint, Component/s, Fix Version/s) | `jira_issues` |
 | sharepoint | Microsoft Graph list items (whole list, following `@odata.nextLink`) | `<prefix>_pull_<stamp>.csv` with the headers named in `columns` | registers such as `contracts_xlsx` |
 | confluence | content search (CQL on the space) with storage-format bodies | `confluence_<space>_pull_<stamp>/` in the space HTML export layout | `confluence_pages` |
+| sap | SAP Gateway OData v2 or v4 entity sets (`$select`, `$orderby`, `$top`/`$skip`, `$filter` on the change property) | `sap_charm_changes_pull_<source>_<stamp>.csv`, `sap_transport_imports_pull_...`, `sap_idocs_pull_...` | `sap_charm_changes`, `sap_charm_transports`, `sap_idocs` |
 
 ### Configure a connector
 1. Copy `config/connectors.yaml` to `DATA_DIR\config\connectors.yaml` and fill in the real instance URL, the source
@@ -39,6 +40,21 @@ scrubbing, aliases, rule findings and reports.
   secrets and rejected credentials stop with exit code 4 and a message without URLs' query strings or secrets.
 - **Record:** every pull is appended to `DATA_DIR\logs\pulls.jsonl` (connector, source, rows, file, watermark).
 - **Fallback:** manual exports keep working; pulled and exported files can be imported side by side.
+
+### SAP (`sed pull sap`)
+SAP data comes through SAP Gateway OData services with a read-only technical user; Claude never connects to SAP and
+there is no MCP server in the reporting path. Each source in the `sap` section names an entity set (`service_path`),
+the mapping file it produces (`file_prefix`), which OData property feeds each CSV column (`columns`, keyed by the field
+names the sap mappings read), the dates to convert (`datetime_columns`) and the change property for delta pulls
+(`updated_property`). IDocs are read per production system: an IDoc source can name its own `base_url`, `user` and
+`credential` and adds `constants: {system_id: <SID>}`. OData v2 `/Date(...)/` and v4 ISO dates are both accepted
+(`odata_version`).
+
+The service and property names in `config/connectors.yaml` are placeholders: which services exist (Solution Manager
+ChaRM, Cloud ALM, or custom Gateway services for transports and IDoc status) must be confirmed with SAP Basis, together
+with the technical user's authorisations, network access from this laptop and approval to run pulls on a schedule.
+Until then the manual exports stay the source; after it, reconcile one week pulled against the same week exported by
+hand (`sed metrics reconcile` and the SAP pages) before relying on the pulls.
 
 ## Weekly schedule (`sed schedule write`)
 

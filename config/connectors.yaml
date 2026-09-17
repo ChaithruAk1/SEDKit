@@ -55,3 +55,43 @@ confluence:
   auth: bearer
   credential: confluence
   sources: []
+
+# SAP Gateway OData (S5). Service paths, entity sets and property names depend on the landscape (Solution Manager
+# ChaRM, Cloud ALM, or custom services): confirm them with SAP Basis before enabling. Column keys are the field names
+# the sap mappings read; IDoc sources are per production system (own gateway, account and system_id).
+sap:
+  enabled: false
+  base_url: https://solman.example.invalid
+  auth: basic
+  user: SED_READONLY
+  credential: sap-solman
+  odata_version: 2
+  sources:
+    - key: charm_changes
+      service_path: /sap/opu/odata/sap/ZSED_CHARM_SRV/ChangeDocuments
+      file_prefix: sap_charm_changes
+      updated_property: ChangedAt
+      datetime_columns: [created_at, changed_at]
+      columns: {change_id: ObjectId, transaction_type: ProcessType, title: Description, status: UserStatus,
+                priority: Priority, component: Component, cycle: ChangeCycle, created_at: CreatedAt,
+                changed_at: ChangedAt, requester: Requester, developer: Developer, change_manager: ChangeManager,
+                external_ref: ExternalReference, ticket_ref: IncidentNumber}
+    - key: transport_imports
+      service_path: /sap/opu/odata/sap/ZSED_CHARM_SRV/TransportImports
+      file_prefix: sap_transport_imports
+      updated_property: ImportedAt
+      datetime_columns: [released_at, imported_at]
+      columns: {transport: TransportRequest, system_id: TargetSystem, change_id: ObjectId, transport_type: RequestType,
+                description: Description, owner: Owner, released_at: ReleasedAt, import_status: ImportStatus,
+                return_code: ReturnCode, imported_at: ImportedAt}
+    - key: idocs_prod
+      service_path: /sap/opu/odata/sap/ZSED_IDOC_SRV/IdocStatus
+      base_url: https://erp-prod.example.invalid
+      credential: sap-erp-prod
+      file_prefix: sap_idocs
+      updated_property: StatusChangedAt
+      datetime_columns: [created_at, status_at]
+      constants: {system_id: PRD}
+      columns: {docnum: Docnum, direction: Direction, message_type: MessageType, basic_type: BasicType,
+                partner_type: PartnerType, partner_number: PartnerNumber, status_code: Status, status_text: StatusText,
+                created_at: CreatedAt, status_at: StatusChangedAt}

@@ -46,7 +46,7 @@ def _pull_command(connector: str) -> None:
     command.__doc__ = f"Pull {connector} sources into the inbox (delta from the watermark)."
 
 
-for _name in ("servicenow", "jira", "sharepoint", "confluence"):
+for _name in ("servicenow", "jira", "sharepoint", "confluence", "sap"):
     _pull_command(_name)
 
 

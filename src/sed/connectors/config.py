@@ -91,15 +91,39 @@ class ConfluenceConfig(ConnectorBase):
     sources: list[ConfluenceSource] = Field(default_factory=list)
 
 
+class SapSource(_Strict):
+    """One SAP Gateway OData entity set written as the export a SAP mapping reads (ChaRM changes, transport imports or
+    IDocs). Service and property names depend on the landscape: confirm them with SAP Basis."""
+
+    key: str = Field(pattern=PREFIX_PATTERN)
+    service_path: str = Field(pattern=r"^/[^\s?#]+$")  # e.g. /sap/opu/odata/sap/<SERVICE>/<EntitySet>
+    file_prefix: Literal["sap_charm_changes", "sap_transport_imports", "sap_idocs"]
+    columns: dict[str, str] = Field(min_length=1)  # CSV header (a mapping field name) -> OData property
+    datetime_columns: list[str] = Field(default_factory=list)
+    updated_property: str | None = Field(None, pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,79}$")  # None = whole set each pull
+    constants: dict[str, str] = Field(default_factory=dict)  # fixed columns, e.g. system_id: HP1
+    source_tz: str = "Europe/Paris"
+    # A production system's own gateway and account (IDocs are read per system); default: the connector's.
+    base_url: str | None = Field(None, pattern=r"^https://[^\s/?#]+(/[^\s?#]*)?$")
+    user: str | None = Field(None, max_length=120)
+    credential: str | None = Field(None, pattern=r"^[a-z][a-z0-9._-]{1,59}$")
+
+
+class SapConfig(ConnectorBase):
+    odata_version: Literal[2, 4] = 2
+    sources: list[SapSource] = Field(default_factory=list)
+
+
 class ConnectorsConfig(_Strict):
     defaults: Defaults = Defaults()
     servicenow: ServiceNowConfig | None = None
     jira: JiraConfig | None = None
     sharepoint: SharePointConfig | None = None
     confluence: ConfluenceConfig | None = None
+    sap: SapConfig | None = None
 
 
-CONNECTORS = ("servicenow", "jira", "sharepoint", "confluence")
+CONNECTORS = ("servicenow", "jira", "sharepoint", "confluence", "sap")
 
 
 def load_config(paths: Any) -> ConnectorsConfig:

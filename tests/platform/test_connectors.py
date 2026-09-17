@@ -228,7 +228,7 @@ def test_refusals_and_credential_errors(ops_profile_rw, monkeypatch):
     with pytest.raises(ValidationFailed, match="no source 'problem'"):
         pull(paths, "servicenow", source="problem", allow_synthetic=True, transport=RecordedTransport([]))
     with pytest.raises(ValidationFailed, match="Unknown connector"):
-        pull(paths, "sap")
+        pull(paths, "crm")
     _config(paths, servicenow={**SN_SOURCE, "base_url": "http://sn.example.invalid"})
     with pytest.raises(ValidationFailed, match=r"Invalid connectors\.yaml"):
         pull(paths, "servicenow", allow_synthetic=True)

@@ -1,7 +1,9 @@
 # SAP module (`sed.modules.sap`)
 
 Module #2 of SED: SAP application support on top of the ops module (`depends_on=("ops",)`): L3 support (S1), ChaRM
-changes with transports (S2), IDoc health (S3) and SAP subcategories in AI triage (S4).
+changes with transports (S2), IDoc health (S3) and SAP subcategories in AI triage (S4). S5 connectivity is the core
+connector `sed pull sap` (`sed.connectors`, SAP Gateway OData): it writes files named for this module's mappings, so
+nothing here changes; see docs/automation.md.
 
 - **Manifest:** `__init__.py` (`MODULE`). Everything else is reached through the lazy import references declared there.
 - **SAP tickets stay ops tickets.** `scope.py` turns `config/sap/scope.yaml` into a ticket predicate
