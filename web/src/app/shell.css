@@ -1,0 +1,405 @@
+/*
+ * THE SHELL: the floating sidebar, the page tabs, the top-right tools and the classification strip. These objects exist
+ * only in the shell, so the shell dresses them here, always through tokens (DESIGN.md law 3). Shared objects inside
+ * (buttons, fields, tiles) keep their one dress from design/objects.
+ */
+.sed-strip {
+  position: sticky;
+  top: 0;
+  z-index: var(--sed-z-menu);
+  height: var(--sed-strip-h);
+  background: var(--sed-class-unknown);
+}
+.sed-strip[data-data-class='synthetic'] {
+  background: var(--sed-class-synthetic);
+}
+.sed-strip[data-data-class='real'] {
+  background: var(--sed-class-real);
+}
+
+.sed-shell {
+  display: grid;
+  grid-template-columns: var(--sed-sidebar-w) minmax(0, 1fr);
+  min-height: calc(100vh - var(--sed-strip-h));
+  align-items: start;
+  transition: grid-template-columns var(--sed-d2) var(--sed-ease);
+}
+.sed-shell[data-collapsed] {
+  grid-template-columns: var(--sed-sidebar-w-collapsed) minmax(0, 1fr);
+}
+
+/* THE SIDEBAR: a square panel, full height and flush with the left edge (owner's choice, 2026-09-17), with the logo,
+   the pages and the items waiting for review. It stays in place under the strip while the page scrolls. */
+.sed-sidebar {
+  position: sticky;
+  top: var(--sed-strip-h);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sed-s2);
+  height: calc(100vh - var(--sed-strip-h));
+  padding: var(--sed-s3) var(--sed-s2);
+  background: var(--sed-sidebar-surface);
+  border-right: var(--sed-hairline) solid var(--sed-sidebar-line);
+  box-shadow: var(--sed-emboss);
+  color: var(--sed-sidebar-ink);
+  z-index: var(--sed-z-content);
+}
+.sed-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sed-s2);
+}
+.sed-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s3);
+  min-height: var(--sed-search-h);
+  padding: var(--sed-s1) var(--sed-s2) var(--sed-s3);
+  background: var(--sed-sidebar-plate);
+  border-bottom: var(--sed-hairline) solid var(--sed-sidebar-line);
+  text-decoration: none;
+}
+.sed-logo img {
+  display: block;
+  flex: none;
+  max-width: 100%;
+  max-height: var(--sed-logo-h);
+  object-fit: contain;
+}
+.sed-logo-divider {
+  flex: none;
+  align-self: stretch;
+  width: var(--sed-hairline);
+  background: var(--sed-sidebar-line);
+}
+.sed-logo-title {
+  min-width: 0;
+  color: var(--sed-accent);
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-title);
+  line-height: var(--sed-lh-tight);
+}
+/* One word per line, stacked beside the logo like a lockup. */
+.sed-logo-line {
+  display: block;
+}
+.sed-shell[data-collapsed] .sed-logo {
+  justify-content: center;
+  padding-inline: 0;
+}
+.sed-logo-word {
+  color: var(--sed-accent);
+  font-size: var(--sed-fs-heading);
+  font-weight: var(--sed-weight-title);
+  letter-spacing: var(--sed-logo-tracking);
+}
+/* Hide or show the sidebar: a small tile on the sidebar's edge. */
+.sed-collapse {
+  position: absolute;
+  top: var(--sed-s5);
+  right: calc(-1 * var(--sed-s3));
+  display: grid;
+  place-items: center;
+  padding: var(--sed-s1);
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-accent-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-emboss);
+  color: var(--sed-accent-text);
+  cursor: pointer;
+}
+.sed-collapse svg {
+  width: var(--sed-ic-sm);
+  height: var(--sed-ic-sm);
+}
+.sed-collapse:hover {
+  color: var(--sed-accent-text);
+  box-shadow: var(--sed-emboss-hover);
+  transform: translateY(var(--sed-tile-press));
+}
+.sed-collapse:focus-visible {
+  outline: var(--sed-focus) solid var(--sed-accent);
+  outline-offset: var(--sed-focus);
+}
+
+.sed-nav-group {
+  display: flex;
+  flex-direction: column;
+}
+.sed-nav-label {
+  padding: var(--sed-s2) var(--sed-s2) var(--sed-s1);
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+  color: var(--sed-sidebar-ink-quiet);
+}
+.sed-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s2);
+  padding: var(--sed-row-pad);
+  border-radius: var(--sed-r1);
+  color: var(--sed-sidebar-ink);
+  font-size: var(--sed-fs-body);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--sed-d1) var(--sed-ease), color var(--sed-d1) var(--sed-ease);
+}
+.sed-nav-item:hover {
+  background: var(--sed-sidebar-hover);
+}
+.sed-nav-item[data-active] {
+  background: var(--sed-sidebar-active);
+  color: var(--sed-sidebar-active-ink);
+  font-weight: var(--sed-weight-strong);
+}
+.sed-nav-item:focus-visible {
+  outline: var(--sed-focus) solid var(--sed-accent);
+  outline-offset: calc(-1 * var(--sed-focus));
+}
+.sed-nav-item svg {
+  flex: none;
+  width: var(--sed-ic-sm);
+  height: var(--sed-ic-sm);
+}
+.sed-nav-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sed-nav-count {
+  margin-left: auto;
+  font-size: var(--sed-fs-tiny);
+  color: var(--sed-sidebar-ink-quiet);
+}
+.sed-sidebar-rule {
+  height: var(--sed-hairline);
+  background: var(--sed-sidebar-line);
+  margin: var(--sed-s1) var(--sed-s2);
+}
+.sed-shell[data-collapsed] .sed-nav-label,
+.sed-shell[data-collapsed] .sed-nav-text,
+.sed-shell[data-collapsed] .sed-nav-count,
+.sed-shell[data-collapsed] .sed-hide-collapsed {
+  display: none;
+}
+.sed-shell[data-collapsed] .sed-nav-item {
+  justify-content: center;
+}
+
+/* The one sidebar action: a quiet box that sits forward like a button. */
+.sed-nav-action {
+  justify-content: center;
+  background: var(--sed-sidebar-surface);
+  border: var(--sed-hairline) solid var(--sed-sidebar-line);
+  box-shadow: var(--sed-emboss);
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+}
+.sed-shell[data-collapsed] .sed-nav-action {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* The items waiting for review, below the pages. */
+.sed-shelf-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s2);
+  white-space: nowrap;
+  padding: var(--sed-row-pad);
+  border-radius: var(--sed-r1);
+  color: var(--sed-sidebar-ink);
+  font-size: var(--sed-fs-tiny);
+  text-decoration: none;
+}
+.sed-shelf-item:hover {
+  background: var(--sed-sidebar-hover);
+}
+
+/* The person at the foot of the sidebar. */
+.sed-user {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s2);
+  width: 100%;
+  padding: var(--sed-s2);
+  background: transparent;
+  border: none;
+  border-top: var(--sed-hairline) solid var(--sed-sidebar-line);
+  color: var(--sed-sidebar-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.sed-user-text {
+  min-width: 0;
+}
+.sed-popover-field {
+  width: var(--sed-sidebar-w);
+}
+.sed-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--sed-face-md);
+  height: var(--sed-face-md);
+  border-radius: var(--sed-pill);
+  background: var(--sed-accent-weak);
+  border: var(--sed-hairline) solid var(--sed-accent-line);
+  box-shadow: var(--sed-emboss);
+  color: var(--sed-accent-text);
+  font-weight: var(--sed-weight-title);
+}
+.sed-foot-note {
+  padding: 0 var(--sed-s2);
+  font-size: var(--sed-fs-tiny);
+  color: var(--sed-sidebar-ink-quiet);
+}
+/* Text components inside the sidebar take its ink (the person card's name and profile). */
+.sed-sidebar .mantine-Text-root {
+  color: inherit;
+}
+
+/* THE MAIN COLUMN: the tab row with the tools at its right, then the page. */
+.sed-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sed-section-gap);
+  padding: var(--sed-shell-gap) var(--sed-shell-gap) 0 var(--sed-s5);
+}
+.sed-topbar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sed-s2);
+  border-bottom: var(--sed-hairline) solid var(--sed-line);
+}
+.sed-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sed-s1);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+.sed-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s1);
+  flex: 0 1 var(--sed-tab-w);
+  min-width: var(--sed-tab-min-w);
+  padding: var(--sed-s1) var(--sed-s1) var(--sed-s1) var(--sed-s3);
+  background: var(--sed-canvas-deep);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-bottom: none;
+  border-radius: var(--sed-r1) var(--sed-r1) 0 0;
+  color: var(--sed-tx-2);
+  font-size: var(--sed-fs-tiny);
+}
+.sed-tab[data-active] {
+  background: var(--sed-panel);
+  border-color: var(--sed-accent-line);
+  color: var(--sed-tx);
+  font-weight: var(--sed-weight-strong);
+}
+.sed-tab-open {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s2);
+  flex: 1;
+  min-width: 0;
+  padding: var(--sed-s1) 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sed-tab-open svg {
+  flex: none;
+  width: var(--sed-ic-sm);
+  height: var(--sed-ic-sm);
+}
+.sed-tab-close,
+.sed-tab-add {
+  display: grid;
+  place-items: center;
+  padding: var(--sed-s1);
+  background: none;
+  border: none;
+  border-radius: var(--sed-r1);
+  color: var(--sed-tx-3);
+  cursor: pointer;
+}
+.sed-tab-close:hover,
+.sed-tab-add:hover {
+  background: var(--sed-row-hover);
+  color: var(--sed-accent-text);
+}
+.sed-tab-add {
+  margin-bottom: var(--sed-s1);
+}
+/* Back to the previous screen: a small tile level with the tabs. */
+.sed-back {
+  margin-bottom: var(--sed-s1);
+}
+.sed-back:disabled {
+  opacity: var(--sed-faded);
+  box-shadow: none;
+  transform: none;
+  cursor: default;
+}
+.sed-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s2);
+  padding-bottom: var(--sed-s1);
+}
+
+.sed-page {
+  min-width: 0;
+  padding: 0 var(--sed-s1) var(--sed-s5);
+}
+
+/* Narrow windows: the sidebar floats over the page and opens from the menu button. */
+.sed-menu-button {
+  display: none;
+}
+@media (max-width: 48em) {
+  .sed-shell,
+  .sed-shell[data-collapsed] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sed-sidebar {
+    position: fixed;
+    inset: var(--sed-strip-h) auto 0 0;
+    width: var(--sed-sidebar-w);
+    height: auto;
+    z-index: var(--sed-z-dialog);
+    box-shadow: var(--sed-shadow-deep);
+    transform: translateX(-100%);
+    transition: transform var(--sed-d2) var(--sed-ease);
+  }
+  .sed-shell[data-mobile-open] .sed-sidebar {
+    transform: none;
+  }
+  .sed-collapse {
+    display: none;
+  }
+  .sed-menu-button {
+    display: inline-grid;
+  }
+  .sed-main {
+    padding-left: var(--sed-shell-gap);
+  }
+  .sed-shell[data-collapsed] .sed-nav-label,
+  .sed-shell[data-collapsed] .sed-nav-text,
+  .sed-shell[data-collapsed] .sed-nav-count,
+  .sed-shell[data-collapsed] .sed-hide-collapsed {
+    display: revert;
+  }
+}

@@ -11,7 +11,8 @@ import sqlite3
 from datetime import date
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 
 from sed import __version__, db
 from sed.api.deps import read_conn, resolve_as_of, write_conn
@@ -21,6 +22,7 @@ from sed.api.models import (
     AliasOut,
     AliasTarget,
     AliasTargetsOut,
+    BrandingOut,
     DefinitionOut,
     FilterOption,
     FindingsOut,
@@ -124,6 +126,31 @@ def _int_counts(text: str | None) -> dict[str, int]:
 @router.get("/health", response_model=HealthOut)
 def health() -> HealthOut:
     return HealthOut(ok=True, version=__version__)
+
+
+@router.get("/branding", response_model=BrandingOut)
+def branding() -> BrandingOut:
+    # The strip title and whether a logo and a watermark are set on this machine (never the images themselves).
+    from sed.branding import find_asset, title
+
+    return BrandingOut(
+        title=title(),
+        logo=find_asset("logo") is not None,
+        watermark=find_asset("watermark") is not None,
+        watermark_dark=find_asset("watermark-dark") is not None,
+    )
+
+
+@router.get("/branding/{asset}", include_in_schema=False)
+def branding_asset(asset: Literal["logo", "watermark", "watermark-dark"]) -> FileResponse:
+    # A branding image kept on this machine (`sed branding logo|watermark <file>`); 404 when it is not set, and the
+    # dashboard then shows the SED wordmark and no watermark.
+    from sed.branding import MEDIA_TYPES, find_asset
+
+    found = find_asset(asset)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"No {asset} is set on this machine (sed branding {asset} <file>)")
+    return FileResponse(found, media_type=MEDIA_TYPES[found.suffix], headers={"Cache-Control": "no-cache"})
 
 
 @router.get("/meta", response_model=MetaOut)

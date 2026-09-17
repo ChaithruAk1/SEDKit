@@ -51,7 +51,8 @@ def test_every_get_uses_query_only_connections(ops_profile, core_gets, connectio
         response = client.get(path)
         assert response.status_code == 200, (path, response.text[:300])
         assert all(flag == (True, 1) for flag in connections), (path, connections)
-        if not path.startswith(("/api/health", "/api/nav", "/api/modules")):
+        # Routes that answer from files or the registry rather than the database open no connection at all.
+        if not path.startswith(("/api/health", "/api/nav", "/api/modules", "/api/branding")):
             assert connections, f"{path} should read through deps.read_conn"
     assert _state(paths) == before  # includes meta.ops.rule_findings_as_of: no refresh from a GET
 

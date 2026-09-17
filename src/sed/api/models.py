@@ -81,6 +81,15 @@ class HealthOut(ApiModel):
     version: str
 
 
+class BrandingOut(ApiModel):
+    """Branding kept on this machine (`sed branding`): the strip title and which images are set."""
+
+    title: str | None
+    logo: bool
+    watermark: bool
+    watermark_dark: bool
+
+
 class PeriodsOut(ApiModel):
     weeks: list[str]
     months: list[str]

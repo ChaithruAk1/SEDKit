@@ -49,7 +49,11 @@ export function meta(): Schema<'MetaOut'> {
     },
     freshness: freshness(),
     definitions: DEFINITIONS,
-    modules: [{ key: 'ops', title: 'Application operations' }],
+    modules: [
+      { key: 'ops', title: 'Application operations' },
+      { key: 'sap', title: 'SAP application support' },
+      { key: 'delivery', title: 'Delivery management' },
+    ],
   };
 }
 
@@ -76,7 +80,7 @@ export function nav(): Schema<'NavOut'> {
       { id: 'sap.tickets', module: 'sap', label: 'SAP L3 tickets', path: '/sap/tickets', order: 61, icon: 'ticket' },
       { id: 'sap.changes', module: 'sap', label: 'SAP changes', path: '/sap/changes', order: 62, icon: 'git-pull-request' },
       { id: 'sap.idocs', module: 'sap', label: 'SAP IDocs', path: '/sap/idocs', order: 63, icon: 'arrows-exchange' },
-      { id: 'delivery.portfolio', module: 'delivery', label: 'Delivery', path: '/delivery', order: 70, icon: 'chart-bar' },
+      { id: 'delivery.portfolio', module: 'delivery', label: 'Change Request', path: '/delivery', order: 70, icon: 'chart-bar' },
       { id: 'core.review', module: 'core', label: 'Review', path: '/review', order: 800, icon: 'list-check' },
       { id: 'core.runs', module: 'core', label: 'AI runs', path: '/runs', order: 810, icon: 'robot' },
       { id: 'core.reports', module: 'core', label: 'Reports', path: '/reports', order: 820, icon: 'file-text' },

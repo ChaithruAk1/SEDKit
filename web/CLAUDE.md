@@ -30,14 +30,25 @@ bundled and `npm run check` enforces it.
   Numbers in AI prose come from `{{f:<fact_key>}}` tokens filled from the finding's evidence.
 - **Provenance.** Every AI-derived element carries `ProvenanceBadge` (run, skill, approval, sample accuracy); rule
   findings carry `SystemDetectedBadge`. AI drafts appear only with the "Include AI drafts" filter.
-- **Data class.** The SYNTHETIC/REAL banner comes from `/api/meta` and is never hidden; unknown means "treat as
-  confidential".
+- **Data class.** It comes from `/api/meta` and is never hidden: the top strip's colour (accent on synthetic, red on
+  real, amber when unknown) and the status dot's tooltip; unknown means "treat as confidential".
 - **Synthetic fixtures only.** Fixture names are fictional (the `sed synth` catalog); no real organisations, people,
   hosts or high-entropy strings anywhere in `web/`.
 
+## Design
+- **The design book is `src/design/DESIGN.md`.** Read it before UI work. Every number lives in `src/design/tokens.css`
+  and every colour in `src/design/faces.css` (light is the default face, dark the other); each shared object is
+  dressed once in `src/design/objects/<object>.css`, and `src/design/theme.ts` carries the same law into Mantine
+  (spacing, corners, type, and the colour meanings behind page colour names).
+- A page sets size and the position of its own objects, never how a shared object looks, and never types a number or
+  a colour. Use `Figure` for labelled numbers, `CollectionView` for list/cards collections, `Deck` for big tiles.
+- No all-caps text. Branding (logo, watermarks, title) comes from `/api/branding` and is never bundled or committed.
+
 ## Layout
-- `src/main.tsx` (Mantine provider, router), `src/app/` (router, AppShell, DataClassBanner, NavBar, FilterBar,
-  HomeRedirect, NotFound, PageFrame, ShellContext with meta/nav/filter options).
+- `src/main.tsx` (Mantine provider with the SED theme, router), `src/design/` (the design book, tokens, faces,
+  objects, theme), `src/app/` (router, AppShell with the sidebar, page tabs and top bar, DataClassBanner (the top
+  strip), SearchEverything, LineArt, Watermark, FilterBar, NotFound, PageFrame, ShellContext with
+  meta/nav/filter options), `src/core/pages/HomePage.tsx` (the front screen at `#/`).
 - `src/api/` client, hooks, generated schema, `fixtures/` (a mapped type over every GET path, so a new route fails
   typecheck until it has a fixture).
 - `src/hooks/useFilters.ts`: global filters (app, family, vendor, group, period, as_of, include_drafts) live in the

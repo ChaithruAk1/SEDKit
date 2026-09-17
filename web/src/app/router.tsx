@@ -3,9 +3,11 @@ import { type RouteObject, createHashRouter } from 'react-router';
 import { CORE_ROUTES } from '../core/routes';
 import { MODULES } from '../modules/registry';
 import { AppShell } from './AppShell';
-import { HomeRedirect } from './HomeRedirect';
 import { NotFound } from './NotFound';
 import { PageFrame, type PageRoute, RouteError } from './PageFrame';
+
+/** The front screen at `#/` (core, not a module page and not a nav item: the shell links to it). */
+const HOME_ROUTE: PageRoute = { path: '', title: 'Home', filters: [], load: () => import('../core/pages/HomePage') };
 
 function toRouteObject(route: PageRoute): RouteObject {
   return {
@@ -24,7 +26,7 @@ export function buildRoutes(): RouteObject[] {
       element: <AppShell />,
       errorElement: <RouteError />,
       children: [
-        { index: true, element: <HomeRedirect /> },
+        { index: true, handle: { title: HOME_ROUTE.title, filters: [] }, element: <PageFrame route={HOME_ROUTE} /> },
         ...pages.map(toRouteObject),
         { path: '*', element: <NotFound />, handle: { title: 'Not found' } },
       ],

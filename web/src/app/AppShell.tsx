@@ -1,17 +1,18 @@
-import { AppShell as MantineAppShell, Badge, Burger, Group, Stack, Text, Title } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { useEffect } from 'react';
-import { Outlet, useMatches } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Outlet, useLocation, useMatches } from 'react-router';
 
-import { FIXTURES_MODE } from '../api/client';
-import { formatDate } from '../components/format';
+import './shell.css';
 import { DataClassBanner } from './DataClassBanner';
-import { NavBar } from './NavBar';
 import { ShellProvider, useShell } from './ShellContext';
+import { Sidebar } from './Sidebar';
+import { TabsProvider } from './tabs';
+import { TopBar } from './TopBar';
 
 interface RouteHandle {
   title?: string;
 }
+
+const COLLAPSED_KEY = 'sed.sidebar.collapsed';
 
 function usePageTitle(): string | null {
   const matches = useMatches();
@@ -22,73 +23,56 @@ function usePageTitle(): string | null {
   return null;
 }
 
+function readCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 function ShellLayout() {
-  const [opened, { toggle, close }] = useDisclosure(false);
   const { meta } = useShell();
   const title = usePageTitle();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const dataClass = meta.data?.data_class === 'real' ? 'REAL' : meta.data ? 'SYNTHETIC' : null;
     document.title = ['SED', title, dataClass].filter(Boolean).join(' · ');
   }, [title, meta.data]);
 
+  useEffect(() => setMobileOpen(false), [location.pathname]);
+
+  const toggle = () => {
+    setCollapsed((current) => {
+      try {
+        window.localStorage.setItem(COLLAPSED_KEY, current ? '0' : '1');
+      } catch {
+        // Storage unavailable: the choice lasts for this visit only.
+      }
+      return !current;
+    });
+  };
+
   return (
-    <MantineAppShell
-      header={{ height: 26 + 50 }}
-      navbar={{ width: 230, breakpoint: 'sm', collapsed: { mobile: !opened } }}
-      padding="md"
-    >
-      <MantineAppShell.Header>
-        <DataClassBanner />
-        <Group h={50} px="md" justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap">
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Toggle navigation" />
-            <Title order={3} fz="lg" style={{ letterSpacing: 1 }}>
-              SED
-            </Title>
-            {title ? (
-              <Text c="dimmed" size="sm" truncate visibleFrom="xs">
-                {title}
-              </Text>
-            ) : null}
-          </Group>
-          <Group gap="xs" wrap="nowrap">
-            {FIXTURES_MODE ? (
-              <Badge color="grape" variant="light">
-                fixtures
-              </Badge>
-            ) : null}
-            {meta.data?.as_of_default ? (
-              <Text size="xs" c="dimmed" visibleFrom="sm">
-                data as of {formatDate(meta.data.as_of_default)}
-              </Text>
-            ) : null}
-          </Group>
-        </Group>
-      </MantineAppShell.Header>
-
-      <MantineAppShell.Navbar>
-        <NavBar onNavigate={close} />
-        <Stack gap={0} p="xs" style={{ borderTop: '1px solid var(--app-shell-border-color)' }}>
-          <Text size="xs" c="dimmed">
-            {meta.data ? `SED ${meta.data.sed_version} · schema v${meta.data.schema_version}` : 'SED'}
-          </Text>
-          {meta.data ? (
-            <Text size="xs" c="dimmed">
-              {`${meta.data.reporting_tz} · ${meta.data.base_currency}`}
-            </Text>
-          ) : null}
-        </Stack>
-      </MantineAppShell.Navbar>
-
-      <MantineAppShell.Main>
-        <Outlet />
-      </MantineAppShell.Main>
-    </MantineAppShell>
+    <TabsProvider title={title}>
+      <DataClassBanner />
+      <div className="sed-shell" data-collapsed={collapsed || undefined} data-mobile-open={mobileOpen || undefined}>
+        <Sidebar collapsed={collapsed} onToggle={toggle} onNavigate={() => setMobileOpen(false)} />
+        <div className="sed-main">
+          <TopBar onMenu={() => setMobileOpen((open) => !open)} />
+          <main className="sed-page">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </TabsProvider>
   );
 }
 
-/** Root layout: data-class banner, header, server-driven nav and the routed page. */
+/** Root layout: data-class strip, floating sidebar, page tabs with the tools, and the routed page. */
 export function AppShell() {
   return (
     <ShellProvider>

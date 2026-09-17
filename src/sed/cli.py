@@ -225,6 +225,66 @@ app.add_typer(alias_app, name="alias")
 app.add_typer(inbox_app, name="inbox")
 config_app = typer.Typer(no_args_is_help=True, help="Validated DATA_DIR config overrides")
 app.add_typer(config_app, name="config")
+branding_app = typer.Typer(no_args_is_help=True, help="The dashboard logo, kept on this machine (never in the repo)")
+app.add_typer(branding_app, name="branding")
+
+
+@branding_app.command("logo")
+@handle_errors
+def branding_logo(
+    file: Annotated[Path, typer.Argument(help="PNG, JPEG or WebP image (at most 2 MB)")],
+    as_json: JsonOpt = False,
+) -> None:
+    """Set the logo shown at the top of the dashboard sidebar (stored in the data root's branding folder)."""
+    from sed.branding import set_asset
+
+    emit(set_asset("logo", file), as_json)
+
+
+@branding_app.command("watermark")
+@handle_errors
+def branding_watermark(
+    file: Annotated[Path, typer.Argument(help="PNG, JPEG or WebP image (at most 2 MB)")],
+    dark: Annotated[bool, typer.Option("--dark", help="The version for the dark look")] = False,
+    as_json: JsonOpt = False,
+) -> None:
+    """Set the brand mark drawn faintly behind the sidebar's pages, for the light look or (--dark) the dark look."""
+    from sed.branding import set_asset
+
+    emit(set_asset("watermark-dark" if dark else "watermark", file), as_json)
+
+
+@branding_app.command("title")
+@handle_errors
+def branding_title(
+    text: Annotated[str, typer.Argument(help='Title for the top strip, e.g. your organisation name ("" removes it)')],
+    as_json: JsonOpt = False,
+) -> None:
+    """Set the title shown in the dashboard's top strip (stored in the data root's branding folder)."""
+    from sed.branding import set_title
+
+    emit(set_title(text), as_json)
+
+
+@branding_app.command("clear")
+@handle_errors
+def branding_clear(
+    asset: Annotated[str, typer.Argument(help="logo | watermark | watermark-dark")],
+    as_json: JsonOpt = False,
+) -> None:
+    """Remove a branding image; the dashboard falls back to the SED wordmark or no watermark."""
+    from sed.branding import clear_asset
+
+    emit(clear_asset(asset), as_json)
+
+
+@branding_app.command("show")
+@handle_errors
+def branding_show(as_json: JsonOpt = False) -> None:
+    """Where the branding folder is and which images are set."""
+    from sed.branding import status
+
+    emit(status(), as_json)
 
 
 @app.command()

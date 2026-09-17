@@ -12,6 +12,7 @@ import { formatDate, formatInt, humanize } from '../../../components/format';
 import { KpiTile, KpiTileSkeleton } from '../../../components/KpiTile';
 import { PageHeader } from '../../../components/PageHeader';
 import { SectionCard } from '../../../components/SectionCard';
+import { FigureLabel, FigureValue } from '../../../components/Figure';
 import { useFilters, useSearchParam } from '../../../hooks/useFilters';
 import { useFindings } from '../components/useFindings';
 import { findingSubjectHref } from '../links';
@@ -21,12 +22,8 @@ function CountCard({ title, value, icon, href, note }: { title: string; value: n
     <Card withBorder radius="md" padding="md">
       <Group justify="space-between" wrap="nowrap">
         <Stack gap={0}>
-          <Text size="xs" c="dimmed" fw={600} tt="uppercase">
-            {title}
-          </Text>
-          <Text fz={26} fw={700}>
-            {value === undefined ? '–' : formatInt(value)}
-          </Text>
+          <FigureLabel>{title}</FigureLabel>
+          <FigureValue>{value === undefined ? '–' : formatInt(value)}</FigureValue>
         </Stack>
         {icon}
       </Group>
@@ -93,20 +90,20 @@ export default function OverviewPage() {
                 <CountCard
                   title="Needs attention"
                   value={data?.attention_count}
-                  icon={<IconAlertTriangle size={28} color="var(--mantine-color-orange-6)" />}
+                  icon={<IconAlertTriangle className="sed-figure-icon" data-meaning="warn" />}
                   href={`/ops/attention${search}`}
                   note="As of the last export"
                 />
                 <CountCard
                   title="Stale open"
                   value={data?.stale_open}
-                  icon={<IconArchive size={28} color="var(--mantine-color-gray-6)" />}
+                  icon={<IconArchive className="sed-figure-icon" />}
                   note="Open in the store, missing from the latest active export"
                 />
                 <CountCard
                   title="Review queue"
                   value={data?.review_queue_count}
-                  icon={<IconChecklist size={28} color="var(--mantine-color-violet-6)" />}
+                  icon={<IconChecklist className="sed-figure-icon" data-meaning="accent" />}
                   note="AI drafts and runs waiting for review (sed review)"
                 />
               </SimpleGrid>

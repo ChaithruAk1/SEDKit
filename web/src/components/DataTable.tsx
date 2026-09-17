@@ -164,7 +164,7 @@ export function DataTable<T>({
                 aria-label={onRowClick && rowLabel ? rowLabel(row) : undefined}
                 style={{
                   cursor: onRowClick ? 'pointer' : undefined,
-                  background: highlight?.(row) ? 'var(--mantine-color-yellow-light)' : undefined,
+                  background: highlight?.(row) ? 'var(--sed-warn-weak)' : undefined,
                 }}
               >
                 {columns.map((column) => (

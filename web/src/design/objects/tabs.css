@@ -1,0 +1,27 @@
+/* TABS AND FILTERS (DESIGN.md 2.17). Tabs pick a view on one track sized to its words; the picked tab wears the
+   accent. A segmented control is the same sliding track. */
+.mantine-Tabs-tab {
+  font-size: var(--sed-fs-body);
+  color: var(--sed-tx-2);
+}
+.mantine-Tabs-tab[data-active] {
+  color: var(--sed-accent-text);
+  border-color: var(--sed-accent);
+}
+.mantine-SegmentedControl-root {
+  background: var(--sed-well);
+  border-radius: var(--sed-r1);
+}
+.mantine-SegmentedControl-indicator {
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-accent-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-emboss);
+}
+.mantine-SegmentedControl-label {
+  font-size: var(--sed-fs-tiny);
+  color: var(--sed-tx-2);
+}
+.mantine-SegmentedControl-label[data-active] {
+  color: var(--sed-accent-text);
+}

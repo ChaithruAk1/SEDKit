@@ -1,0 +1,38 @@
+/* MENUS, POP-UPS AND TOOLTIPS (DESIGN.md 2.13, 2.14, 2.20). Anything floating: the panel fill, one hairline, one
+   corner and the deep shadow. A pop-up is centred and the page behind it always dims. */
+.mantine-Popover-dropdown,
+.mantine-Menu-dropdown,
+.mantine-Combobox-dropdown,
+.mantine-HoverCard-dropdown {
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-shadow-deep);
+  color: var(--sed-tx);
+}
+.mantine-Combobox-option[data-combobox-selected],
+.mantine-Combobox-option:hover,
+.mantine-Menu-item:hover {
+  background: var(--sed-row-hover);
+}
+.mantine-Modal-content,
+.mantine-Drawer-content {
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-shadow-deep);
+}
+.mantine-Modal-header,
+.mantine-Drawer-header {
+  background: var(--sed-panel);
+}
+.mantine-Modal-overlay,
+.mantine-Drawer-overlay {
+  background: var(--sed-scrim);
+}
+.mantine-Tooltip-tooltip {
+  background: var(--sed-tx);
+  color: var(--sed-canvas);
+  font-size: var(--sed-fs-tiny);
+  border-radius: var(--sed-r1);
+}

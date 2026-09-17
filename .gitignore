@@ -23,6 +23,9 @@ data/
 out/
 *.log
 
+# Branding files (company logos) stay on this machine: SED reads them from <data root>randing (sed branding)
+/Logo/
+
 # Secrets / machine-local config
 .env
 .env.*

@@ -25,11 +25,23 @@ export interface WebRoute<K extends string> {
 /** Extra filter choices a module contributes (for example ops families); merged with /api/meta entities. */
 export type FilterOptionSets = Partial<Record<'app' | 'family' | 'vendor' | 'group', FilterOption[]>>;
 
+/** One result of "search everything" on the front screen: a thing a module knows, and the page that shows it. */
+export interface SearchHit {
+  /** What kind of thing it is, shown as the result group ("Tickets", "Applications", ...). */
+  group: string;
+  label: string;
+  detail?: string;
+  /** Router path (with its own search string) that opens the thing. */
+  to: string;
+}
+
 export interface WebModule<K extends string> {
   key: K;
   title: string;
   routes: readonly WebRoute<K>[];
   filterOptions?: (signal: AbortSignal) => Promise<FilterOptionSets>;
+  /** Things of this module matching a typed query, for the front screen's search (a few per group). */
+  search?: (query: string, signal: AbortSignal) => Promise<SearchHit[]>;
 }
 
 export type AnyWebModule = WebModule<string>;

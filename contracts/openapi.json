@@ -710,6 +710,43 @@
         "title": "BacklogOut",
         "type": "object"
       },
+      "BrandingOut": {
+        "additionalProperties": false,
+        "description": "Branding kept on this machine (`sed branding`): the strip title and which images are set.",
+        "properties": {
+          "logo": {
+            "title": "Logo",
+            "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "watermark": {
+            "title": "Watermark",
+            "type": "boolean"
+          },
+          "watermark_dark": {
+            "title": "Watermark Dark",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title",
+          "logo",
+          "watermark",
+          "watermark_dark"
+        ],
+        "title": "BrandingOut",
+        "type": "object"
+      },
       "BuildIn": {
         "additionalProperties": false,
         "properties": {
@@ -8700,6 +8737,77 @@
           }
         },
         "summary": "Create Alias",
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/branding": {
+      "get": {
+        "operationId": "core_branding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Branding",
         "tags": [
           "core"
         ]

@@ -104,6 +104,23 @@ uv run sed serve --profile synthetic                  # http://127.0.0.1:8000, o
 The server binds 127.0.0.1 only; write requests need the per-launch token injected into the page. Development with
 hot reload: `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1`.
 
+The front screen greets you with one search across tickets, applications, delivery projects and vendors, a
+suggestion for what to do next, the three steps (bring in data, review findings, build reports) and a tile for every
+area. A sidebar lists the pages and the items waiting for your review; pages open in tabs. The look is light by
+default, with a dark look one click away, and follows the design book in `web/src/design/DESIGN.md` (every number in
+`tokens.css`, every colour in `faces.css`, one stylesheet per shared object).
+
+Branding stays on your machine and never enters the repository: a logo, a watermark for each look and a title for the
+sidebar, stored in `<data root>\branding\` and served only by your local dashboard.
+
+```bash
+uv run sed branding logo "C:\path\to\logo.png" --json
+uv run sed branding watermark "C:\path\to\mark-light.png" --json
+uv run sed branding watermark "C:\path\to\mark-dark.png" --dark --json
+uv run sed branding title "Your team name" --json
+uv run sed branding show --json
+```
+
 ## SAP application support (module `sap`)
 
 SAP tickets stay ordinary ops tickets. `config/sap/scope.yaml` decides on read which of them are SAP L3 tickets (an

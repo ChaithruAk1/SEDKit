@@ -4,7 +4,7 @@ import type { WebRoute } from '../types';
 export const DELIVERY_ROUTES = [
   {
     path: 'delivery',
-    title: 'Delivery portfolio',
+    title: 'Change Request',
     filters: ['as_of'],
     load: () => import('./pages/DeliveryPortfolioPage'),
   },

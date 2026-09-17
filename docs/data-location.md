@@ -50,6 +50,12 @@ Run the move again from the current root (`uv run sed data move --to <new folder
 restart. Going back to `%LOCALAPPDATA%\sed` without the variable only works on a machine where you don't run SED from
 the Claude desktop app.
 
+## Branding
+
+`<data root>\branding\` holds the dashboard's logo, watermarks and sidebar title (`sed branding`). They are company
+material, so they live here with the other machine-level files and never in the repository; the dashboard shows the
+plain SED name when the folder is empty.
+
 ## Other machines
 
 Before `sed init --profile real` on another machine, decide the data root first. If you will run SED from the Claude

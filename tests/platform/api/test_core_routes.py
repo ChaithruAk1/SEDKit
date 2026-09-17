@@ -45,6 +45,8 @@ def test_every_core_get_returns_its_model(ops_profile, core_gets):
         "/api/reports",
         "/api/reports/readiness",
         "/api/ai/review-rates",
+        "/api/sources",
+        "/api/branding",
     }
     for path, model in core_gets:
         response = client.get(path)

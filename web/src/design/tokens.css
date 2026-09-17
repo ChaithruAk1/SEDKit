@@ -1,0 +1,104 @@
+/*
+ * THE TOKEN FILE. Every size, corner, gap, duration and layer of the SED dashboard lives here, once
+ * (web/src/design/DESIGN.md, law 4). Colours live in faces.css, because they change with the light and dark face.
+ * Object files and page code name these tokens and never type a number. To make SED look different, change a
+ * token, never a page.
+ */
+:root {
+  /* The spacing ladder: nothing outside it. */
+  --sed-s1: 4px;
+  --sed-s2: 8px;
+  --sed-s3: 12px;
+  --sed-s4: 16px;
+  --sed-s5: 22px;
+  --sed-s6: 30px;
+  --sed-s7: 42px;
+
+  /* The two vertical rhythms: between cards and sections, and around a page title. */
+  --sed-section-gap: var(--sed-s3);
+  --sed-title-gap: var(--sed-s5);
+
+  /* One corner for every box; the full curve for search bars and accent-filled buttons only. */
+  --sed-r1: 9px;
+  --sed-pill: 999px;
+
+  /* Type: the text, the small, the heading and the title. Standard system lettering (no web fonts). */
+  --sed-font: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --sed-font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+  --sed-fs-tiny: 11.5px;
+  --sed-fs-body: 13.5px;
+  --sed-fs-heading: 17px;
+  --sed-fs-title: clamp(30px, 3.6vw, 44px);
+  --sed-fs-figure: 26px;
+  --sed-lh: 1.4;
+  --sed-lh-tight: 1.08;
+  --sed-weight-strong: 600;
+  --sed-weight-title: 650;
+
+  /* Insides of the shared objects. */
+  --sed-btn-pad: 6px 13px;
+  --sed-btn-pad-xs: 2px 6px;
+  --sed-chip-pad: 2px 9px;
+  --sed-row-pad: 5px 9px;
+  --sed-cell-pad: 6px 10px;
+  --sed-cell-pad-head: 7px 10px;
+  --sed-card-pad: 10px 14px;
+  --sed-tile-pad: 8px 10px;
+  --sed-hairline: 1px;
+
+  /* The one height in the house: the search bar. Nothing else states a height. */
+  --sed-search-h: 32px;
+  --sed-search-hero-h: 46px;
+
+  /* Tiles. */
+  --sed-tile-big: 150px;
+  --sed-card-min: 240px;
+  --sed-tile-art: 62px;
+  --sed-tile-art-h: 44px;
+  --sed-tile-lift: -3px;
+  --sed-tile-press: -1px;
+
+  /* Icons and marks. */
+  --sed-ic-sm: 16px;
+  --sed-ic-md: 18px;
+  --sed-ic-badge: 12px;
+  --sed-dot: 8px;
+  --sed-face-sm: 22px;
+  --sed-face-md: 32px;
+
+  /* Marks every object shares: the keyboard focus ring, a faded unavailable control, the line-art stroke. */
+  --sed-focus: 2px;
+  --sed-faded: 0.45;
+  --sed-art-stroke: 1.5;
+  --sed-art-dash: 120;
+  --sed-logo-tracking: 0.24em;
+
+  /* The shell. */
+  --sed-sidebar-w: 268px;
+  --sed-logo-h: 34px;
+  --sed-home-min-h: calc(100vh - 120px);
+  --sed-home-mark-w: 380px;
+  --sed-home-mark-min: 96px;
+  --sed-sidebar-w-collapsed: 64px;
+  --sed-shell-gap: var(--sed-s3);
+  --sed-tab-w: 190px;
+  --sed-tab-min-w: 96px;
+  --sed-strip-h: 22px;
+  --sed-home-w: 980px;
+
+  /* Motion: two durations, one easing, and the one glow of a selected thing (three breaths, then still). */
+  --sed-d1: 120ms;
+  --sed-d2: 220ms;
+  --sed-d-arrive: 360ms;
+  --sed-stagger: 40ms;
+  --sed-ease: cubic-bezier(0.33, 0.02, 0.2, 1);
+  --sed-glow-time: 3.6s;
+  --sed-draw-time: 900ms;
+
+  /* The layer ladder: five layers and nothing else. */
+  --sed-z-content: 1;
+  --sed-z-menu: 300;
+  --sed-z-dialog: 200;
+  --sed-z-toast: 400;
+  --sed-z-tooltip: 500;
+}

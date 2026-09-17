@@ -3,6 +3,7 @@ import { IconInfoCircle } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 
 import type { Kpi } from '../api/types';
+import { FigureLabel, FigureValue } from './Figure';
 import { formatByUnit, formatDelta } from './format';
 
 /** Metrics where a lower value is better (drives the delta colour). */
@@ -48,18 +49,14 @@ export function KpiTile({ kpi, definition, footer }: KpiTileProps) {
   return (
     <Card withBorder padding="md" radius="md" data-kpi={kpi.key}>
       <Group justify="space-between" gap={4} wrap="nowrap" align="flex-start">
-        <Text size="xs" c="dimmed" fw={600} tt="uppercase" lineClamp={2}>
-          {kpi.label}
-        </Text>
+        <FigureLabel>{kpi.label}</FigureLabel>
         {text ? (
           <Tooltip label={text} multiline w={280} withArrow>
             <IconInfoCircle size={14} style={{ flexShrink: 0, opacity: 0.6 }} aria-label={`Definition of ${kpi.label}`} />
           </Tooltip>
         ) : null}
       </Group>
-      <Text fz={26} fw={700} mt={4} style={{ fontVariantNumeric: 'tabular-nums' }}>
-        {formatByUnit(kpi.value, kpi.unit)}
-      </Text>
+      <FigureValue>{formatByUnit(kpi.value, kpi.unit)}</FigureValue>
       <Group gap={6} mt={2} wrap="nowrap">
         {delta !== null ? (
           <Badge size="sm" variant="light" tt="none" color={good === null ? 'gray' : good ? 'teal' : 'red'}>

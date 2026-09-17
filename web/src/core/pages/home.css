@@ -1,0 +1,141 @@
+/* THE FRONT SCREEN. Objects that exist on this page alone (the greeting, the suggestion, the steps), dressed through
+   tokens only; the search bar, buttons and tiles keep their shared dress. */
+.sed-home {
+  position: relative;
+  isolation: isolate;
+  min-height: var(--sed-home-min-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sed-s4);
+  max-width: var(--sed-home-w);
+  margin: 0 auto;
+  padding-top: var(--sed-s7);
+  text-align: center;
+}
+.sed-home em {
+  color: var(--sed-accent-text);
+  font-style: italic;
+}
+.sed-home-hello {
+  font-size: var(--sed-fs-heading);
+  font-weight: var(--sed-weight-strong);
+  color: var(--sed-tx-1);
+}
+.sed-home-title {
+  margin: 0;
+  font-size: var(--sed-fs-title);
+  font-weight: var(--sed-weight-title);
+  line-height: var(--sed-lh-tight);
+  color: var(--sed-tx);
+}
+.sed-home-sub {
+  margin: 0;
+  max-width: var(--sed-home-w);
+  color: var(--sed-tx-2);
+  font-size: var(--sed-fs-body);
+  line-height: var(--sed-lh);
+}
+.sed-home-search {
+  width: 100%;
+  margin-top: var(--sed-s2);
+}
+
+.sed-suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--sed-s3);
+  width: 100%;
+  padding: var(--sed-card-pad);
+  background: var(--sed-accent-weak);
+  border: var(--sed-hairline) solid var(--sed-accent-line);
+  border-radius: var(--sed-r1);
+  text-align: left;
+}
+.sed-suggestion-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--sed-tx-1);
+}
+.sed-suggestion-text i {
+  color: var(--sed-tx-2);
+}
+
+.sed-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--sed-s3);
+}
+.sed-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sed-s2);
+  color: var(--sed-tx-1);
+  font-size: var(--sed-fs-body);
+  text-decoration: none;
+}
+.sed-step .sed-icon-box svg {
+  width: var(--sed-ic-sm);
+  height: var(--sed-ic-sm);
+}
+.sed-step:hover {
+  color: var(--sed-accent-text);
+}
+.sed-step[data-current] {
+  color: var(--sed-accent-text);
+  font-weight: var(--sed-weight-strong);
+}
+.sed-step[data-current] .sed-icon-box {
+  border-color: var(--sed-accent-line);
+  background: var(--sed-accent-weak);
+  color: var(--sed-accent-text);
+}
+.sed-step-line {
+  width: var(--sed-s7);
+  height: var(--sed-hairline);
+  background: var(--sed-line);
+}
+
+/* The stage under the suggestion: the steps, the tiles and the honest line. */
+.sed-home-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sed-s4);
+  width: 100%;
+}
+
+/* The brand mark, centred in the free space under the tiles. HomePage measures that space and sets the layer's top and
+   height (so the mark shrinks with the window and never covers the tiles). The layer takes part in the page's arrival
+   animation (which ends at full opacity), so the faintness lives on the image inside it. */
+.sed-home-mark-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: -1;
+}
+.sed-home-mark-layer[hidden] {
+  display: none;
+}
+.sed-home-mark {
+  width: var(--sed-home-mark-size, var(--sed-home-mark-w));
+  height: var(--sed-home-mark-size, var(--sed-home-mark-w));
+  object-fit: contain;
+  opacity: var(--sed-home-mark-opacity);
+  user-select: none;
+}
+
+.sed-home-deck {
+  width: 100%;
+}
+.sed-home-honest {
+  margin: var(--sed-s4) 0 0;
+  font-size: var(--sed-fs-tiny);
+  font-style: italic;
+  color: var(--sed-tx-3);
+}

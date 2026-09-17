@@ -108,7 +108,7 @@ export default function DeliveryProjectPage() {
         title={project?.name ?? projectId}
         description={
           <Anchor component={Link} to={`/delivery${search}`} size="sm">
-            Delivery portfolio
+            Change Request
           </Anchor>
         }
         badges={project ? <RagBadge rag={project.computed_rag} /> : undefined}

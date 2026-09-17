@@ -1,0 +1,60 @@
+/* ICON (DESIGN.md 2.16). A small icon standing alone sits in a compact box: the glyph, a little air, one hairline, the
+   panel fill, level on its row. It answers with the accent on hover. The delete icon is the one icon with no box. */
+.mantine-ActionIcon-root[data-variant='default'],
+.mantine-ActionIcon-root[data-variant='subtle'],
+.sed-icon-box {
+  display: inline-grid;
+  place-items: center;
+  padding: var(--sed-s1);
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-emboss);
+  color: var(--sed-tx-1);
+  cursor: pointer;
+  transition:
+    transform var(--sed-d1) var(--sed-ease),
+    color var(--sed-d1) var(--sed-ease),
+    border-color var(--sed-d1) var(--sed-ease);
+}
+.mantine-ActionIcon-root[data-variant='default']:hover,
+.mantine-ActionIcon-root[data-variant='subtle']:hover,
+.sed-icon-box:hover {
+  color: var(--sed-accent-text);
+  border-color: var(--sed-accent-line);
+  transform: translateY(var(--sed-tile-press));
+}
+.sed-icon-box:focus-visible {
+  outline: var(--sed-focus) solid var(--sed-accent);
+  outline-offset: var(--sed-focus);
+}
+.sed-icon-box[data-danger] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--sed-bad);
+}
+
+/* STATUS DOT (DESIGN.md 2.11): round, one of four colours. */
+.sed-dot {
+  display: inline-block;
+  width: var(--sed-dot);
+  height: var(--sed-dot);
+  border-radius: var(--sed-pill);
+  background: var(--sed-tx-3);
+  flex: none;
+}
+.sed-dot[data-state='live'] {
+  background: var(--sed-ok);
+}
+.sed-dot[data-state='busy'] {
+  background: var(--sed-warn);
+}
+.sed-dot[data-state='down'] {
+  background: var(--sed-bad);
+}
+
+/* LOADING (DESIGN.md 2.12): a skeleton while a page fills, a spinner in the accent inside the thing you pressed. */
+.mantine-Loader-root {
+  --loader-color: var(--sed-accent);
+}

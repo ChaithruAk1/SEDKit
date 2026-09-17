@@ -1,0 +1,44 @@
+/* FIELD YOU TYPE IN (DESIGN.md 2.9). One hairline, the panel fill, as tall as its words. Focus turns the border accent
+   and nothing else. An error is a red edge, a faint red fill and a line saying what to fix. The search bar stands at
+   the one search height and takes the full curve. */
+.mantine-Input-input {
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  color: var(--sed-tx);
+  font-size: var(--sed-fs-body);
+  transition: border-color var(--sed-d1) var(--sed-ease);
+}
+.mantine-Input-input:focus,
+.mantine-Input-input:focus-within {
+  border-color: var(--sed-accent);
+  outline: none;
+  box-shadow: none;
+}
+.mantine-Input-input[data-error] {
+  border-color: var(--sed-bad);
+  background: var(--sed-bad-weak);
+}
+.mantine-InputWrapper-label {
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+  color: var(--sed-tx-2);
+}
+
+.sed-search .mantine-Input-input {
+  height: var(--sed-search-h);
+  min-height: var(--sed-search-h);
+  border-radius: var(--sed-pill);
+}
+.sed-search-hero .mantine-Input-input {
+  height: var(--sed-search-hero-h);
+  min-height: var(--sed-search-hero-h);
+  box-shadow: var(--sed-emboss);
+}
+
+/* SWITCH AND TICK BOX (DESIGN.md 2.10): the accent when on. */
+.mantine-Switch-track[data-checked],
+.mantine-Checkbox-input:checked {
+  background: var(--sed-accent);
+  border-color: var(--sed-accent);
+}

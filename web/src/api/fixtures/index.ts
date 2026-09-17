@@ -24,6 +24,7 @@ type PostHandlers = {
 
 const GET_HANDLERS: GetHandlers = {
   '/api/health': () => ({ ok: true, version: '0.2.0' }),
+  '/api/branding': () => ({ title: null, logo: false, watermark: false, watermark_dark: false }),
   '/api/meta': () => core.meta(),
   '/api/nav': () => core.nav(),
   '/api/modules': () => core.modules(),
@@ -104,6 +105,15 @@ export async function fixtureGet(
   signal?: AbortSignal,
 ): Promise<unknown> {
   await delay(signal);
+  if (path === '/api/branding') {
+    // Branding is this machine's, not fixture data: the fixtures dev server answers it from the branding folder.
+    try {
+      const response = await fetch('/api/branding', { signal, cache: 'no-store' });
+      if (response.ok) return (await response.json()) as unknown;
+    } catch (error) {
+      if (isAbortError(error)) throw error;
+    }
+  }
   const handler = GET_HANDLERS[path] as unknown as ((p: Record<string, string>, q: object) => unknown) | undefined;
   if (!handler) throw new ApiError(404, 'not_found', `No fixture for GET ${path}`);
   try {

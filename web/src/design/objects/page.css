@@ -1,0 +1,85 @@
+/* THE PAGE AND ITS TEXT (DESIGN.md: the page, text). One canvas, tabular figures, and no all-caps anywhere. */
+body {
+  background: var(--sed-canvas);
+  color: var(--sed-tx);
+  font-size: var(--sed-fs-body);
+  line-height: var(--sed-lh);
+  font-variant-numeric: tabular-nums;
+}
+
+.mantine-Badge-label,
+.mantine-Kbd-root,
+.mantine-Text-root,
+.mantine-Title-root {
+  text-transform: none;
+}
+
+/* LINK: the accent ink at rest, underlined on hover, one ink. */
+.mantine-Anchor-root {
+  color: var(--sed-accent-text);
+  text-decoration: none;
+}
+.mantine-Anchor-root:hover {
+  text-decoration: underline;
+}
+
+/* DIVIDER: one colour, one thickness. */
+.mantine-Divider-root {
+  --divider-color: var(--sed-line);
+}
+
+/* SCROLLBAR: one width and fill in both faces. */
+* {
+  scrollbar-color: var(--sed-line) transparent;
+  scrollbar-width: thin;
+}
+
+/* A page arrives: its sections fade up one after another (DESIGN.md, movement). */
+.sed-arrive > * {
+  animation: sed-arrive var(--sed-d-arrive) var(--sed-ease) both;
+}
+.sed-arrive > *:nth-child(2) {
+  animation-delay: var(--sed-stagger);
+}
+.sed-arrive > *:nth-child(3) {
+  animation-delay: calc(2 * var(--sed-stagger));
+}
+.sed-arrive > *:nth-child(4) {
+  animation-delay: calc(3 * var(--sed-stagger));
+}
+.sed-arrive > *:nth-child(5) {
+  animation-delay: calc(4 * var(--sed-stagger));
+}
+.sed-arrive > *:nth-child(n + 6) {
+  animation-delay: calc(5 * var(--sed-stagger));
+}
+
+@keyframes sed-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--sed-s2));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A face flip cross-fades instead of snapping. */
+body,
+.mantine-Card-root,
+.mantine-Paper-root {
+  transition:
+    background-color var(--sed-d2) var(--sed-ease),
+    color var(--sed-d2) var(--sed-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -1,0 +1,174 @@
+/* TILE (DESIGN.md 2.2). A box you press that stands for a thing. One padding, one corner, one hairline, sitting forward;
+   hover rises and takes the accent edge. Selected: an accent ring and a halo that breathes three times, then settles.
+   Every tile in one collection is the same size. Big tiles carry line art, never a glyph. */
+.sed-tile {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--sed-s2);
+  padding: var(--sed-tile-pad);
+  min-width: 0;
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-emboss);
+  color: var(--sed-tx-1);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--sed-d2) var(--sed-ease),
+    border-color var(--sed-d2) var(--sed-ease),
+    box-shadow var(--sed-d2) var(--sed-ease);
+}
+.sed-tile:hover {
+  transform: translateY(var(--sed-tile-lift));
+  border-color: var(--sed-accent-line);
+  box-shadow: var(--sed-emboss-hover);
+}
+.sed-tile:active {
+  transform: translateY(var(--sed-tile-press));
+}
+.sed-tile:focus-visible {
+  outline: var(--sed-focus) solid var(--sed-accent);
+  outline-offset: var(--sed-focus);
+}
+.sed-tile[data-selected] {
+  border-color: var(--sed-accent);
+  animation: sed-breathe var(--sed-glow-time) var(--sed-ease) 3;
+}
+.sed-tile-label {
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+  color: var(--sed-tx-1);
+}
+.sed-tile-note {
+  font-size: var(--sed-fs-tiny);
+  color: var(--sed-tx-3);
+}
+.sed-tile-big {
+  padding: var(--sed-s4) var(--sed-s2) var(--sed-s3);
+}
+
+/* A card: a tile wearing its card face, for one thing in a collection shown as cards. Three bands: the head (name and
+   chips), the story (its words) and the foot (figures and links) pinned to the bottom. Every card in a grid is the
+   same size. */
+.sed-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--sed-card-min), 1fr));
+  gap: var(--sed-s3);
+}
+.sed-card-cell {
+  display: flex;
+  min-width: 0;
+}
+.sed-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sed-s2);
+  flex: 1;
+  min-width: 0;
+  padding: var(--sed-card-pad);
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-emboss);
+  color: var(--sed-tx-1);
+  text-align: left;
+  text-decoration: none;
+  transition:
+    transform var(--sed-d2) var(--sed-ease),
+    border-color var(--sed-d2) var(--sed-ease),
+    box-shadow var(--sed-d2) var(--sed-ease);
+}
+a.sed-card:hover,
+button.sed-card:hover {
+  transform: translateY(var(--sed-tile-lift));
+  border-color: var(--sed-accent-line);
+  box-shadow: var(--sed-emboss-hover);
+}
+.sed-card:focus-visible {
+  outline: var(--sed-focus) solid var(--sed-accent);
+  outline-offset: var(--sed-focus);
+}
+.sed-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sed-s1);
+  min-width: 0;
+}
+.sed-card-title {
+  font-size: var(--sed-fs-body);
+  font-weight: var(--sed-weight-strong);
+  color: var(--sed-tx);
+  overflow-wrap: anywhere;
+}
+.sed-card-story {
+  font-size: var(--sed-fs-tiny);
+  color: var(--sed-tx-2);
+  overflow-wrap: anywhere;
+}
+.sed-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sed-s3);
+  margin-top: auto;
+  padding-top: var(--sed-s2);
+  border-top: var(--sed-hairline) solid var(--sed-line-faint);
+  font-size: var(--sed-fs-tiny);
+  color: var(--sed-tx-2);
+}
+.sed-card-foot b {
+  display: block;
+  color: var(--sed-tx);
+  font-size: var(--sed-fs-body);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A deck: equal tiles that widen to fill their row. */
+.sed-deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--sed-tile-big), 1fr));
+  gap: var(--sed-s3);
+}
+
+/* Line art: a neutral outline with accent detail lines, drawing itself in on hover. */
+.sed-art {
+  width: var(--sed-tile-art);
+  height: var(--sed-tile-art-h);
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sed-art .line {
+  stroke: var(--sed-tx-2);
+  stroke-width: var(--sed-art-stroke);
+}
+.sed-art .detail {
+  stroke: var(--sed-accent);
+  stroke-width: var(--sed-art-stroke);
+  stroke-dasharray: var(--sed-art-dash);
+  stroke-dashoffset: 0;
+}
+.sed-tile:hover .sed-art .detail {
+  animation: sed-draw var(--sed-draw-time) var(--sed-ease) both;
+}
+
+@keyframes sed-breathe {
+  0%,
+  100% {
+    box-shadow: var(--sed-emboss), var(--sed-glow-near);
+  }
+  50% {
+    box-shadow: var(--sed-emboss), var(--sed-glow-far);
+  }
+}
+@keyframes sed-draw {
+  from {
+    stroke-dashoffset: var(--sed-art-dash);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

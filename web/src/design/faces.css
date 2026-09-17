@@ -1,0 +1,97 @@
+/*
+ * THE TWO FACES. SED wears one design in two faces: light (the default) and dark. Every colour lives here, once per
+ * face; objects and pages name the role, never a colour. The face follows Mantine's colour scheme attribute, so the
+ * light/dark switch in the top bar flips every surface at once.
+ *
+ * THE ACCENT is one colour, spoken in four roles only (DESIGN.md, the accent): selected (edge + glow), the one to
+ * press (solid fill), hover (edge) and wholly accent (light fill + edge). Change --sed-accent-rgb to re-colour SED.
+ */
+:root {
+  --sed-accent-rgb: 61, 205, 88; /* the SED accent, #3DCD58 (owner's choice, 2026-09-17) */
+
+  --sed-accent: rgb(var(--sed-accent-rgb));
+  --sed-accent-ink: rgb(255, 255, 255); /* white writing on accent fills (owner's choice, 2026-09-17) */
+  --sed-accent-text: color-mix(in srgb, var(--sed-accent) 55%, black);
+  --sed-accent-weak: rgba(var(--sed-accent-rgb), 0.12);
+  --sed-accent-line: rgba(var(--sed-accent-rgb), 0.55);
+  --sed-glow-near: 0 0 10px rgba(var(--sed-accent-rgb), 0.28);
+  --sed-glow-far: 0 0 22px rgba(var(--sed-accent-rgb), 0.6);
+  --sed-row-hover: var(--sed-accent-weak);
+
+  /* Paper: a warm canvas, white boxes, one warm-ink hairline. */
+  --sed-canvas: rgb(249, 247, 240);
+  --sed-canvas-deep: rgb(245, 241, 233);
+  --sed-panel: rgb(255, 255, 255);
+  --sed-line: rgba(62, 55, 42, 0.14);
+  --sed-line-faint: rgba(62, 55, 42, 0.07);
+  --sed-well: rgba(62, 55, 42, 0.05);
+
+  /* The ink ladder. */
+  --sed-tx: rgb(38, 34, 26);
+  --sed-tx-1: rgb(66, 61, 51);
+  --sed-tx-2: rgb(109, 102, 90);
+  --sed-tx-3: rgb(112, 104, 90);
+
+  /* The four meanings: good, needs a look, bad, and plain (the accent is the fifth, for chosen). */
+  --sed-ok: rgb(28, 110, 70);
+  --sed-ok-weak: rgba(28, 110, 70, 0.1);
+  --sed-warn: rgb(150, 98, 0);
+  --sed-warn-weak: rgba(214, 150, 20, 0.14);
+  --sed-bad: rgb(170, 45, 38);
+  --sed-bad-weak: rgba(200, 60, 50, 0.1);
+  --sed-plain-weak: rgba(62, 55, 42, 0.05);
+
+  /* Every box sits slightly forward (the emboss), and something floating casts the deep shadow. */
+  --sed-emboss: 0 1px 1px rgba(62, 55, 42, 0.05), 0 4px 10px -6px rgba(62, 55, 42, 0.22);
+  --sed-emboss-hover: 0 2px 3px rgba(62, 55, 42, 0.06), 0 10px 18px -10px rgba(62, 55, 42, 0.3);
+  --sed-shadow-deep: 0 18px 40px -26px rgba(62, 55, 42, 0.35), 0 2px 6px rgba(62, 55, 42, 0.08);
+  --sed-scrim: rgba(38, 34, 26, 0.32);
+
+  /* THE SIDEBAR SURFACE: the panel, like every box (an accent-filled sidebar was tried and reverted, 2026-09-17). */
+  --sed-sidebar-surface: var(--sed-panel);
+  --sed-sidebar-ink: var(--sed-tx-1);
+  --sed-sidebar-ink-quiet: var(--sed-tx-3);
+  --sed-sidebar-line: var(--sed-line);
+  --sed-sidebar-hover: var(--sed-row-hover);
+  --sed-sidebar-active: var(--sed-accent-weak);
+  --sed-sidebar-active-ink: var(--sed-accent-text);
+  --sed-sidebar-plate: transparent;
+  --sed-home-mark-opacity: 0.22; /* the front screen's brand mark: quiet, but clearly visible (owner's ask) */
+
+  /* The data classification strip: never hidden, never the accent. */
+  --sed-class-synthetic: var(--sed-accent); /* owner's choice 2026-09-17: a plain accent strip */
+  --sed-class-real: rgb(176, 38, 32);
+  --sed-class-unknown: rgb(196, 98, 30);
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --sed-accent-text: color-mix(in srgb, var(--sed-accent) 70%, white);
+  --sed-accent-weak: rgba(var(--sed-accent-rgb), 0.14);
+
+  --sed-canvas: rgb(23, 21, 18);
+  --sed-canvas-deep: rgb(19, 18, 16);
+  --sed-panel: rgb(32, 31, 28);
+  --sed-line: rgba(233, 228, 220, 0.11);
+  --sed-line-faint: rgba(233, 228, 220, 0.055);
+  --sed-well: rgba(0, 0, 0, 0.26);
+
+  --sed-tx: rgb(239, 234, 226);
+  --sed-tx-1: rgb(216, 210, 199);
+  --sed-tx-2: rgb(170, 163, 150);
+  --sed-tx-3: rgb(140, 133, 120);
+
+  --sed-ok: rgb(110, 200, 140);
+  --sed-ok-weak: rgba(76, 175, 114, 0.16);
+  --sed-warn: rgb(240, 190, 90);
+  --sed-warn-weak: rgba(240, 180, 60, 0.14);
+  --sed-bad: rgb(255, 138, 128);
+  --sed-bad-weak: rgba(255, 120, 110, 0.13);
+  --sed-plain-weak: rgba(233, 228, 220, 0.05);
+
+  --sed-emboss: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 6px 14px -8px rgba(0, 0, 0, 0.7);
+  --sed-emboss-hover: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 22px -12px rgba(0, 0, 0, 0.8);
+  --sed-shadow-deep: 0 22px 54px -28px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --sed-scrim: rgba(12, 11, 9, 0.62);
+
+  --sed-home-mark-opacity: 0.26;
+}

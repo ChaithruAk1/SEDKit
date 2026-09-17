@@ -1,0 +1,14 @@
+/* The SED design system, loaded once by main.tsx after Mantine's own styles. The law: DESIGN.md. */
+@import './tokens.css';
+@import './faces.css';
+@import './objects/page.css';
+@import './objects/button.css';
+@import './objects/chip.css';
+@import './objects/panel.css';
+@import './objects/tile.css';
+@import './objects/field.css';
+@import './objects/table.css';
+@import './objects/tabs.css';
+@import './objects/floating.css';
+@import './objects/icon.css';
+@import './objects/figure.css';

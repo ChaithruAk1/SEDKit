@@ -1,0 +1,15 @@
+/* CHIP AND LABEL (DESIGN.md 2.6). One dress for both jobs: as tall as its words, the small type, a faint fill in its
+   meaning and one hairline. Never all-caps, never a stated height. */
+.mantine-Badge-root {
+  height: auto;
+  padding: var(--sed-chip-pad);
+  border-radius: var(--sed-r1);
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: var(--sed-lh);
+}
+.mantine-Badge-label {
+  overflow: visible;
+}

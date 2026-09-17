@@ -1,18 +1,15 @@
-/* Global styles. Fonts are system stacks only (see main.tsx); nothing here may reference external hosts. */
+/* Global styles outside the design objects: chart text follows the type tokens. Nothing here references external hosts. */
 html,
 body,
 #root {
   min-height: 100%;
 }
 
-body {
-  font-variant-numeric: tabular-nums;
-}
-
 .recharts-cartesian-axis-tick-value {
-  font-size: 11px;
+  font-size: var(--sed-fs-tiny);
+  fill: var(--sed-tx-2);
 }
 
 .recharts-legend-item-text {
-  font-size: 12px;
+  font-size: var(--sed-fs-tiny);
 }

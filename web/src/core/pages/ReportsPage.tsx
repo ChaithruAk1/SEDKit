@@ -29,6 +29,7 @@ import { formatDateTime, humanize } from '../../components/format';
 import { PageHeader } from '../../components/PageHeader';
 import { SectionCard } from '../../components/SectionCard';
 import { useSearchParam } from '../../hooks/useFilters';
+import { CardBands, CardGrid, ViewToggle, useViewMode } from '../../components/CollectionView';
 
 type ArtifactRow = Schema<'ArtifactRow'>;
 type ReadinessSection = Schema<'ReadinessSection'>;
@@ -102,15 +103,30 @@ const SECTION_COLUMNS: Column<ReadinessSection>[] = [
 ];
 
 const ARTIFACT_COLUMNS: Column<ArtifactRow>[] = [
-  { key: 'built_at', header: 'Built', value: (r) => r.built_at, render: (r) => formatDateTime(r.built_at), nowrap: true },
+  {
+    key: 'built_at',
+    header: 'Built',
+    value: (r) => r.built_at,
+    render: (r) => formatDateTime(r.built_at),
+    nowrap: true,
+  },
   { key: 'report', header: 'Report', value: (r) => r.report },
-  { key: 'period', header: 'Period', value: (r) => r.period, render: (r) => `${r.period}${r.vendor_id ? ` · ${r.vendor_id}` : ''}` },
+  {
+    key: 'period',
+    header: 'Period',
+    value: (r) => r.period,
+    render: (r) => `${r.period}${r.vendor_id ? ` · ${r.vendor_id}` : ''}`,
+  },
   {
     key: 'ai_mode',
     header: 'AI',
     value: (r) => r.ai_mode,
     render: (r) => (
-      <Badge size="sm" variant="light" color={r.ai_mode === 'draft' ? 'orange' : r.ai_mode === 'none' ? 'gray' : 'violet'}>
+      <Badge
+        size="sm"
+        variant="light"
+        color={r.ai_mode === 'draft' ? 'orange' : r.ai_mode === 'none' ? 'gray' : 'violet'}
+      >
         {r.ai_mode}
       </Badge>
     ),
@@ -134,7 +150,14 @@ const ARTIFACT_COLUMNS: Column<ArtifactRow>[] = [
     key: 'omitted',
     header: 'AI sections left out',
     value: (r) => r.omitted.length,
-    render: (r) => (r.omitted.length ? <Text size="xs" title={r.omitted.join('\n')}>{r.omitted.length}</Text> : '–'),
+    render: (r) =>
+      r.omitted.length ? (
+        <Text size="xs" title={r.omitted.join('\n')}>
+          {r.omitted.length}
+        </Text>
+      ) : (
+        '–'
+      ),
     align: 'right',
   },
 ];
@@ -151,12 +174,17 @@ export default function ReportsPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const build = useApiPost('/api/reports/build');
   const { job, error: jobError } = useJob(jobId);
+  const [artifactView, setArtifactView] = useViewMode('reports.artifacts');
 
   const report = catalog.data?.reports.find((r) => r.key === reportKey) ?? catalog.data?.reports[0];
   const periods = useMemo(() => {
     const p = meta.data?.periods;
     if (!p || !report) return [];
-    const byKind: Record<string, string[]> = { week: p.weeks, month: p.months, quarter: p.quarters };
+    const byKind: Record<string, string[]> = {
+      week: p.weeks,
+      month: p.months,
+      quarter: p.quarters,
+    };
     return report.period_kinds.flatMap((kind) => byKind[kind] ?? []);
   }, [meta.data, report]);
   const effectivePeriod = periods.includes(period) ? period : (periods[0] ?? '');
@@ -168,7 +196,11 @@ export default function ReportsPage() {
   }, [report]);
 
   const readiness = useApi(report && effectivePeriod ? '/api/reports/readiness' : null, {
-    query: { report: report?.key ?? '', period: effectivePeriod, vendor: effectiveVendor || null },
+    query: {
+      report: report?.key ?? '',
+      period: effectivePeriod,
+      vendor: effectiveVendor || null,
+    },
   });
 
   const running = build.pending || job?.status === 'queued' || job?.status === 'running';
@@ -198,7 +230,21 @@ export default function ReportsPage() {
     }
   };
 
-  const result = job?.status === 'done' ? (job.result as { artifacts?: { format: string; file_name: string; artifact_id: string | null }[]; readiness?: { omitted?: string[]; ai_sections_shown?: number; ai_sections_required?: number } } | null) : null;
+  const result =
+    job?.status === 'done'
+      ? (job.result as {
+          artifacts?: {
+            format: string;
+            file_name: string;
+            artifact_id: string | null;
+          }[];
+          readiness?: {
+            omitted?: string[];
+            ai_sections_shown?: number;
+            ai_sections_required?: number;
+          };
+        } | null)
+      : null;
   const ready = readiness.data;
   const profile = meta.data?.profile ?? '<profile>';
 
@@ -211,15 +257,33 @@ export default function ReportsPage() {
       <Group gap="sm" align="flex-end">
         <Select
           label="Report"
-          data={(catalog.data?.reports ?? []).map((r) => ({ value: r.key, label: r.title }))}
+          data={(catalog.data?.reports ?? []).map((r) => ({
+            value: r.key,
+            label: r.title,
+          }))}
           value={report?.key ?? null}
           onChange={(v) => v && setReportKey(v)}
           allowDeselect={false}
           w={260}
         />
-        <Select label="Period" data={periods} value={effectivePeriod || null} onChange={(v) => v && setPeriod(v)} allowDeselect={false} w={140} />
+        <Select
+          label="Period"
+          data={periods}
+          value={effectivePeriod || null}
+          onChange={(v) => v && setPeriod(v)}
+          allowDeselect={false}
+          w={140}
+        />
         {report?.needs_vendor ? (
-          <Select label="Vendor" data={vendorOptions} value={effectiveVendor || null} onChange={(v) => v && setVendor(v)} searchable allowDeselect={false} w={260} />
+          <Select
+            label="Vendor"
+            data={vendorOptions}
+            value={effectiveVendor || null}
+            onChange={(v) => v && setVendor(v)}
+            searchable
+            allowDeselect={false}
+            w={260}
+          />
         ) : null}
       </Group>
       {catalog.error ? <ErrorState error={catalog.error} onRetry={catalog.reload} /> : null}
@@ -228,7 +292,11 @@ export default function ReportsPage() {
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <SectionCard
             title="AI section readiness"
-            description={ready?.snapshot_id ? `Against snapshot ${ready.snapshot_id}` : 'No snapshot of this period yet: build or draft the report first'}
+            description={
+              ready?.snapshot_id
+                ? `Against snapshot ${ready.snapshot_id}`
+                : 'No snapshot of this period yet: build or draft the report first'
+            }
             actions={
               ready ? (
                 <Badge variant="light" color={ready.complete ? 'teal' : 'orange'}>
@@ -264,7 +332,9 @@ export default function ReportsPage() {
                 <Text size="xs" c="dimmed">
                   Draft the sections in Claude Code, then review them in the queue:
                 </Text>
-                <Code block>{`Run the sed-report workflow with {profile: '${profile}', report: '${report?.key ?? ''}', period: '${effectivePeriod}'${effectiveVendor ? `, vendor: '${effectiveVendor}'` : ''}}`}</Code>
+                <Code
+                  block
+                >{`Run the sed-report workflow with {profile: '${profile}', report: '${report?.key ?? ''}', period: '${effectivePeriod}'${effectiveVendor ? `, vendor: '${effectiveVendor}'` : ''}}`}</Code>
               </Stack>
             )}
           </SectionCard>
@@ -300,7 +370,11 @@ export default function ReportsPage() {
                 onChange={(e) => setRequireComplete(e.currentTarget.checked)}
               />
               <Group>
-                <Button onClick={start} loading={running} disabled={!report || !effectivePeriod || formats.length === 0}>
+                <Button
+                  onClick={start}
+                  loading={running}
+                  disabled={!report || !effectivePeriod || formats.length === 0}
+                >
                   Build report
                 </Button>
                 {running ? (
@@ -315,7 +389,14 @@ export default function ReportsPage() {
               <ErrorState error={build.error ?? jobError} compact />
               {job?.status === 'failed' && job.error ? (
                 <ErrorState
-                  error={new ApiError(0, String(job.error.kind ?? 'internal'), String(job.error.message ?? 'Build failed'), job.error.details ?? null)}
+                  error={
+                    new ApiError(
+                      0,
+                      String(job.error.kind ?? 'internal'),
+                      String(job.error.message ?? 'Build failed'),
+                      job.error.details ?? null,
+                    )
+                  }
                   compact
                 />
               ) : null}
@@ -338,7 +419,9 @@ export default function ReportsPage() {
                     ))}
                     <Text size="xs" c="dimmed">
                       {`AI sections shown: ${result.readiness?.ai_sections_shown ?? 0} of ${result.readiness?.ai_sections_required ?? 0}`}
-                      {result.readiness?.omitted?.length ? ` · left out: ${result.readiness.omitted.map((o) => humanize(o.split(':')[0])).join(', ')}` : ''}
+                      {result.readiness?.omitted?.length
+                        ? ` · left out: ${result.readiness.omitted.map((o) => humanize(o.split(':')[0])).join(', ')}`
+                        : ''}
                     </Text>
                   </Stack>
                 </Alert>
@@ -348,19 +431,70 @@ export default function ReportsPage() {
         </Grid.Col>
       </Grid>
 
-      <SectionCard title="Recent artifacts" description="Newest first; files stay in the profile's out folder" count={catalog.data?.artifacts.length ?? null}>
-        <DataTable
-          rows={catalog.data?.artifacts}
-          columns={ARTIFACT_COLUMNS}
-          rowKey={(r) => r.artifact_id}
-          loading={catalog.loading}
-          error={catalog.error}
-          onRetry={catalog.reload}
-          emptyText="No reports built yet"
-          serverOrdered
-          pageSize={25}
-          minWidth={900}
-        />
+      <SectionCard
+        title="Recent artifacts"
+        description="Newest first; files stay in the profile's out folder"
+        count={catalog.data?.artifacts.length ?? null}
+        actions={
+          <ViewToggle mode={artifactView} onChange={setArtifactView} count={catalog.data?.artifacts.length ?? null} />
+        }
+      >
+        {artifactView === 'cards' ? (
+          <CardGrid
+            rows={catalog.data?.artifacts}
+            rowKey={(a) => a.artifact_id}
+            emptyText="No reports built yet"
+            renderCard={(a) => (
+              <a
+                href={artifactHref(a.artifact_id)}
+                download
+                className="sed-card"
+                aria-label={`Download ${a.file_name}`}
+              >
+                <CardBands
+                  head={
+                    <>
+                      <span className="sed-card-title">{`${a.report} · ${a.period}${a.vendor_id ? ` · ${a.vendor_id}` : ''}`}</span>
+                      <Group gap={4}>
+                        <Badge size="sm" variant="light" color="gray">
+                          {a.format}
+                        </Badge>
+                        <Badge size="sm" variant="light" color={a.ai_mode === 'draft' ? 'orange' : 'gray'}>
+                          {`AI ${a.ai_mode}`}
+                        </Badge>
+                      </Group>
+                    </>
+                  }
+                  story={a.file_name}
+                  foot={
+                    <>
+                      <span>
+                        <b>{formatDateTime(a.built_at)}</b>built
+                      </span>
+                      <span>
+                        <b>{a.omitted.length}</b>AI sections left out
+                      </span>
+                    </>
+                  }
+                />
+              </a>
+            )}
+          />
+        ) : null}
+        {artifactView === 'list' ? (
+          <DataTable
+            rows={catalog.data?.artifacts}
+            columns={ARTIFACT_COLUMNS}
+            rowKey={(r) => r.artifact_id}
+            loading={catalog.loading}
+            error={catalog.error}
+            onRetry={catalog.reload}
+            emptyText="No reports built yet"
+            serverOrdered
+            pageSize={25}
+            minWidth={900}
+          />
+        ) : null}
       </SectionCard>
     </Stack>
   );

@@ -1,0 +1,20 @@
+/* PANEL AND CARD (DESIGN.md 2.7). The panel fill, one hairline, one corner, sitting slightly forward. */
+.mantine-Card-root,
+.mantine-Paper-root[data-with-border] {
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-emboss);
+}
+.mantine-Card-root {
+  padding: var(--sed-card-pad);
+}
+
+/* An alert is a panel wearing one of the four meanings as a faint fill. */
+.mantine-Alert-root {
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+}
+.mantine-Alert-title {
+  font-size: var(--sed-fs-body);
+}

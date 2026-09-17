@@ -1,0 +1,37 @@
+/* READ-OUT FIGURE (DESIGN.md 2.4): a number with its label, as on KPI tiles and count cards. The label is small and
+   quiet (never all-caps), the number is the one figure size on tabular numerals, and a figure may wear one of the
+   three meanings (good, needs a look, bad) as its ink. */
+.sed-figure-label {
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+  color: var(--sed-tx-2);
+  text-transform: none;
+}
+.sed-figure {
+  font-size: var(--sed-fs-figure);
+  font-weight: var(--sed-weight-title);
+  line-height: var(--sed-lh-tight);
+  color: var(--sed-tx);
+  font-variant-numeric: tabular-nums;
+}
+.sed-figure[data-meaning='ok'] {
+  color: var(--sed-ok);
+}
+.sed-figure[data-meaning='warn'] {
+  color: var(--sed-warn);
+}
+.sed-figure[data-meaning='bad'] {
+  color: var(--sed-bad);
+}
+.sed-figure-icon {
+  flex: none;
+  width: var(--sed-face-md);
+  height: var(--sed-face-md);
+  color: var(--sed-tx-3);
+}
+.sed-figure-icon[data-meaning='warn'] {
+  color: var(--sed-warn);
+}
+.sed-figure-icon[data-meaning='accent'] {
+  color: var(--sed-accent-text);
+}

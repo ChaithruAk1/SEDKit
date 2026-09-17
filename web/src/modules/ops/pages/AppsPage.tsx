@@ -1,7 +1,7 @@
 import { Badge, Group, Stack, Text, TextInput } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
 import type { Schema } from '../../../api/types';
 import { useApi } from '../../../api/useApi';
@@ -11,17 +11,28 @@ import { PageHeader } from '../../../components/PageHeader';
 import { SectionCard } from '../../../components/SectionCard';
 import { useFilters, useSearchParam } from '../../../hooks/useFilters';
 import { appHref } from '../links';
+import { CardBands, CardGrid, ViewToggle, useViewMode } from '../../../components/CollectionView';
 
 type AppRow = Schema<'AppRow'>;
 
-const CRITICALITY_COLOR: Record<string, string> = { high: 'red', medium: 'orange', low: 'gray' };
-const LIFECYCLE_COLOR: Record<string, string> = { production: 'teal', sunset: 'orange', retired: 'gray', pilot: 'blue' };
+const CRITICALITY_COLOR: Record<string, string> = {
+  high: 'red',
+  medium: 'orange',
+  low: 'gray',
+};
+const LIFECYCLE_COLOR: Record<string, string> = {
+  production: 'teal',
+  sunset: 'orange',
+  retired: 'gray',
+  pilot: 'blue',
+};
 
 export default function AppsPage() {
   const { query, search } = useFilters();
   const navigate = useNavigate();
   const apps = useApi('/api/ops/apps', { query });
   const [needle, setNeedle] = useSearchParam('find', '');
+  const [view, setView] = useViewMode('ops.apps');
 
   const rows = useMemo(() => {
     const text = needle.trim().toLowerCase();
@@ -75,7 +86,11 @@ export default function AppsPage() {
           '–'
         ),
     },
-    { key: 'primary_vendor', header: 'Primary vendor', value: (a) => a.primary_vendor },
+    {
+      key: 'primary_vendor',
+      header: 'Primary vendor',
+      value: (a) => a.primary_vendor,
+    },
     {
       key: 'annual_license_cost_base',
       header: 'Licence cost / yr',
@@ -103,7 +118,11 @@ export default function AppsPage() {
       key: 'sla_pct_3m',
       header: 'SLA (3 m)',
       value: (a) => a.sla_pct_3m,
-      render: (a) => <Text size="sm" c={(a.sla_pct_3m ?? 100) < 85 ? 'red' : undefined}>{formatPct(a.sla_pct_3m)}</Text>,
+      render: (a) => (
+        <Text size="sm" c={(a.sla_pct_3m ?? 100) < 85 ? 'red' : undefined}>
+          {formatPct(a.sla_pct_3m)}
+        </Text>
+      ),
       align: 'right',
     },
     {
@@ -137,7 +156,10 @@ export default function AppsPage() {
 
   return (
     <Stack gap="md">
-      <PageHeader title="App 360" description="Portfolio grid. Open an application for tickets, changes, cost, contracts, licences, Jira and findings." />
+      <PageHeader
+        title="App 360"
+        description="Portfolio grid. Open an application for tickets, changes, cost, contracts, licences, Jira and findings."
+      />
       <SectionCard
         title="Applications"
         count={rows?.length ?? null}
@@ -151,23 +173,81 @@ export default function AppsPage() {
               onChange={(event) => setNeedle(event.currentTarget.value)}
               w={260}
             />
+            <ViewToggle mode={view} onChange={setView} count={rows?.length ?? null} />
           </Group>
         }
       >
-        <DataTable
-          rows={rows}
-          columns={columns}
-          rowKey={(a) => a.app_id}
-          loading={apps.loading}
-          error={apps.error}
-          onRetry={apps.reload}
-          onRowClick={(a) => navigate(appHref(a.app_id, search))}
-          rowLabel={(a) => `Open ${a.name}`}
-          initialSort={{ key: 'open_risks', dir: 'desc' }}
-          emptyText="No applications in scope"
-          pageSize={50}
-          minWidth={1200}
-        />
+        {view === 'cards' ? (
+          <CardGrid
+            rows={rows}
+            rowKey={(a) => a.app_id}
+            emptyText="No applications in scope"
+            renderCard={(a) => (
+              <Link to={appHref(a.app_id, search)} className="sed-card" aria-label={`Open ${a.name}`}>
+                <CardBands
+                  head={
+                    <>
+                      <span className="sed-card-title">{a.name}</span>
+                      <Group gap={4}>
+                        {a.criticality ? (
+                          <Badge size="sm" variant="light" color={CRITICALITY_COLOR[a.criticality] ?? 'gray'}>
+                            {a.criticality}
+                          </Badge>
+                        ) : null}
+                        {a.lifecycle ? (
+                          <Badge size="sm" variant="light" color={LIFECYCLE_COLOR[a.lifecycle] ?? 'gray'}>
+                            {a.lifecycle}
+                          </Badge>
+                        ) : null}
+                        {a.open_risks ? (
+                          <Badge size="sm" variant="light" color="red">
+                            {`${a.open_risks} open risks`}
+                          </Badge>
+                        ) : null}
+                      </Group>
+                    </>
+                  }
+                  story={[a.app_id, a.family, a.primary_vendor].filter(Boolean).join(' · ')}
+                  foot={
+                    <>
+                      <span>
+                        <b>{formatNumber(a.incidents_per_month_3m, 1)}</b>
+                        incidents / month
+                      </span>
+                      <span>
+                        <b>{formatPct(a.sla_pct_3m)}</b>SLA (3 m)
+                      </span>
+                      <span>
+                        <b>
+                          {formatMoney(a.annual_license_cost_base, {
+                            compact: true,
+                          })}
+                        </b>
+                        licences / yr
+                      </span>
+                    </>
+                  }
+                />
+              </Link>
+            )}
+          />
+        ) : null}
+        {view === 'list' ? (
+          <DataTable
+            rows={rows}
+            columns={columns}
+            rowKey={(a) => a.app_id}
+            loading={apps.loading}
+            error={apps.error}
+            onRetry={apps.reload}
+            onRowClick={(a) => navigate(appHref(a.app_id, search))}
+            rowLabel={(a) => `Open ${a.name}`}
+            initialSort={{ key: 'open_risks', dir: 'desc' }}
+            emptyText="No applications in scope"
+            pageSize={50}
+            minWidth={1200}
+          />
+        ) : null}
       </SectionCard>
     </Stack>
   );

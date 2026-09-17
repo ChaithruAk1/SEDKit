@@ -21,7 +21,7 @@ MODULE = Module(
     depends_on=("ops",),
     cli=(CliMount("delivery", "sed.modules.delivery.cli:app"),),
     api=ApiMount("sed.modules.delivery.api:router"),
-    nav=(NavItem("delivery.portfolio", "Delivery", "/delivery", 70, "chart-bar"),),
+    nav=(NavItem("delivery.portfolio", "Change Request", "/delivery", 70, "chart-bar"),),
     reports=(
         ReportDef(
             "delivery-status",

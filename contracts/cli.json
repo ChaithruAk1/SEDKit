@@ -993,6 +993,162 @@
     {
       "commands": [
         {
+          "help": "Remove a branding image; the dashboard falls back to the SED wordmark or no watermark.",
+          "name": "clear",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "asset",
+              "opts": [
+                "asset"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Set the logo shown at the top of the dashboard sidebar (stored in the data root's branding folder).",
+          "name": "logo",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "file",
+              "opts": [
+                "file"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Where the branding folder is and which images are set.",
+          "name": "show",
+          "params": [
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Set the title shown in the dashboard's top strip (stored in the data root's branding folder).",
+          "name": "title",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "text",
+              "opts": [
+                "text"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "Set the brand mark drawn faintly behind the sidebar's pages, for the light look or (--dark) the dark look.",
+          "name": "watermark",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "file",
+              "opts": [
+                "file"
+              ],
+              "required": true,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "dark",
+              "opts": [
+                "--dark"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "The dashboard logo, kept on this machine (never in the repo)",
+      "name": "branding"
+    },
+    {
+      "commands": [
+        {
           "help": "Save DATA_DIR/config/<rel_path> from a draft, validate the effective config, restore the old file on failure.",
           "name": "save-override",
           "params": [

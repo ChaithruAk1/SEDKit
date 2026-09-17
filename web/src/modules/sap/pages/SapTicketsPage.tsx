@@ -14,6 +14,7 @@ import { ProvenanceBadge } from '../../../components/ProvenanceBadge';
 import { SectionCard } from '../../../components/SectionCard';
 import { useFilters, useSearchParam } from '../../../hooks/useFilters';
 import { ticketHref } from '../links';
+import { Figure } from '../../../components/Figure';
 
 type AttentionRow = Schema<'SapAttentionRow'>;
 type PriorityRow = Schema<'SapSlaPriorityRow'>;
@@ -21,16 +22,7 @@ type SubcategoryRow = Schema<'SapAiSubcategoryRow'>;
 type AreaFlow = { area: string; label: string; arrived: number; closed: number; net: number };
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <Stack gap={0}>
-      <Text size="xs" c="dimmed" fw={600} tt="uppercase">
-        {label}
-      </Text>
-      <Text fz={22} fw={700}>
-        {value}
-      </Text>
-    </Stack>
-  );
+  return <Figure label={label} value={value} />;
 }
 
 export default function SapTicketsPage() {

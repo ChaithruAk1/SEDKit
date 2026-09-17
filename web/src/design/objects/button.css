@@ -1,0 +1,52 @@
+/* BUTTON (DESIGN.md 2.1). Three kinds and no fourth: quiet (everything that is not the main action), primary (the one
+   main action: accent fill, full curve) and danger (deleting). As tall as its words; it rises on hover, settles when
+   pressed, fades when unavailable and shows a ring for the keyboard. */
+.mantine-Button-root {
+  height: auto;
+  min-height: 0;
+  padding: var(--sed-btn-pad);
+  border-radius: var(--sed-r1);
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+  box-shadow: var(--sed-emboss);
+  transition:
+    transform var(--sed-d1) var(--sed-ease),
+    box-shadow var(--sed-d2) var(--sed-ease),
+    border-color var(--sed-d1) var(--sed-ease),
+    color var(--sed-d1) var(--sed-ease);
+}
+.mantine-Button-root:is([data-variant='default'], [data-variant='light'], [data-variant='outline'], [data-variant='subtle'], [data-variant='transparent'], [data-variant='white']) {
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+}
+.mantine-Button-root:is([data-variant='default'], [data-variant='light'], [data-variant='outline'], [data-variant='subtle'], [data-variant='transparent'], [data-variant='white']):hover:not(:disabled, [data-disabled]) {
+  background: var(--sed-panel);
+  border-color: var(--sed-accent-line);
+  color: var(--sed-accent-text);
+}
+/* The primary kind: filled is Mantine's default variant, so a button with no variant is the primary one. */
+.mantine-Button-root:is(:not([data-variant]), [data-variant='filled']) {
+  border-radius: var(--sed-pill);
+}
+.mantine-Button-root:hover:not(:disabled, [data-disabled], [data-loading]) {
+  transform: translateY(var(--sed-tile-lift));
+  box-shadow: var(--sed-emboss-hover);
+}
+.mantine-Button-root:active:not(:disabled, [data-disabled]) {
+  transform: translateY(var(--sed-tile-press));
+  box-shadow: var(--sed-emboss);
+}
+.mantine-Button-root:disabled,
+.mantine-Button-root[data-disabled] {
+  opacity: var(--sed-faded);
+  box-shadow: none;
+  transform: none;
+}
+.mantine-Button-root:focus-visible {
+  outline: var(--sed-focus) solid var(--sed-accent);
+  outline-offset: var(--sed-focus);
+}
+.mantine-Button-section svg {
+  width: var(--sed-ic-sm);
+  height: var(--sed-ic-sm);
+}

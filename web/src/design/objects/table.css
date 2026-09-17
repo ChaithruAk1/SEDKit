@@ -1,0 +1,31 @@
+/* TABLE (DESIGN.md 2.5). One skin: the panel fill, one row line, a faint line between columns, the row tint on hover,
+   header cells on the panel fill in the quiet ink, numbers right-aligned on tabular figures. No stripes. */
+.mantine-Table-table {
+  --table-border-color: var(--sed-line);
+  --table-striped-color: transparent;
+  --table-highlight-on-hover-color: var(--sed-row-hover);
+  background: var(--sed-panel);
+  font-size: var(--sed-fs-body);
+}
+.mantine-Table-th {
+  padding: var(--sed-cell-pad-head);
+  background: var(--sed-panel);
+  color: var(--sed-tx-2);
+  font-size: var(--sed-fs-tiny);
+  font-weight: var(--sed-weight-strong);
+  border-bottom: var(--sed-hairline) solid var(--sed-line);
+}
+.mantine-Table-td {
+  padding: var(--sed-cell-pad);
+  color: var(--sed-tx-1);
+}
+.mantine-Table-th + .mantine-Table-th,
+.mantine-Table-td + .mantine-Table-td {
+  border-left: var(--sed-hairline) solid var(--sed-line-faint);
+}
+.mantine-Table-tbody .mantine-Table-tr:hover {
+  background: var(--sed-row-hover);
+}
+.mantine-Table-tbody .mantine-Table-tr:last-child .mantine-Table-td {
+  border-bottom: none;
+}
