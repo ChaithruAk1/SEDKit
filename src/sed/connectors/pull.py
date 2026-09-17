@@ -2,9 +2,11 @@
 
 Delta sources (ServiceNow tables, Jira, Confluence) read from their watermark (`meta`
 `connector.<connector>.<source>.watermark`, the newest update time already pulled) minus `overlap_minutes`; `--since`
-overrides it and `--full` ignores it. SharePoint lists are full snapshots. The watermark advances only after the file
-is written, and only to the newest update actually pulled (a row cap therefore resumes where it stopped). `--dry-run`
-reads but writes nothing. Every pull is appended to `logs/pulls.jsonl`.
+overrides it and `--full` ignores it. SharePoint lists are full snapshots; SharePoint document libraries (`libraries`)
+download the matching files changed since the watermark under their own names. The watermark advances only after the
+files are written, and only to the newest update actually pulled (a row or file cap therefore resumes where it
+stopped). `--dry-run` reads but writes nothing. Every pull is appended to `logs/pulls.jsonl`. `--import` runs the
+normal import on the files written (`sed.sources.pull_and_import`).
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from typing import Any
 
 from sed import db
 from sed.connectors import sources as fetchers
-from sed.connectors.config import CONNECTORS, ConnectorBase, load_config
+from sed.connectors.config import CONNECTORS, ConnectorBase, SharePointLibrary, load_config
 from sed.connectors.credentials import get_credential
 from sed.connectors.http import Client, HttpTransport, Transport
 from sed.errors import PreconditionFailed, ValidationFailed
@@ -89,7 +91,9 @@ def pull(
         data_class = db.get_meta(conn, "data_class") or "synthetic"
         if data_class == "synthetic" and not allow_synthetic:
             raise PreconditionFailed("Connectors pull real systems: use the real profile (the synthetic one refuses)")
-        wanted = [s for s in cfg.sources if source is None or s.key == source]
+        wanted: list[Any] = [s for s in cfg.sources if source is None or s.key == source]
+        if connector == "sharepoint":
+            wanted += [lib for lib in cfg.libraries if source is None or lib.key == source]
         if not wanted:
             raise ValidationFailed(f"Connector '{connector}' has no source '{source}'")
         defaults = config.defaults
@@ -123,18 +127,32 @@ def pull(
             start: datetime | None = None
             if since:
                 start = _parse_since(since)
-            elif stored and not full:
+            elif stored and not full and not getattr(src, "snapshot", False):
                 start = datetime.fromisoformat(stored) - timedelta(minutes=defaults.overlap_minutes)
-            fetched, target, text = _fetch(client, connector, cfg, src, start, defaults, paths, stamp)
-            count = len(fetched.pages) if connector == "confluence" else len(fetched.rows)
-            written = None
+            library = isinstance(src, SharePointLibrary)
+            if library:
+                fetched = fetchers.fetch_library(client, src, start, defaults.page_size)
+                count = len(fetched.files)
+            else:
+                fetched, target, text = _fetch(client, connector, cfg, src, start, defaults, paths, stamp)
+                count = len(fetched.pages) if connector == "confluence" else len(fetched.rows)
+            if getattr(src, "snapshot", False) and fetched.capped:
+                raise PreconditionFailed(
+                    f"{connector}/{src.key} is a snapshot source and reached max_rows: raise defaults.max_rows so the "
+                    "whole table fits (a partial snapshot would mark the missing rows deleted)"
+                )
+            files: list[str] = []
             if not dry_run and count:
-                if connector == "confluence":
+                if library:
+                    files = _download_library(client, src, fetched.files, paths.inbox)
+                elif connector == "confluence":
                     for name, page_text in text.items():
                         _write(target / name, page_text)
+                    files = [target.name]
                 else:
                     _write(target, text)
-                written = target.name
+                    files = [target.name]
+            written = files[0] if files else None
             advanced = None
             if not dry_run and fetched.newest is not None:
                 advanced = fetched.newest.astimezone(UTC).isoformat()
@@ -150,6 +168,7 @@ def pull(
                 "rows": count,
                 "capped": fetched.capped,
                 "file": written,
+                "files": files,
                 "watermark": advanced if not dry_run else stored,
                 "dry_run": dry_run,
             }
@@ -165,6 +184,24 @@ def pull(
         "pages": sum(c.pages for c in clients.values()),
         "next": "uv run sed import --inbox" if any(r["file"] for r in results) else None,
     }
+
+
+def _download_library(client: Client, src: SharePointLibrary, files: list[Any], inbox: Path) -> list[str]:
+    """Download each listed file into the inbox under its sanitised name (never overwriting); types SED cannot read
+    are skipped."""
+    from sed.ingest.upload import MAX_BYTES, TABLE_SUFFIXES, free_path, safe_name, write_atomic
+
+    inbox.mkdir(parents=True, exist_ok=True)
+    written = []
+    for item in files:
+        name = safe_name(item.name)
+        if Path(name).suffix.lower() not in TABLE_SUFFIXES:
+            continue
+        content = client.download(item.download_url, src.download_hosts, MAX_BYTES)
+        target = free_path(inbox, name)
+        write_atomic(target, content)
+        written.append(target.name)
+    return written
 
 
 def _fetch(client, connector, cfg, src, start, defaults, paths, stamp) -> tuple[Any, Path, Any]:

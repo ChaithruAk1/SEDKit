@@ -6,15 +6,23 @@ through `Client.get`; the orchestration in `pull.py` writes files and watermarks
 
 from __future__ import annotations
 
+import fnmatch
 import html
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, quote, urlsplit
 from zoneinfo import ZoneInfo
 
-from sed.connectors.config import ConfluenceSource, JiraSource, SapSource, ServiceNowSource, SharePointSource
+from sed.connectors.config import (
+    ConfluenceSource,
+    JiraSource,
+    SapSource,
+    ServiceNowSource,
+    SharePointLibrary,
+    SharePointSource,
+)
 from sed.connectors.http import Client
 from sed.errors import PreconditionFailed
 
@@ -28,6 +36,15 @@ class Fetched:
     newest: datetime | None = None
     capped: bool = False
     pages: list[dict[str, Any]] = field(default_factory=list)  # Confluence pages (not tabular)
+    files: list[LibraryFile] = field(default_factory=list)  # document library files to download
+
+
+@dataclass(frozen=True)
+class LibraryFile:
+    name: str
+    modified: datetime
+    size: int
+    download_url: str
 
 
 def _local(value: datetime, tz: str) -> str:
@@ -225,6 +242,50 @@ def fetch_sharepoint(client: Client, source: SharePointSource, page_size: int, m
             raise PreconditionFailed("SharePoint returned a next page on another host; stopped")
         path = parts.path.removeprefix(base.path.rstrip("/"))
         params = {k: v[0] for k, v in parse_qs(parts.query).items()}
+
+
+def _next_path(client: Client, next_link: str) -> tuple[str, dict[str, Any]]:
+    parts = urlsplit(next_link)
+    base = urlsplit(client.base_url)
+    if parts.netloc != base.netloc:
+        raise PreconditionFailed("SharePoint returned a next page on another host; stopped")
+    return parts.path.removeprefix(base.path.rstrip("/")), {k: v[0] for k, v in parse_qs(parts.query).items()}
+
+
+def fetch_library(client: Client, source: SharePointLibrary, since: datetime | None, page_size: int) -> Fetched:
+    """GET /drives/<drive>/root:/<folder>:/children: the files of one document library folder whose name matches the
+    source patterns and that changed after `since`, oldest first, at most `max_files` (the watermark then resumes).
+    Only the listing is read here; `pull` downloads each file through its pre-authenticated link."""
+    folder = source.folder.strip("/")
+    drive = quote(source.drive_id, safe="!")
+    path = f"/drives/{drive}/root:/{quote(folder)}:/children" if folder else f"/drives/{drive}/root/children"
+    params: dict[str, Any] = {"$top": page_size}
+    matches: list[LibraryFile] = []
+    patterns = [p.lower() for p in source.patterns]
+    while True:
+        body = client.get(path, params) or {}
+        values = body.get("value")
+        if not isinstance(values, list):
+            raise PreconditionFailed(f"SharePoint library {source.key}: unexpected response (no value list)")
+        for item in values:
+            name = str(item.get("name") or "")
+            if "file" not in item or not any(fnmatch.fnmatch(name.lower(), p) for p in patterns):
+                continue
+            modified = odata_time(item.get("lastModifiedDateTime"))
+            if modified is None or (since is not None and modified <= since):
+                continue
+            url = item.get("@microsoft.graph.downloadUrl")
+            if not isinstance(url, str) or not url:
+                raise PreconditionFailed(f"SharePoint library {source.key}: no download link for a matching file")
+            matches.append(LibraryFile(name, modified, int(item.get("size") or 0), url))
+        next_link = body.get("@odata.nextLink")
+        if not next_link:
+            break
+        path, params = _next_path(client, next_link)
+    matches.sort(key=lambda f: (f.modified, f.name))
+    capped = len(matches) > source.max_files
+    matches = matches[: source.max_files]
+    return Fetched(headers=[], rows=[], newest=matches[-1].modified if matches else None, capped=capped, files=matches)
 
 
 # -- Confluence content search ---------------------------------------------------------------------------------------

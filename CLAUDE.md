@@ -63,7 +63,8 @@ such a build, work in the main checkout as usual. Never put high-entropy literal
 - `src/sed/` — core package:
   - `cli.py` / `cli_common.py`, `paths.py` (profiles/DATA_DIR), `settings.py` (layered config), `db.py` (connections,
     `write_tx` = BEGIN IMMEDIATE, migrations, backups), `schema/NNN_*.sql`, `doctor.py`, `bootstrap.py`.
-  - Engines: `ingest/`, `reports/`, `ai/`, `api/`.
+  - Engines: `ingest/` (with `upload.py` for dashboard uploads), `reports/`, `ai/`, `api/`, `connectors/` (read-only
+    pulls) and `sources.py` (every source by API or by file; `docs/sources.md`).
   - Registry: `modules/`.
   - Ops module: `modules/ops/`; legacy ops code in `metrics.py`, `analytics.py`, `synth/`, `ingest/targets.py`.
   - SAP module: `modules/sap/` (SAP scope over ops tickets; see its `CLAUDE.md`).

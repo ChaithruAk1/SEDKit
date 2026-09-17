@@ -16,8 +16,10 @@ bundled and `npm run check` enforces it.
 
 ## Rules
 - **Contract first.** Every request and response type comes from `src/api/schema.d.ts` through `src/api/types.ts`.
-  Call the API only with `apiGet`/`apiPost` (`src/api/client.ts`) or the hooks in `src/api/useApi.ts`; URLs are
-  relative `/api/...` paths, and templated routes take `{params: {...}}` (GET and POST).
+  Call the API only with `apiGet`/`apiPost`/`apiUpload` (`src/api/client.ts`) or the hooks in `src/api/useApi.ts`;
+  URLs are relative `/api/...` paths, and templated routes take `{params: {...}}` (GET and POST). Background jobs
+  (report builds, uploads, pulls) are polled with `useJob` (`src/api/useJob.ts`); their fixtures share
+  `src/api/fixtures/jobs.ts`.
 - **Token.** POSTs send `X-SED-Token` from `<meta name="sed-token" content="__SED_TOKEN__">`, which `sed serve` fills in
   per launch. Never log the token, put it in a URL, or store it.
 - **Errors.** Non-2xx responses become `ApiError` from the ErrorEnvelope (`kind`, `message`, `details`); show them with

@@ -13,6 +13,7 @@ import { formatDate, formatDateTime, formatInt, humanize } from '../../component
 import { PageHeader } from '../../components/PageHeader';
 import { SectionCard } from '../../components/SectionCard';
 import { useSearchParam } from '../../hooks/useFilters';
+import { SourcesCard, UploadCard } from './DataSources';
 
 type ImportRow = Schema<'ImportRow'>;
 type UnmappedRow = Schema<'UnmappedRow'>;
@@ -96,6 +97,7 @@ export default function DataPage() {
   const [assigning, setAssigning] = useState<UnmappedRow | null>(null);
 
   const imports = useApi('/api/imports', { query: { limit: 100 } });
+  const sources = useApi('/api/sources');
   const unmapped = useApi('/api/dq/unmapped', { query: { kind: kind === 'all' ? null : kind, limit: 500 } });
   const allUnmapped = useApi('/api/dq/unmapped', { query: { limit: 5000 } });
 
@@ -163,13 +165,26 @@ export default function DataPage() {
     allUnmapped.reload();
     imports.reload();
   };
+  const afterImport = () => {
+    refresh();
+    sources.reload();
+    meta.reload();
+  };
 
   return (
     <Stack gap="md">
       <PageHeader
         title="Data"
-        description="Import batches, data quality and unmapped values. Assigning an alias re-links existing rows."
+        description="Sources, uploads, import batches, data quality and unmapped values. Assigning an alias re-links existing rows."
       />
+      <Grid gap="md">
+        <Grid.Col span={{ base: 12, lg: 8 }}>
+          <SourcesCard sources={sources.data} loading={sources.loading} error={sources.error} onRetry={sources.reload} onChanged={afterImport} />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, lg: 4 }}>
+          <UploadCard sources={sources.data} onImported={afterImport} />
+        </Grid.Col>
+      </Grid>
       <Grid gap="md">
         <Grid.Col span={{ base: 12, lg: 4 }}>
           <SectionCard title="Freshness" description="Newest data per source">
@@ -220,7 +235,7 @@ export default function DataPage() {
           error={imports.error}
           onRetry={imports.reload}
           emptyText="No imports yet"
-          emptyDescription="Drop exports in the inbox and run `sed import --inbox`."
+          emptyDescription="Upload an export above, pull a connector, or drop exports in the inbox and run `sed import --inbox`."
           pageSize={25}
           minWidth={1100}
         />

@@ -1,4 +1,5 @@
-"""`sed pull ...` (connectors) and `sed schedule ...` (weekly automation files)."""
+"""`sed pull ...` (connectors), `sed sources` (every source by API or by file) and `sed schedule ...` (weekly automation
+files)."""
 
 from __future__ import annotations
 
@@ -23,22 +24,38 @@ def _pull_command(connector: str) -> None:
         ] = None,
         full: Annotated[bool, typer.Option("--full", help="Ignore the watermark and pull everything")] = False,
         dry_run: Annotated[bool, typer.Option("--dry-run", help="Read and count, write nothing")] = False,
+        run_import: Annotated[
+            bool, typer.Option("--import", help="Import the files written (same as `sed import` on them)")
+        ] = False,
         profile: ProfileOpt = None,
         data_dir: DataDirOpt = None,
         as_json: JsonOpt = False,
     ) -> None:
         from sed.connectors.pull import pull
+        from sed.errors import ValidationFailed
+        from sed.sources import pull_and_import
 
-        result = pull(paths_for(profile, data_dir), connector, source=source, since=since, full=full, dry_run=dry_run)
+        paths = paths_for(profile, data_dir)
+        if run_import and dry_run:
+            raise ValidationFailed("--import cannot be combined with --dry-run")
+        if run_import:
+            combined = pull_and_import(paths, connector, source=source, since=since, full=full)
+            result = {**combined["pull"], "import": combined["import"]}
+        else:
+            result = pull(paths, connector, source=source, since=since, full=full, dry_run=dry_run)
 
         def human(p: dict) -> None:
             for s in p["sources"]:
-                capped = " (row cap reached)" if s["capped"] else ""
+                capped = " (cap reached)" if s["capped"] else ""
+                written = ", ".join(s.get("files") or []) or "nothing written"
+                console().print(f"{p['connector']}/{s['source']}: {s['rows']} rows{capped} -> {written}", markup=False)
+            summary = (p.get("import") or {}).get("summary")
+            if summary:
                 console().print(
-                    f"{p['connector']}/{s['source']}: {s['rows']} rows{capped} -> {s['file'] or 'nothing written'}",
+                    f"imported {summary['imported']} files, {summary['errors']} errors, {summary['rows_read']} rows",
                     markup=False,
                 )
-            if p["next"]:
+            elif p["next"]:
                 console().print(f"next: {p['next']}", markup=False)
 
         emit(result, as_json, human)
@@ -57,6 +74,28 @@ def pull_status(profile: ProfileOpt = None, data_dir: DataDirOpt = None, as_json
     from sed.connectors.pull import status
 
     emit(status(paths_for(profile, data_dir)), as_json)
+
+
+def sources_command(
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Every export of the enabled modules with the connector sources that can pull it and its last import, and each
+    connector's readiness (enabled, credential found, profile). No network, no secret values."""
+    from sed.sources import overview
+
+    result = overview(paths_for(profile, data_dir))
+
+    def human(p: dict) -> None:
+        for c in p["connectors"]:
+            state = "ready" if c["can_pull"] else c["reason"]
+            console().print(f"{c['connector']:<11} {state}", markup=False)
+        for f in p["files"]:
+            by_api = ", ".join(f["connector_sources"]) or "file only"
+            console().print(f"  {f['mapping']:<34} {by_api:<40} last: {f['last_imported_at'] or 'never'}", markup=False)
+
+    emit(result, as_json, human)
 
 
 @schedule_app.command("write")

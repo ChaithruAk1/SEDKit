@@ -923,6 +923,125 @@
         "title": "ChangeRow",
         "type": "object"
       },
+      "ConnectorSourceRow": {
+        "additionalProperties": false,
+        "properties": {
+          "credential": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential"
+          },
+          "credential_found_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential Found In"
+          },
+          "kind": {
+            "enum": [
+              "table",
+              "query",
+              "list",
+              "library",
+              "space",
+              "odata"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last File"
+          },
+          "last_pull_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pull At"
+          },
+          "last_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Rows"
+          },
+          "mappings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mappings",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warning"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "source",
+          "kind",
+          "mappings",
+          "watermark",
+          "last_pull_at",
+          "last_rows",
+          "last_file",
+          "credential",
+          "credential_found_in",
+          "warning"
+        ],
+        "title": "ConnectorSourceRow",
+        "type": "object"
+      },
       "Correction": {
         "additionalProperties": false,
         "properties": {
@@ -1881,6 +2000,99 @@
           "fact_key"
         ],
         "title": "Evidence",
+        "type": "object"
+      },
+      "FileSourceRow": {
+        "additionalProperties": false,
+        "properties": {
+          "connector_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Connector Sources",
+            "type": "array"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "last_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last File"
+          },
+          "last_imported_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Imported At"
+          },
+          "last_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status"
+          },
+          "load_mode": {
+            "title": "Load Mode",
+            "type": "string"
+          },
+          "mapping": {
+            "title": "Mapping",
+            "type": "string"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
+          },
+          "patterns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Patterns",
+            "type": "array"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mapping",
+          "module",
+          "target",
+          "load_mode",
+          "format",
+          "patterns",
+          "connector_sources",
+          "last_file",
+          "last_status",
+          "last_imported_at"
+        ],
+        "title": "FileSourceRow",
         "type": "object"
       },
       "FilterOption": {
@@ -3442,6 +3654,30 @@
           "quarters"
         ],
         "title": "PeriodsOut",
+        "type": "object"
+      },
+      "PullIn": {
+        "additionalProperties": false,
+        "properties": {
+          "full": {
+            "default": false,
+            "title": "Full",
+            "type": "boolean"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_]{1,40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "title": "PullIn",
         "type": "object"
       },
       "ReadinessOut": {
@@ -7034,6 +7270,106 @@
         "title": "SlaRow",
         "type": "object"
       },
+      "SourceConnectorRow": {
+        "additionalProperties": false,
+        "properties": {
+          "can_pull": {
+            "title": "Can Pull",
+            "type": "boolean"
+          },
+          "connector": {
+            "title": "Connector",
+            "type": "string"
+          },
+          "credential": {
+            "title": "Credential",
+            "type": "string"
+          },
+          "credential_found_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential Found In"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorSourceRow"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "connector",
+          "enabled",
+          "credential",
+          "credential_found_in",
+          "can_pull",
+          "reason",
+          "sources"
+        ],
+        "title": "SourceConnectorRow",
+        "type": "object"
+      },
+      "SourcesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "connectors": {
+            "items": {
+              "$ref": "#/components/schemas/SourceConnectorRow"
+            },
+            "title": "Connectors",
+            "type": "array"
+          },
+          "data_class": {
+            "title": "Data Class",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileSourceRow"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "upload": {
+            "$ref": "#/components/schemas/UploadInfo"
+          }
+        },
+        "required": [
+          "profile",
+          "data_class",
+          "upload",
+          "connectors",
+          "files"
+        ],
+        "title": "SourcesOut",
+        "type": "object"
+      },
       "SubcategoryOption": {
         "additionalProperties": false,
         "properties": {
@@ -7795,6 +8131,33 @@
           "last_batch_id"
         ],
         "title": "UnmappedRow",
+        "type": "object"
+      },
+      "UploadInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "max_bytes": {
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "needs_confirmation": {
+            "title": "Needs Confirmation",
+            "type": "boolean"
+          },
+          "suffixes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suffixes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suffixes",
+          "max_bytes",
+          "needs_confirmation"
+        ],
+        "title": "UploadInfo",
         "type": "object"
       },
       "VendorPoint": {
@@ -9356,6 +9719,125 @@
           }
         },
         "summary": "Imports",
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/imports/upload": {
+      "post": {
+        "operationId": "core_upload",
+        "parameters": [
+          {
+            "description": "The file name, e.g. incident_2026-08.csv",
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "description": "The file name, e.g. incident_2026-08.csv",
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Synthetic profile only: the file is a hand-made fictional fixture",
+            "in": "query",
+            "name": "synthetic_ok",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Synthetic profile only: the file is a hand-made fictional fixture",
+              "title": "Synthetic Ok",
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing or invalid X-SED-Token"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Upload",
         "tags": [
           "core"
         ]
@@ -14424,6 +14906,179 @@
         "summary": "Overview",
         "tags": [
           "sap"
+        ]
+      }
+    },
+    "/api/sources": {
+      "get": {
+        "operationId": "core_sources",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Sources",
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/sources/{connector}/pull": {
+      "post": {
+        "operationId": "core_pull_now",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "title": "Connector",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PullIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing or invalid X-SED-Token"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Pull Now",
+        "tags": [
+          "core"
         ]
       }
     }

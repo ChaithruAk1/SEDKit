@@ -191,6 +191,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/imports/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload */
+        post: operations["core_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -735,6 +752,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sources */
+        get: operations["core_sources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sources/{connector}/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pull Now */
+        post: operations["core_pull_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -994,6 +1045,32 @@ export interface components {
             /** Start Date */
             start_date: string | null;
         };
+        /** ConnectorSourceRow */
+        ConnectorSourceRow: {
+            /** Credential */
+            credential: string | null;
+            /** Credential Found In */
+            credential_found_in: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "table" | "query" | "list" | "library" | "space" | "odata";
+            /** Last File */
+            last_file: string | null;
+            /** Last Pull At */
+            last_pull_at: string | null;
+            /** Last Rows */
+            last_rows: number | null;
+            /** Mappings */
+            mappings: string[];
+            /** Source */
+            source: string;
+            /** Warning */
+            warning: string | null;
+            /** Watermark */
+            watermark: string | null;
+        };
         /** Correction */
         Correction: {
             /** Category */
@@ -1249,6 +1326,29 @@ export interface components {
             fact_key: string;
             /** Value */
             value?: unknown;
+        };
+        /** FileSourceRow */
+        FileSourceRow: {
+            /** Connector Sources */
+            connector_sources: string[];
+            /** Format */
+            format: string;
+            /** Last File */
+            last_file: string | null;
+            /** Last Imported At */
+            last_imported_at: string | null;
+            /** Last Status */
+            last_status: string | null;
+            /** Load Mode */
+            load_mode: string;
+            /** Mapping */
+            mapping: string;
+            /** Module */
+            module: string | null;
+            /** Patterns */
+            patterns: string[];
+            /** Target */
+            target: string;
         };
         /** FilterOption */
         FilterOption: {
@@ -1686,6 +1786,16 @@ export interface components {
             quarters: string[];
             /** Weeks */
             weeks: string[];
+        };
+        /** PullIn */
+        PullIn: {
+            /**
+             * Full
+             * @default false
+             */
+            full: boolean;
+            /** Source */
+            source?: string | null;
         };
         /** ReadinessOut */
         ReadinessOut: {
@@ -2705,6 +2815,35 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** SourceConnectorRow */
+        SourceConnectorRow: {
+            /** Can Pull */
+            can_pull: boolean;
+            /** Connector */
+            connector: string;
+            /** Credential */
+            credential: string;
+            /** Credential Found In */
+            credential_found_in: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason: string | null;
+            /** Sources */
+            sources: components["schemas"]["ConnectorSourceRow"][];
+        };
+        /** SourcesOut */
+        SourcesOut: {
+            /** Connectors */
+            connectors: components["schemas"]["SourceConnectorRow"][];
+            /** Data Class */
+            data_class: string;
+            /** Files */
+            files: components["schemas"]["FileSourceRow"][];
+            /** Profile */
+            profile: string;
+            upload: components["schemas"]["UploadInfo"];
+        };
         /** SubcategoryOption */
         SubcategoryOption: {
             /** Code */
@@ -2868,6 +3007,15 @@ export interface components {
             score: number | null;
             /** Suggestion */
             suggestion: string | null;
+        };
+        /** UploadInfo */
+        UploadInfo: {
+            /** Max Bytes */
+            max_bytes: number;
+            /** Needs Confirmation */
+            needs_confirmation: boolean;
+            /** Suffixes */
+            suffixes: string[];
         };
         /** VendorPoint */
         VendorPoint: {
@@ -3712,6 +3860,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportsOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_upload: {
+        parameters: {
+            query: {
+                /** @description The file name, e.g. incident_2026-08.csv */
+                name: string;
+                /** @description Synthetic profile only: the file is a hand-made fictional fixture */
+                synthetic_ok?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -6154,6 +6385,151 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SapOverview"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_sources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourcesOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_pull_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */

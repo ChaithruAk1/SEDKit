@@ -238,10 +238,23 @@ the module's tests). Details: `docs/modules.md`.
   (recurring issues, risks) appear in the weekly report (AI findings sheet and slide); `--ai none` leaves both out.
   See `docs/ai/walking-skeleton-runbook.md`.
 
+## Every source by API or by file
+
+Each export SED reads (ServiceNow, Jira, Confluence, Excel and SharePoint workbooks, MS Project plans, SAP ChaRM,
+transports and IDocs) can come either way, and both end in the same import:
+- **By API**, when access is given: `uv run sed pull <connector> --import --profile real --json`, or **Pull now** on
+  `#/data`. SharePoint document libraries (plans, RAID logs, cost and contract workbooks) are pulled as files.
+- **By file**: upload the export on `#/data` (a Confluence space export as a `.zip`), or drop it into the inbox and run
+  `sed import --inbox`.
+
+`uv run sed sources --profile real --json` and the Sources card on `#/data` show, for every export, the connector
+sources configured for it, whether each connector can pull now, and the last import. The full source matrix with the
+connector settings and export recipes per export: `docs/sources.md`.
+
 ## Automation and connectors
 
 - `uv run sed pull servicenow|jira|sharepoint|confluence|sap --profile real` reads the APIs with a read-only account and
-  writes export-shaped files into the inbox; `sed import --inbox` runs unchanged. Secrets live in the Windows Credential
+  writes export-shaped files into the inbox; `sed import --inbox` (or `--import` on the pull) runs unchanged. Secrets live in the Windows Credential
   Manager, an environment variable or the profile's `secret` folder, never in config. `sed pull status` and
   `sed doctor` check the setup without calling the API.
 - `uv run sed schedule write --profile real` writes a weekly script and a Task Scheduler definition into the data
@@ -270,3 +283,4 @@ headless spike): `docs/real-data-onboarding.md`.
 | M6 | Automation & connectors | built; real connector setup and the scheduled run pending |
 | M7 | AI-native SDLC: delivery module (D1), AI drafts for stories, ADRs, test plans and release notes (D2), app factory (D3) | built |
 | SAP S5 | SAP connectivity (`sed pull sap`), last wave | built; SAP services, technical user and reconciliation pending |
+| W8 | Every source by API or by file: dashboard upload, Pull now, SharePoint document libraries, source matrix | built; real connector access pending |

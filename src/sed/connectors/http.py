@@ -1,4 +1,5 @@
-"""Read-only HTTP for connectors: GET only, JSON responses, retries with backoff, a pause between pages, row caps.
+"""Read-only HTTP for connectors: GET only, JSON responses (and capped file downloads for document libraries), retries
+with backoff, a pause between pages, row caps.
 
 `HttpTransport` uses httpx when it is installed (with truststore for the Windows certificate store behind TLS
 inspection, when available) and the standard library otherwise, so a work laptop needs no extra packages.
@@ -30,8 +31,32 @@ class Response:
     body: Any  # parsed JSON
 
 
+@dataclass(frozen=True)
+class BytesResponse:
+    status: int
+    headers: dict[str, str]
+    content: bytes
+
+
 class Transport(Protocol):
     def get(self, url: str, params: dict[str, Any], headers: dict[str, str]) -> Response: ...
+
+    def get_bytes(self, url: str, headers: dict[str, str], max_bytes: int) -> BytesResponse: ...
+
+
+def _verify() -> Any:
+    try:
+        import ssl
+
+        import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except ImportError:
+        return True
+
+
+def _too_large(url: str, max_bytes: int) -> PreconditionFailed:
+    return PreconditionFailed(f"{_safe(url)} is larger than {max_bytes // (1024 * 1024)} MB; stopped")
 
 
 class HttpTransport:
@@ -44,17 +69,36 @@ class HttpTransport:
             import httpx
         except ImportError:
             return self._urllib(url, params, headers)
-        verify: Any = True
-        try:
-            import ssl
-
-            import truststore
-
-            verify = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        except ImportError:
-            pass
-        response = httpx.get(url, params=params, headers=headers, timeout=self.timeout, verify=verify)
+        response = httpx.get(url, params=params, headers=headers, timeout=self.timeout, verify=_verify())
         return Response(response.status_code, dict(response.headers), _json(response.content, url))
+
+    def get_bytes(self, url: str, headers: dict[str, str], max_bytes: int) -> BytesResponse:
+        """A file download (no redirects followed), read in chunks and stopped past max_bytes."""
+        headers = {"User-Agent": USER_AGENT, **headers}
+        try:
+            import httpx
+        except ImportError:
+            return self._urllib_bytes(url, headers, max_bytes)
+        with httpx.stream("GET", url, headers=headers, timeout=self.timeout, verify=_verify()) as response:
+            chunks: list[bytes] = []
+            size = 0
+            for chunk in response.iter_bytes():
+                size += len(chunk)
+                if size > max_bytes:
+                    raise _too_large(url, max_bytes)
+                chunks.append(chunk)
+            return BytesResponse(response.status_code, dict(response.headers), b"".join(chunks))
+
+    def _urllib_bytes(self, url: str, headers: dict[str, str], max_bytes: int) -> BytesResponse:
+        request = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                data = response.read(max_bytes + 1)
+                if len(data) > max_bytes:
+                    raise _too_large(url, max_bytes)
+                return BytesResponse(response.status, dict(response.headers), data)
+        except urllib.error.HTTPError as exc:
+            return BytesResponse(exc.code, dict(exc.headers or {}), b"")
 
     def _urllib(self, url: str, params: dict[str, Any], headers: dict[str, str]) -> Response:
         query = urllib.parse.urlencode(params)
@@ -112,6 +156,18 @@ class RecordedTransport:
                 )
         raise ValidationFailed(f"No recorded response for GET {path} {json.dumps(params, sort_keys=True)}")
 
+    def get_bytes(self, url: str, headers: dict[str, str], max_bytes: int) -> BytesResponse:
+        """Recorded downloads: `{"download": "<full url>", "status": 200, "text": "..."}` (UTF-8 content)."""
+        self.calls.append((url, {}))
+        self.headers_seen.append(dict(headers))
+        for recorded in self.requests:
+            if recorded.get("download") == url:
+                content = str(recorded.get("text", "")).encode("utf-8")
+                if len(content) > max_bytes:
+                    raise _too_large(url, max_bytes)
+                return BytesResponse(int(recorded.get("status", 200)), {}, content)
+        raise ValidationFailed(f"No recorded download for {_safe(url)}")
+
 
 @dataclass
 class Client:
@@ -148,6 +204,29 @@ class Client:
                 retry_after = response.headers.get("Retry-After") or response.headers.get("retry-after")
                 wait = float(retry_after) if retry_after and retry_after.isdigit() else delay
                 self.sleep(min(wait, 120.0))
+                delay *= 2
+                continue
+            raise PreconditionFailed(f"{_safe(url)} returned HTTP {response.status}")
+        raise PreconditionFailed(f"{_safe(url)} kept failing after {self.retries} retries")
+
+    def download(self, url: str, allowed_hosts: list[str], max_bytes: int) -> bytes:
+        """GET a pre-authenticated download link (Graph `@microsoft.graph.downloadUrl`) WITHOUT the connector's
+        credentials: https only, and only to a host ending in one of `allowed_hosts` (e.g. `.sharepoint.com`)."""
+        parts = urllib.parse.urlsplit(url)
+        host = (parts.hostname or "").lower()
+        if parts.scheme != "https" or not any(
+            host == h.lower().lstrip(".") or host.endswith("." + h.lower().lstrip(".")) for h in allowed_hosts
+        ):
+            raise PreconditionFailed(f"Download link to '{host or url[:40]}' is not an allowed https host; stopped")
+        delay = 2.0
+        for attempt in range(self.retries + 1):
+            if self.pause_seconds:
+                self.sleep(self.pause_seconds)
+            response = self.transport.get_bytes(url, {}, max_bytes)
+            if response.status == 200:
+                return response.content
+            if response.status in RETRY_STATUS and attempt < self.retries:
+                self.sleep(delay)
                 delay *= 2
                 continue
             raise PreconditionFailed(f"{_safe(url)} returned HTTP {response.status}")

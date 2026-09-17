@@ -8,10 +8,12 @@ import { ApiError, isAbortError } from '../client';
 import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostPathParams, PostResponse } from '../types';
 import * as core from './core';
 import * as delivery from './delivery';
+import * as jobs from './jobs';
 import * as ops from './ops';
 import * as reports from './reports';
 import * as review from './review';
 import * as sap from './sap';
+import * as sources from './sources';
 
 type GetHandlers = {
   [P in GetPath]: (params: GetPathParams<P>, query: GetQuery<P>) => GetResponse<P>;
@@ -35,7 +37,7 @@ const GET_HANDLERS: GetHandlers = {
   '/api/ai/review-rates': (_, query) => review.reviewRates(query),
   '/api/reports': (_, query) => reports.reports(query),
   '/api/reports/readiness': (_, query) => reports.readiness(query),
-  '/api/jobs/{job_id}': (params) => reports.jobStatus(params.job_id),
+  '/api/jobs/{job_id}': (params) => jobs.jobStatus(params.job_id),
   '/api/ops/filters': () => ops.filters(),
   '/api/ops/overview': (_, query) => ops.overview(query),
   '/api/ops/attention': (_, query) => ops.attention(query),
@@ -57,6 +59,7 @@ const GET_HANDLERS: GetHandlers = {
   '/api/sap/idocs': (_, query) => sap.idocs(query),
   '/api/delivery/portfolio': () => delivery.portfolio(),
   '/api/delivery/projects/{project_id}': (params) => delivery.project(params.project_id),
+  '/api/sources': () => sources.sources(),
 };
 
 const POST_HANDLERS: PostHandlers = {
@@ -67,6 +70,10 @@ const POST_HANDLERS: PostHandlers = {
   '/api/runs/{run_id}/review': (body, params) => review.runReview(params.run_id, body),
   '/api/labels/correct': (body) => review.correctLabel(body),
   '/api/reports/build': (body) => reports.startBuild(body),
+  '/api/sources/{connector}/pull': (body, params) => sources.startPull(params.connector, body),
+  '/api/imports/upload': () => {
+    throw new ApiError(400, 'bad_request', 'Uploads send the file as the request body: use apiUpload');
+  },
 };
 
 const LATENCY_MS = 150;
@@ -117,4 +124,10 @@ export async function fixturePost(
   const handler = POST_HANDLERS[path] as unknown as ((b: unknown, p: Record<string, string>) => unknown) | undefined;
   if (!handler) throw new ApiError(404, 'not_found', `No fixture for POST ${path}`);
   return clone(handler(clone(body), params));
+}
+
+/** Fixture answer for `apiUpload` (the upload body is a file, so it is not one of the typed POST handlers). */
+export async function fixtureUpload(name: string, size: number, syntheticOk: boolean, signal?: AbortSignal) {
+  await delay(signal);
+  return clone(sources.startUpload(name, size, syntheticOk));
 }

@@ -4,6 +4,7 @@
  */
 import { ApiError } from '../client';
 import type { GetQuery, PostBody, Schema } from '../types';
+import { jobSeq, startJob } from './jobs';
 import { AS_OF, addDays, isoAt } from './random';
 
 type Job = Schema<'JobOut'>;
@@ -129,35 +130,14 @@ export function readiness(query: GetQuery<'/api/reports/readiness'>): Schema<'Re
   };
 }
 
-const JOBS = new Map<string, { job: Job; polls: number }>();
-let JOB_SEQ = 0;
-
 export function startBuild(body: PostBody<'/api/reports/build'>): Job {
   const report = REPORTS.find((r) => r.key === body.report);
   if (!report) throw new ApiError(422, 'validation', `Unknown report '${body.report}'`);
   if (report.needs_vendor && !body.vendor) throw new ApiError(412, 'precondition', `The ${body.report} report needs a vendor`);
-  JOB_SEQ += 1;
-  const job: Job = {
-    job_id: `job-fixture-${JOB_SEQ}`,
-    kind: 'report_build',
-    status: 'queued',
-    created_at: isoAt(AS_OF, 10, JOB_SEQ % 60),
-    finished_at: null,
-    params: { ...body },
-    result: null,
-    error: null,
-  };
-  JOBS.set(job.job_id, { job, polls: 0 });
-  return job;
+  return startJob('report_build', { ...body }, finishBuild);
 }
 
-export function jobStatus(jobId: string): Job {
-  const entry = JOBS.get(jobId);
-  if (!entry) throw new ApiError(412, 'precondition', `Unknown job '${jobId}'`);
-  entry.polls += 1;
-  const { job } = entry;
-  if (entry.polls === 1) return { ...job, status: 'running' };
-  if (job.status === 'done' || job.status === 'failed') return job;
+function finishBuild(job: Job): void {
   const body = job.params as PostBody<'/api/reports/build'>;
   const formats = body.formats ?? ['xlsx', 'md', 'pptx'];
   if (body.require_complete && body.ai_mode !== 'none') {
@@ -166,7 +146,7 @@ export function jobStatus(jobId: string): Job {
       finished_at: isoAt(AS_OF, 10, 59),
       error: { kind: 'precondition', message: '3 required AI sections are not ready for --ai approved', details: { sections: ['lowlights: stale'] } },
     });
-    return job;
+    return;
   }
   const suffix = `${body.vendor ? `_${body.vendor}` : ''}_SYNTHETIC${body.ai_mode === 'draft' ? '_DRAFT' : ''}`;
   const built = formats.map((format) => ({
@@ -185,7 +165,7 @@ export function jobStatus(jobId: string): Job {
       snapshot_id: `snap-${body.report}-${body.period}-fixture`,
       format: a.format,
       ai_mode: body.ai_mode ?? 'approved',
-      built_at: isoAt(AS_OF, 11, JOB_SEQ % 60),
+      built_at: isoAt(AS_OF, 11, jobSeq(job) % 60),
       file_name: a.file_name,
       sha256: 'fixture-sha',
       ai_run_ids: [],
@@ -205,5 +185,4 @@ export function jobStatus(jobId: string): Job {
       readiness: { ai_sections_required: 5, ai_sections_shown: 1, omitted: ['headline: no draft', 'actions: no draft'] },
     },
   });
-  return job;
 }

@@ -3130,6 +3130,18 @@
               "type": "boolean"
             },
             {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "run_import",
+              "opts": [
+                "--import"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
               "default": null,
               "is_flag": false,
               "kind": "option",
@@ -3216,6 +3228,18 @@
               "name": "dry_run",
               "opts": [
                 "--dry-run"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "run_import",
+              "opts": [
+                "--import"
               ],
               "required": false,
               "type": "boolean"
@@ -3312,6 +3336,18 @@
               "type": "boolean"
             },
             {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "run_import",
+              "opts": [
+                "--import"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
               "default": null,
               "is_flag": false,
               "kind": "option",
@@ -3403,6 +3439,18 @@
               "type": "boolean"
             },
             {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "run_import",
+              "opts": [
+                "--import"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
               "default": null,
               "is_flag": false,
               "kind": "option",
@@ -3489,6 +3537,18 @@
               "name": "dry_run",
               "opts": [
                 "--dry-run"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "run_import",
+              "opts": [
+                "--import"
               ],
               "required": false,
               "type": "boolean"
@@ -5157,6 +5217,49 @@
           "required": false,
           "type": "boolean"
         },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "profile",
+          "opts": [
+            "--profile",
+            "-p"
+          ],
+          "required": false,
+          "type": "str"
+        },
+        {
+          "default": null,
+          "is_flag": false,
+          "kind": "option",
+          "multiple": false,
+          "name": "data_dir",
+          "opts": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": "path"
+        },
+        {
+          "default": false,
+          "is_flag": true,
+          "kind": "option",
+          "multiple": false,
+          "name": "as_json",
+          "opts": [
+            "--json"
+          ],
+          "required": false,
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "help": "Every export of the enabled modules with the connector sources that can pull it and its last import, and each",
+      "name": "sources",
+      "params": [
         {
           "default": null,
           "is_flag": false,

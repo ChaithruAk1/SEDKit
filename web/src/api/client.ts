@@ -103,10 +103,18 @@ function retryAfterSeconds(response: Response): number | null {
   return Number.isFinite(seconds) ? seconds : null;
 }
 
+/** A request body sent as is (a file upload) instead of JSON. */
+class RawBody {
+  constructor(
+    readonly data: Blob,
+    readonly contentType: string,
+  ) {}
+}
+
 async function send<T>(method: 'GET' | 'POST', url: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (method !== 'GET') {
-    headers['Content-Type'] = 'application/json';
+    headers['Content-Type'] = body instanceof RawBody ? body.contentType : 'application/json';
     const token = readToken();
     if (token) headers[TOKEN_HEADER] = token;
   }
@@ -115,7 +123,7 @@ async function send<T>(method: 'GET' | 'POST', url: string, body: unknown, signa
     response = await fetch(url, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : body instanceof RawBody ? body.data : JSON.stringify(body),
       signal,
       cache: 'no-store',
       credentials: 'same-origin',
@@ -182,4 +190,22 @@ export async function apiPost<P extends PostPath>(path: P, body: PostBody<P>, ..
     return fixtures.fixturePost(path, body, params ?? {}, options?.signal) as Promise<PostResponse<P>>;
   }
   return send<PostResponse<P>>('POST', buildUrl(path, params), body, options?.signal);
+}
+
+/**
+ * Upload one export file as the raw request body (`POST /api/imports/upload?name=...`, with the launch token). The
+ * server stores it in the inbox and returns the import job; poll it with `useJob`. `syntheticOk` confirms, on a
+ * synthetic profile, that the file is a hand-made fictional fixture.
+ */
+export async function apiUpload(
+  file: File,
+  options: { syntheticOk?: boolean; signal?: AbortSignal } = {},
+): Promise<PostResponse<'/api/imports/upload'>> {
+  const syntheticOk = options.syntheticOk ?? false;
+  if (FIXTURES_MODE) {
+    const fixtures = await import('./fixtures');
+    return fixtures.fixtureUpload(file.name, file.size, syntheticOk, options.signal);
+  }
+  const url = buildUrl('/api/imports/upload', undefined, { name: file.name, synthetic_ok: syntheticOk || undefined });
+  return send<PostResponse<'/api/imports/upload'>>('POST', url, new RawBody(file, 'application/octet-stream'), options.signal);
 }

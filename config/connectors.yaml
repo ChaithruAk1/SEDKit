@@ -24,6 +24,8 @@ servicenow:
       filter: ""                     # optional encoded query ANDed with the watermark, e.g. assignment_groupSTARTSWITH...
       source_tz: Europe/Paris        # the time zone the mapping expects (dates are converted from UTC)
       datetime_fields: [opened_at, sys_updated_on, resolved_at, closed_at]
+      # snapshot: true             # whole table every pull: required for exports read as snapshots (cmdb_ci_business_app,
+                                   # cmdb_rel_ci, sys_user_group, all open incidents); see docs/sources.md
       fields: [number, sys_id, opened_at, sys_updated_on, resolved_at, closed_at, state, priority, impact, urgency,
                category, subcategory, short_description, description, close_code, close_notes, caller_id,
                assigned_to, assignment_group, business_service, cmdb_ci, made_sla, reassignment_count, reopen_count,
@@ -42,12 +44,21 @@ jira:
       sprint_field: null
       source_tz: Europe/Paris
 
+# Microsoft Graph. `sources` are SharePoint lists (the whole list each pull, with a column map); `libraries` are
+# document library folders whose matching files are downloaded as they are (plan exports, RAID logs, workbooks).
 sharepoint:
   enabled: false
   base_url: https://graph.example.invalid/v1.0
   auth: bearer
   credential: graph
   sources: []
+  libraries: []
+  # libraries:
+  #   - key: plans
+  #     drive_id: <drive id>
+  #     folder: Delivery/Plans
+  #     patterns: [project_plan_*.xlsx]   # file names the mappings read (docs/sources.md)
+  #     download_hosts: [.sharepoint.example]
 
 confluence:
   enabled: false

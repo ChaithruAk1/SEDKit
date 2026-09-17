@@ -465,6 +465,64 @@ class JobOut(ApiModel):
     error: dict[str, Any] | None
 
 
+# -- sources: API pull or file (W8) ---------------------------------------------------------------------------------
+
+
+class PullIn(ApiModel):
+    source: str | None = Field(None, pattern=r"^[a-z][a-z0-9_]{1,40}$")
+    full: bool = False
+
+
+class ConnectorSourceRow(ApiModel):
+    source: str
+    kind: Literal["table", "query", "list", "library", "space", "odata"]
+    mappings: list[str]
+    watermark: str | None
+    last_pull_at: str | None
+    last_rows: int | None
+    last_file: str | None
+    credential: str | None
+    credential_found_in: str | None
+    warning: str | None
+
+
+class SourceConnectorRow(ApiModel):
+    connector: str
+    enabled: bool
+    credential: str
+    credential_found_in: str | None
+    can_pull: bool
+    reason: str | None
+    sources: list[ConnectorSourceRow]
+
+
+class FileSourceRow(ApiModel):
+    mapping: str
+    module: str | None
+    target: str
+    load_mode: str
+    format: str
+    patterns: list[str]
+    connector_sources: list[str]
+    last_file: str | None
+    last_status: str | None
+    last_imported_at: str | None
+
+
+class UploadInfo(ApiModel):
+    suffixes: list[str]
+    max_bytes: int
+    needs_confirmation: bool
+
+
+class SourcesOut(ApiModel):
+    profile: str
+    data_class: str
+    upload: UploadInfo
+    connectors: list[SourceConnectorRow]
+    files: list[FileSourceRow]
+
+
 # -- review rates (M6) ---------------------------------------------------------------------------------------------
 
 

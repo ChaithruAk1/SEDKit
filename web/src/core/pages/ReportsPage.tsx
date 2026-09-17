@@ -17,9 +17,10 @@ import { IconDownload } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
-import { ApiError, apiGet } from '../../api/client';
+import { ApiError } from '../../api/client';
 import type { Schema } from '../../api/types';
-import { toApiError, useApi, useApiPost } from '../../api/useApi';
+import { useApi, useApiPost } from '../../api/useApi';
+import { useJob } from '../../api/useJob';
 import { useShell } from '../../app/ShellContext';
 import { type Column, DataTable } from '../../components/DataTable';
 import { EmptyState } from '../../components/EmptyState';
@@ -29,7 +30,6 @@ import { PageHeader } from '../../components/PageHeader';
 import { SectionCard } from '../../components/SectionCard';
 import { useSearchParam } from '../../hooks/useFilters';
 
-type Job = Schema<'JobOut'>;
 type ArtifactRow = Schema<'ArtifactRow'>;
 type ReadinessSection = Schema<'ReadinessSection'>;
 type Format = 'xlsx' | 'md' | 'pptx';
@@ -42,7 +42,6 @@ const STATUS_COLOR: Record<string, string> = {
   blocked: 'red',
   missing: 'gray',
 };
-const POLL_MS = 1000;
 
 export function artifactHref(artifactId: string): string {
   return `/api/reports/artifacts/${encodeURIComponent(artifactId)}/file`;
@@ -139,34 +138,6 @@ const ARTIFACT_COLUMNS: Column<ArtifactRow>[] = [
     align: 'right',
   },
 ];
-
-function useJob(jobId: string | null): { job: Job | undefined; error: ApiError | undefined } {
-  const [job, setJob] = useState<Job | undefined>(undefined);
-  const [error, setError] = useState<ApiError | undefined>(undefined);
-  useEffect(() => {
-    setJob(undefined);
-    setError(undefined);
-    if (!jobId) return;
-    let stopped = false;
-    let timer: number | undefined;
-    const poll = async () => {
-      try {
-        const next = await apiGet('/api/jobs/{job_id}', { params: { job_id: jobId } });
-        if (stopped) return;
-        setJob(next);
-        if (next.status === 'queued' || next.status === 'running') timer = window.setTimeout(poll, POLL_MS);
-      } catch (caught) {
-        if (!stopped) setError(toApiError(caught));
-      }
-    };
-    void poll();
-    return () => {
-      stopped = true;
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, [jobId]);
-  return { job, error };
-}
 
 export default function ReportsPage() {
   const { meta } = useShell();

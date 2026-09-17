@@ -48,6 +48,9 @@ class ServiceNowSource(_Strict):
     filter: str = Field("", max_length=2000)  # extra encoded query, ANDed with the watermark
     updated_field: str = "sys_updated_on"
     source_tz: str = "Europe/Paris"
+    # Pull the whole table every time (no watermark), for exports read as full or active snapshots (application list,
+    # CI relations, groups, all open incidents); a row cap then fails the pull instead of writing a partial snapshot.
+    snapshot: bool = False
 
 
 class ServiceNowConfig(ConnectorBase):
@@ -77,8 +80,31 @@ class SharePointSource(_Strict):
     columns: dict[str, str] = Field(min_length=1)
 
 
+class SharePointLibrary(_Strict):
+    """A document library folder (Microsoft Graph drive): files whose name matches `patterns` and that changed since the
+    watermark are downloaded into the inbox under their own (sanitised) names, so name them like the exports the
+    mappings read (plans, RAID logs, cost and contract workbooks)."""
+
+    key: str = Field(pattern=PREFIX_PATTERN)
+    drive_id: str = Field(min_length=1, max_length=300)
+    folder: str = Field("", max_length=400)  # path inside the drive, e.g. "Delivery/Plans"; "" = the drive root
+    patterns: list[str] = Field(default_factory=lambda: ["*.xlsx", "*.csv"], min_length=1)
+    max_files: int = Field(100, ge=1, le=5000)
+    # Hosts Graph download links may point at (pre-authenticated links, fetched without the bearer token).
+    download_hosts: list[str] = Field(default_factory=lambda: [".sharepoint.com"], min_length=1)
+
+
 class SharePointConfig(ConnectorBase):
     sources: list[SharePointSource] = Field(default_factory=list)
+    libraries: list[SharePointLibrary] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _unique_keys(self) -> SharePointConfig:
+        keys = [s.key for s in self.sources] + [lib.key for lib in self.libraries]
+        duplicates = sorted({k for k in keys if keys.count(k) > 1})
+        if duplicates:
+            raise ValueError(f"source and library keys must be unique: {', '.join(duplicates)}")
+        return self
 
 
 class ConfluenceSource(_Strict):
