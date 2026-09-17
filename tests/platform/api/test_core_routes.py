@@ -113,7 +113,7 @@ def test_nav_and_modules_follow_the_served_modules(ops_profile):
     listed = api_client(paths).get("/api/modules").json()["modules"]
     ops = next(m for m in listed if m["key"] == "ops")
     assert ops["enabled"] is True and ops["reports"] == ["weekly", "monthly", "quarterly", "vendor"]
-    assert ops["skills"] == ["sed-triage-batch"]
+    assert ops["skills"] == ["sed-triage-batch", "sed-find-recurring"]
 
     with_hello = api_client(paths, modules=[modules.get("ops"), HELLO])
     assert "hello.home" in [i["id"] for i in with_hello.get("/api/nav").json()["items"]]

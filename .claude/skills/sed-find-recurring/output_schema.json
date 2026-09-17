@@ -1,0 +1,197 @@
+{
+  "additionalProperties": false,
+  "description": "The JSON file the agent writes to runs/<run_id>/out/batch_0001.json.",
+  "properties": {
+    "clusters": {
+      "items": {
+        "additionalProperties": false,
+        "description": "One recurring issue: the groups it is made of, what probably causes it and what to do.",
+        "properties": {
+          "body_md": {
+            "description": "Markdown for the reviewer; numbers only as {{f:<fact_key>}} tokens",
+            "maxLength": 1500,
+            "minLength": 1,
+            "title": "Body Md",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "fact_key": {
+                  "description": "<ref>.<fact name> of a referenced group, e.g. T004.tickets",
+                  "pattern": "^T\\d{3,5}\\.[a-z_]+$",
+                  "title": "Fact Key",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fact_key"
+              ],
+              "title": "Evidence",
+              "type": "object"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "periodicity": {
+            "enum": [
+              "none",
+              "monthly",
+              "weekly",
+              "burst",
+              "episode"
+            ],
+            "title": "Periodicity",
+            "type": "string"
+          },
+          "problem_exists": {
+            "description": "True when a referenced group lists a problem record",
+            "title": "Problem Exists",
+            "type": "boolean"
+          },
+          "recommended_action": {
+            "enum": [
+              "raise_problem",
+              "kb_article",
+              "vendor_escalation",
+              "fix",
+              "monitor"
+            ],
+            "title": "Recommended Action",
+            "type": "string"
+          },
+          "refs": {
+            "description": "Packet refs of the groups that form the issue",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Refs",
+            "type": "array"
+          },
+          "root_cause_hypothesis": {
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Root Cause Hypothesis",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "suspected_change": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "A change number listed in a referenced group's changes_before_onset, or null",
+            "title": "Suspected Change"
+          },
+          "title": {
+            "description": "Short name of the issue, no numbers or names",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "refs",
+          "periodicity",
+          "problem_exists",
+          "root_cause_hypothesis",
+          "recommended_action",
+          "severity",
+          "evidence",
+          "body_md",
+          "confidence"
+        ],
+        "title": "Cluster",
+        "type": "object"
+      },
+      "maxItems": 60,
+      "title": "Clusters",
+      "type": "array"
+    },
+    "key_merges": {
+      "items": {
+        "additionalProperties": false,
+        "description": "Two symptom keys of one application that name the same symptom: from_key is folded into to_key.",
+        "properties": {
+          "app_id": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "App Id",
+            "type": "string"
+          },
+          "from_key": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "From Key",
+            "type": "string"
+          },
+          "to_key": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "To Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "app_id",
+          "from_key",
+          "to_key"
+        ],
+        "title": "KeyMerge",
+        "type": "object"
+      },
+      "maxItems": 200,
+      "title": "Key Merges",
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "BatchMeta",
+      "type": "object"
+    }
+  },
+  "title": "RecurringOutput",
+  "type": "object"
+}

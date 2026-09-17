@@ -62,6 +62,7 @@ def test_p7_outage_day_bursts_on_several_apps(groups, truth):
     p7 = [g for g in groups if _pattern_share(g, truth, "P7") >= 0.8]
     assert len({g.app_id for g in p7}) >= 3
     assert all(g.first_day == g.last_day == day and g.periodicity == "burst" for g in p7)
+    assert all(g.bursts and g.bursts[0]["day"] == day for g in p7)
 
 
 def test_groups_are_symptom_coherent_and_deterministic(groups, ops_profile, truth):

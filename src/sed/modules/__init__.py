@@ -76,6 +76,7 @@ CORE_TABLES = (
     "ai_batch",
     "ai_batch_item",
     "ai_sample",
+    "ai_group_member",
 )
 PORTFOLIO_TABLES = (
     "vendor",

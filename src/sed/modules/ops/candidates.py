@@ -11,7 +11,8 @@ or `none`), burst days, the configuration items involved, changes on the same ap
 that starts inside the window, problem links, top terms and a few sample texts.
 
 Deterministic: the same data and parameters give the same groups in the same order. The group id is anchored on the
-group's earliest incident (`tc:<app_id>:<ticket number>`), so it stays stable while a group grows.
+group's earliest incident (`tc:<app_id>:<hash of its ticket id>`, never a ticket number), so it stays stable while a
+group grows.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from typing import Any
 
 import numpy as np
 
+from sed.ai.hashing import sha256_text
 from sed.calendar import iso_utc, local_midnight_utc, month_label, to_local, week_label
 
 TOKEN_WITH_DIGIT = re.compile(r"\b\w*\d\w*\b")
@@ -176,6 +178,22 @@ def text_candidates(
     return groups
 
 
+def changes_before(conn: sqlite3.Connection, app_id: str, onset: date, tz: str) -> list[dict[str, Any]]:
+    """Changes on the application raised, started or ended in the CHANGE_LOOKBACK_DAYS before the onset day (inclusive
+    of the onset day itself): exports often carry planned rather than actual dates."""
+    onset_utc = local_midnight_utc(onset + timedelta(days=1), tz)
+    lo, hi = iso_utc(onset_utc - timedelta(days=CHANGE_LOOKBACK_DAYS + 1)), iso_utc(onset_utc)
+    rows = conn.execute(
+        "SELECT number, close_code, CASE WHEN start_date >= :lo AND start_date < :hi THEN start_date "
+        "WHEN end_date >= :lo AND end_date < :hi THEN end_date ELSE opened_at END AS at FROM ticket "
+        "WHERE kind = 'change_request' AND app_id = :app AND ((opened_at >= :lo AND opened_at < :hi) "
+        "OR (start_date >= :lo AND start_date < :hi) OR (end_date >= :lo AND end_date < :hi)) "
+        "ORDER BY at, number",
+        {"app": app_id, "lo": lo, "hi": hi},
+    ).fetchall()
+    return [{"number": r["number"], "close_code": r["close_code"], "at": r["at"][:10]} for r in rows]
+
+
 def _months_back(day: date, months: int) -> date:
     y, m = day.year, day.month - months
     while m <= 0:
@@ -200,23 +218,12 @@ def _group(
     if kind == "none" and starts_in_window and (last - first).days <= EPISODE_MAX_DAYS:
         kind = "episode"  # appeared inside the window and stopped within weeks, e.g. after a change
     by_day = Counter(days)
-    threshold = max(5, int(np.median(list(by_day.values())) * 3))
+    # A burst day holds at least 5 tickets and, when the group spans several days, three times its median day.
+    threshold = 5 if len(by_day) == 1 else max(5, int(np.median(list(by_day.values())) * 3))
     bursts = [{"day": d.isoformat(), "tickets": n} for d, n in sorted(by_day.items(), key=lambda kv: (-kv[1], kv[0]))]
     bursts = [b for b in bursts if b["tickets"] >= threshold][:3]
-    changes: list[sqlite3.Row] = []
     # Only a group that starts inside the window has an onset; one present from the start has none to explain.
-    if starts_in_window:
-        onset_utc = local_midnight_utc(first + timedelta(days=1), tz)
-        lo, hi = iso_utc(onset_utc - timedelta(days=CHANGE_LOOKBACK_DAYS + 1)), iso_utc(onset_utc)
-        # A change counts when it was raised, started or ended in the lookback: exports often carry planned dates.
-        changes = conn.execute(
-            "SELECT number, close_code, CASE WHEN start_date >= :lo AND start_date < :hi THEN start_date "
-            "WHEN end_date >= :lo AND end_date < :hi THEN end_date ELSE opened_at END AS at FROM ticket "
-            "WHERE kind = 'change_request' AND app_id = :app AND ((opened_at >= :lo AND opened_at < :hi) "
-            "OR (start_date >= :lo AND start_date < :hi) OR (end_date >= :lo AND end_date < :hi)) "
-            "ORDER BY at, number",
-            {"app": app_id, "lo": lo, "hi": hi},
-        ).fetchall()
+    changes = changes_before(conn, app_id, first, tz) if starts_in_window else []
     anchor = min(rows, key=lambda r: (r["opened_at"], r["ticket_id"]))
     samples = []
     for r in rows:
@@ -225,7 +232,7 @@ def _group(
             samples.append(text[:160])
         if len(samples) >= SAMPLES:
             break
-    group_id = f"tc:{app_id}:{anchor['number']}"
+    group_id = f"tc:{app_id}:{sha256_text(anchor['ticket_id'])[:12]}"
     weekly = dict(sorted(Counter(week_label(d) for d in days).items()))
     return CandidateGroup(
         group_id=group_id,
@@ -242,9 +249,7 @@ def _group(
         periodicity=kind,
         bursts=bursts,
         cis=dict(Counter(r["cmdb_ci_raw"] for r in rows if r["cmdb_ci_raw"]).most_common(5)),
-        changes_before_onset=[
-            {"number": c["number"], "close_code": c["close_code"], "at": c["at"][:10]} for c in changes
-        ],
+        changes_before_onset=changes,
         problems=sorted({r["problem_id"] for r in rows if r["problem_id"]}),
         terms=terms,
         samples=samples,

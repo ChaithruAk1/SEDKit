@@ -165,6 +165,9 @@ def start_run(paths: Paths, skill: str, params: StartParams) -> RunPlan:
             max_items=params.batch_size or settings.ai.triage_batch_size,
             max_chars=params.max_chars or settings.ai.triage_packet_max_chars,
         )
+        adjust = getattr(handler, "packet_limits", None)
+        if adjust is not None:  # a handler may need other limits, e.g. one packet for a whole analysis
+            limits = adjust(limits, params)
         max_items = params.max_items or settings.ai.max_items_per_run
         if params.dry_run:
             return _dry_run(conn, paths, settings, handler, skill, params, data_date, limits, max_items)
