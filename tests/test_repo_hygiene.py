@@ -285,6 +285,19 @@ def test_pretooluse_hook_is_wired_into_committed_settings():
     assert {"Bash", "Read", "Edit", "Write"} <= set(matcher.split("|")), matcher
 
 
+def test_project_mcp_servers_declare_no_literal_secrets():
+    """`.mcp.json` is shared with everyone who clones the repo: credentials belong in ${ENV_VAR} references."""
+    config = json.loads((REPO / ".mcp.json").read_text(encoding="utf-8"))
+    servers = config["mcpServers"]
+    assert isinstance(servers, dict)
+    for name, server in servers.items():
+        assert server.get("command") or server.get("url"), f"{name}: needs a command or a url"
+        for block in ("env", "headers"):
+            for key, value in (server.get(block) or {}).items():
+                secretish = any(word in key.lower() for word in ("token", "key", "secret", "password", "auth"))
+                assert not secretish or "${" in str(value), f"{name}.{block}.{key} must use a ${{ENV_VAR}} reference"
+
+
 def test_doctor_reports_missing_claude_surfaces(tmp_path: Path):
     assert project_surface_problems(REPO) == []
     for kind in ("skills", "commands", "agents", "hooks"):

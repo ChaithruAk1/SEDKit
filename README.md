@@ -65,6 +65,7 @@ contracts/        generated API contract and schemas (scripts/codegen.py; never 
 docs/             architecture, data model, export specs, playbooks, runbooks
 evals/  templates/  tests/  scripts/
 .claude/          Claude Code configuration: settings, skills, commands, agents, workflows, hooks
+.mcp.json         project MCP servers (none yet; see the rules in CLAUDE.md before adding one)
 .github/workflows/  CI
 CLAUDE.md         the agent contract for this repository (web/ and each module carry their own)
 ```
