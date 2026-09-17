@@ -57,7 +57,7 @@ CORE_CLI_NAMES = frozenset(
     }
 )
 # Skills that belong to the platform rather than a module (no run handler, no module surface).
-CORE_SKILLS = ("sed-map-export",)
+CORE_SKILLS = ("sed-map-export", "sed-review")
 CORE_NAV = (NavItem("core.data", "Data", "/data", 900, "database"),)
 CORE_TABLES = (
     "meta",

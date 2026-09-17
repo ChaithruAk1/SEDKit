@@ -1,0 +1,108 @@
+{
+  "additionalProperties": false,
+  "description": "The JSON file an agent writes to runs/<run_id>/out/<batch>.json.",
+  "properties": {
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "description": "One label for one packet line (`ref`). Codes come from the effective taxonomy in in/context.md.",
+        "properties": {
+          "am_category": {
+            "description": "Category code from the taxonomy",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Am Category",
+            "type": "string"
+          },
+          "am_subcategory": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Subcategory code of that category, or null when none fits",
+            "title": "Am Subcategory"
+          },
+          "confidence": {
+            "description": "Calibrated probability that the category is right",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "misfiled_as": {
+            "description": "Record type the ticket should have been filed as, or none",
+            "enum": [
+              "none",
+              "request",
+              "change",
+              "problem"
+            ],
+            "title": "Misfiled As",
+            "type": "string"
+          },
+          "rationale": {
+            "default": "",
+            "description": "At most 25 words; no names or personal data",
+            "maxLength": 300,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "ref": {
+            "pattern": "^T\\d{3,5}$",
+            "title": "Ref",
+            "type": "string"
+          },
+          "symptom_key": {
+            "description": "Lowercase snake_case symptom slug; reuse a vocabulary key first",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Symptom Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "am_category",
+          "symptom_key",
+          "misfiled_as",
+          "confidence"
+        ],
+        "title": "TriageItem",
+        "type": "object"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "BatchMeta",
+      "type": "object"
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "title": "TriageBatchOutput",
+  "type": "object"
+}
