@@ -1,0 +1,19 @@
+# RAID log (risks, assumptions, issues, dependencies, decisions) of every delivery project: the whole log each time.
+name: delivery_raid
+target: delivery_raid
+load_mode: full_snapshot
+description: RAID log of the delivery projects
+match:
+  glob: ["delivery_raid*.csv", "delivery_raid*.xlsx", "raid_log*.xlsx", "raid_log*.csv"]
+fields:
+  raid_id:     {from: [ID, RAID ID, Ref], pii: none, required: true}
+  project_id:  {from: [Project ID, Project], pii: none, required: true}
+  raid_type:   {from: [Type, Category], pii: none}
+  title:       {from: [Title, Summary], pii: free_text}
+  description: {from: [Description, Details], pii: free_text}
+  owner:       {from: [Owner, Action Owner], pii: person}
+  severity:    {from: [Severity, Impact, Rating], pii: none}
+  status:      {from: [Status], pii: none}
+  raised_on:   {from: [Raised On, Date Raised, Raised], transform: date, pii: none}
+  due_date:    {from: [Due Date, Target Date, Due], transform: date, pii: none}
+  closed_on:   {from: [Closed On, Date Closed], transform: date, pii: none}

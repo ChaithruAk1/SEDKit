@@ -1,0 +1,21 @@
+# Delivery project register (workbook or CSV): one row per project building or changing a business application.
+name: delivery_projects
+target: delivery_project
+load_mode: full_snapshot
+description: Delivery project register
+match:
+  glob: ["delivery_projects*.csv", "delivery_projects*.xlsx", "project_register*.xlsx", "project_register*.csv"]
+fields:
+  project_id:       {from: [Project ID, Project Id, Project No], pii: none, required: true}
+  name:             {from: [Project Name, Project], pii: none, required: true}
+  application:      {from: [Application, Business Application], pii: none}
+  phase:            {from: [Phase, Stage], pii: none}
+  rag:              {from: [RAG, RAG Status, Overall Status], pii: none}
+  sponsor:          {from: [Sponsor, Business Sponsor], pii: person}
+  manager:          {from: [Project Manager, Delivery Manager, PM], pii: person}
+  jira_keys:        {from: [Jira Projects, Jira Project Keys, Jira Keys], transform: split_list, pii: none}
+  confluence_space: {from: [Confluence Space, Space Key], pii: none}
+  start_date:       {from: [Start Date, Start], transform: date, pii: none}
+  target_date:      {from: [Target Go-Live, Target Date, Go-Live Date], transform: date, pii: none}
+  budget:           {from: [Budget], transform: money, pii: none}
+  currency:         {from: [Currency], pii: none}

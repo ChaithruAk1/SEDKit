@@ -7,6 +7,7 @@
 import { ApiError, isAbortError } from '../client';
 import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostPathParams, PostResponse } from '../types';
 import * as core from './core';
+import * as delivery from './delivery';
 import * as ops from './ops';
 import * as reports from './reports';
 import * as review from './review';
@@ -54,6 +55,8 @@ const GET_HANDLERS: GetHandlers = {
   '/api/sap/l3': (_, query) => sap.l3(query),
   '/api/sap/changes': (_, query) => sap.changes(query),
   '/api/sap/idocs': (_, query) => sap.idocs(query),
+  '/api/delivery/portfolio': () => delivery.portfolio(),
+  '/api/delivery/projects/{project_id}': (params) => delivery.project(params.project_id),
 };
 
 const POST_HANDLERS: PostHandlers = {

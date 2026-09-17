@@ -20,7 +20,7 @@ def test_builtin_modules_are_valid_and_every_reference_imports():
 
 
 def test_builtin_modules_are_enabled_by_default_and_nav_is_namespaced():
-    assert [m.key for m in modules.enabled()] == ["ops", "sap"]
+    assert [m.key for m in modules.enabled()] == ["ops", "sap", "delivery"]
     for key, item in modules.nav():
         if key == "core":
             assert item.path.strip("/").split("/")[0] in modules.CORE_PAGE_KEYS
@@ -152,7 +152,7 @@ def test_duplicate_entity_keys_are_rejected():
     [
         ("enabled: []\n", frozenset()),
         ("enabled: [ops]\n", frozenset({"ops"})),
-        ("title: no enabled key\n", frozenset({"ops", "sap"})),
+        ("title: no enabled key\n", frozenset({"ops", "sap", "delivery"})),
         ("enabled: [\n", ValidationFailed),
         ("enabled: none\n", ValidationFailed),
         ("enabled:\n", ValidationFailed),

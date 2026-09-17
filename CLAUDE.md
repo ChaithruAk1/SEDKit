@@ -39,7 +39,8 @@ stopped, because Windows locks `.venv\Scripts\sed.exe`). Exit codes: 0 ok, 1 int
 - Lint/format: `uv run ruff check . --fix` and `uv run ruff format .`
 
 ## Modules
-SED is a platform of modules; ops is module #1 and sap (SAP application support) is module #2. How to add one:
+SED is a platform of modules; ops is module #1, sap (SAP application support) is module #2 and delivery (delivery
+management of new business apps) is module #3. How to add one:
 `docs/modules.md`.
 - Core never imports `sed.modules.<key>` directly. It reaches modules only through `sed.modules` (the registry, with lazy
   import references). `tests/platform/test_core_boundaries.py` enforces this.
@@ -65,10 +66,12 @@ such a build, work in the main checkout as usual. Never put high-entropy literal
   - Registry: `modules/`.
   - Ops module: `modules/ops/`; legacy ops code in `metrics.py`, `analytics.py`, `synth/`, `ingest/targets.py`.
   - SAP module: `modules/sap/` (SAP scope over ops tickets; see its `CLAUDE.md`).
+  - Delivery module: `modules/delivery/` (projects, plans, RAID, Jira progress; see its `CLAUDE.md`).
 - `config/` — synthetic defaults; any file can be overridden at the same relative path in `DATA_DIR\config`.
   Platform files (`settings`, `agent`, `pii`, `fx`) sit at the top; module files live in `config/<module>/`
   (ops: `config/ops/{taxonomy,sla,risk_rules,vendor_groups}.yaml`, `mappings/`, `reports/`; sap:
-  `config/sap/{scope,charm,idoc,taxonomy,risk_rules}.yaml`, `mappings/`, `reports/`).
+  `config/sap/{scope,charm,idoc,taxonomy,risk_rules}.yaml`, `mappings/`, `reports/`; delivery:
+  `config/delivery/risk_rules.yaml`, `mappings/`, `reports/`).
 - `.claude/skills/sed-*` — project skills (always `sed-` prefixed; a personal `/review` skill exists on this machine).
 - `.claude/workflows/` — `sed-analyze.js`, `sed-report.js` (schema blocks generated from Pydantic; do not hand-edit).
 - `scripts/` — `ci.py`, `guard_confidential.py`, `codegen.py`, `check_ownership.py`, `wt.sh`, `setup.ps1`.

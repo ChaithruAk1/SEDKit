@@ -1,0 +1,20 @@
+# Project plan export (MS Project "Export to Excel" or an Excel plan saved as CSV): one row per task, with the project
+# id and the plan's status date on every row. Each plan version is kept (key includes the status date), so forecast
+# finishes of later versions show slips against earlier ones and against the baseline.
+name: delivery_plan
+target: delivery_milestone
+load_mode: delta
+description: Project plan tasks and milestones per plan status date
+match:
+  glob: ["delivery_plan_*.csv", "delivery_plan_*.xlsx", "project_plan_*.xlsx", "project_plan_*.csv"]
+fields:
+  project_id:       {from: [Project ID, Project], pii: none, required: true}
+  task_id:          {from: [ID, Task ID, Unique ID], pii: none, required: true}
+  status_date:      {from: [Status Date], transform: date, pii: none, required: true}
+  name:             {from: [Name, Task Name], pii: none}
+  is_milestone:     {from: [Milestone], transform: bool, pii: none}
+  start_date:       {from: [Start], transform: date, formats: ["%d/%m/%Y", "%Y-%m-%d", "%a %d/%m/%y"], pii: none}
+  finish_date:      {from: [Finish], transform: date, formats: ["%d/%m/%Y", "%Y-%m-%d", "%a %d/%m/%y"], pii: none}
+  baseline_finish:  {from: [Baseline Finish], transform: date, formats: ["%d/%m/%Y", "%Y-%m-%d", "%a %d/%m/%y"], pii: none}
+  actual_finish:    {from: [Actual Finish], transform: date, formats: ["%d/%m/%Y", "%Y-%m-%d", "%a %d/%m/%y"], pii: none}
+  percent_complete: {from: ["% Complete", Percent Complete], transform: float, pii: none}

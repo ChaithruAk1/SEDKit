@@ -1,0 +1,127 @@
+# Monthly delivery status of the new business application projects. Facts/tables come from the frozen snapshot built
+# by sed.modules.delivery.reports.status; module: delivery. Measured at the month end (the data date while it runs).
+report: delivery-status
+title: Monthly Delivery Status
+audience: Delivery sponsors and the application owner
+kpis:
+  - {fact: delivery.projects.count}
+  - {fact: delivery.projects.red}
+  - {fact: delivery.projects.amber}
+  - {fact: delivery.projects.rag_mismatch}
+  - {fact: delivery.milestones.completed}
+  - {fact: delivery.milestones.slipped}
+  - {fact: delivery.milestones.due_30d}
+  - {fact: delivery.raid.open_high}
+  - {fact: delivery.raid.overdue}
+  - {fact: delivery.points.done_pct}
+  - {fact: delivery.velocity.points_per_week}
+  - {fact: delivery.findings.count}
+sheets:
+  - table: delivery_projects
+    sheet: Projects
+    conditional:
+      - {column: worst_slip_days, rule: ">=", value: 30, style: bad}
+      - {column: worst_slip_days, rule: ">=", value: 14, style: warn}
+      - {column: open_high_raid, rule: ">=", value: 1, style: warn}
+  - table: delivery_progress
+    sheet: Jira progress
+    chart: {type: column, categories: name, series: [points_done, points_total], title: Story points done vs scope}
+    conditional:
+      - {column: scope_growth_pct, rule: ">=", value: 20, style: warn}
+      - {column: days_late, rule: ">", value: 0, style: bad}
+  - {table: delivery_milestones_slipped, sheet: Slipped milestones}
+  - {table: delivery_milestones_completed, sheet: Completed milestones}
+  - {table: delivery_milestones_due, sheet: Upcoming milestones}
+  - table: delivery_raid
+    sheet: RAID
+    conditional: [{column: days_overdue, rule: ">", value: 0, style: bad}]
+  - {table: delivery_findings, sheet: Risks}
+markdown:
+  max_words: 300
+slides:
+  - kind: title
+    subtitle: "{period}"
+  - {kind: narrative, title: Headline, ai_section_key: headline, notes: "AI-drafted, human-approved section."}
+  - kind: kpis
+    title: Delivery portfolio
+    kpis:
+      - {fact: delivery.projects.count}
+      - {fact: delivery.projects.red}
+      - {fact: delivery.projects.amber}
+      - {fact: delivery.milestones.slipped}
+      - {fact: delivery.raid.open_high}
+      - {fact: delivery.points.done_pct}
+  - kind: table
+    title: Project health
+    table: delivery_projects
+    columns: [name, phase, computed_rag, reported_rag, target_date, forecast_finish, worst_slip_days, open_high_raid]
+  - {kind: narrative, title: Progress, ai_section_key: progress, notes: "AI-drafted, human-approved section."}
+  - kind: bar_chart
+    title: Story points done vs scope
+    table: delivery_progress
+    chart: {type: bar, categories: name, series: [points_done, points_total], title: Story points}
+  - kind: table
+    title: Jira progress and forecast
+    table: delivery_progress
+    columns: [name, points_done_pct, scope_growth_pct, velocity, forecast_finish, target_date, days_late]
+  - kind: table
+    title: Milestones completed this month
+    table: delivery_milestones_completed
+    columns: [project, name, baseline_finish, actual_finish, slip_days]
+    when: has_rows
+  - kind: table
+    title: Slipped milestones
+    table: delivery_milestones_slipped
+    columns: [project, name, baseline_finish, finish, slip_days, replans]
+    when: has_rows
+  - {kind: narrative, title: Risks and issues, ai_section_key: risks_and_issues, notes: "AI-drafted, human-approved section."}
+  - kind: table
+    title: Open high or overdue RAID items
+    table: delivery_raid
+    columns: [project, raid_id, raid_type, title, severity, due_date, days_overdue]
+    when: has_rows
+  - kind: findings
+    title: System-detected delivery risks
+    table: delivery_findings
+    columns: [severity, title, subject_id]
+    when: has_rows
+  - {kind: narrative, title: Decisions needed, ai_section_key: decisions_needed, notes: "AI-drafted, human-approved section."}
+  - kind: table
+    title: Milestones due in the next 30 days
+    table: delivery_milestones_due
+    columns: [project, name, baseline_finish, finish, slip_days]
+    when: has_rows
+  - {kind: narrative, title: Next steps, ai_section_key: next_steps, notes: "AI-drafted, human-approved section."}
+  - {kind: provenance, title: Provenance}
+sections:
+  - key: headline
+    title: Headline
+    summary: true
+    max_words: 60
+    guide: >-
+      Two or three sentences for sponsors: how many projects are red or amber this month and the single most important
+      reason, with the facts that show it. Written last, from the other sections.
+  - key: progress
+    title: Progress
+    max_words: 120
+    guide: >-
+      Milestones completed and slipped, story points done, velocity and forecast finish against target go-live, per
+      project where it matters. Name projects, never people.
+  - key: risks_and_issues
+    title: Risks and issues
+    max_words: 120
+    guide: >-
+      The open high and overdue RAID items and the system-detected delivery risks: what is at stake and for which
+      project. Cite the findings you rely on.
+  - key: decisions_needed
+    title: Decisions needed
+    max_words: 100
+    guide: >-
+      Decisions sponsors must take this month (re-baseline, descope, add capacity, accept a risk), each tied to a
+      fact or finding. Say "none this month" when there are none.
+  - key: next_steps
+    title: Next steps
+    max_words: 100
+    guide: >-
+      Three to five next steps with the owning role (project manager, product owner, architect), tied to the milestones
+      due in the next 30 days. No person names.

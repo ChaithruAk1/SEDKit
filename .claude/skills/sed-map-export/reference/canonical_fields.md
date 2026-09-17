@@ -124,6 +124,73 @@ File globs: `it_cost_actuals*.xlsx`.
 | `period` | `period` | `str` | `none` | yes |
 | `amount` | `amount` | `eu_decimal` | `none` | yes |
 
+## `delivery_milestone`
+
+Table `delivery_milestone`, key (`project_id`, `task_id`, `status_date`).
+
+### mapping `delivery_plan` (module delivery, load mode `delta`)
+
+File globs: `delivery_plan_*.csv`, `delivery_plan_*.xlsx`, `project_plan_*.xlsx`, `project_plan_*.csv`.
+
+| field | from (first aliases) | transform | pii | required |
+|---|---|---|---|---|
+| `project_id` | `Project ID`, `Project` | `str` | `none` | yes |
+| `task_id` | `ID`, `Task ID`, `Unique ID` | `str` | `none` | yes |
+| `status_date` | `Status Date` | `date` | `none` | yes |
+| `name` | `Name`, `Task Name` | `str` | `none` |  |
+| `is_milestone` | `Milestone` | `bool` | `none` |  |
+| `start_date` | `Start` | `date` | `none` |  |
+| `finish_date` | `Finish` | `date` | `none` |  |
+| `baseline_finish` | `Baseline Finish` | `date` | `none` |  |
+| `actual_finish` | `Actual Finish` | `date` | `none` |  |
+| `percent_complete` | `% Complete`, `Percent Complete` | `float` | `none` |  |
+
+## `delivery_project`
+
+Table `delivery_project`, key (`project_id`).
+
+### mapping `delivery_projects` (module delivery, load mode `full_snapshot`)
+
+File globs: `delivery_projects*.csv`, `delivery_projects*.xlsx`, `project_register*.xlsx`, `project_register*.csv`.
+
+| field | from (first aliases) | transform | pii | required |
+|---|---|---|---|---|
+| `project_id` | `Project ID`, `Project Id`, `Project No` | `str` | `none` | yes |
+| `name` | `Project Name`, `Project` | `str` | `none` | yes |
+| `application` | `Application`, `Business Application` | `str` | `none` |  |
+| `phase` | `Phase`, `Stage` | `str` | `none` |  |
+| `rag` | `RAG`, `RAG Status`, `Overall Status` | `str` | `none` |  |
+| `sponsor` | `Sponsor`, `Business Sponsor` | `str` | `person` |  |
+| `manager` | `Project Manager`, `Delivery Manager`, `PM` | `str` | `person` |  |
+| `jira_keys` | `Jira Projects`, `Jira Project Keys`, `Jira Keys` | `split_list` | `none` |  |
+| `confluence_space` | `Confluence Space`, `Space Key` | `str` | `none` |  |
+| `start_date` | `Start Date`, `Start` | `date` | `none` |  |
+| `target_date` | `Target Go-Live`, `Target Date`, `Go-Live Date` | `date` | `none` |  |
+| `budget` | `Budget` | `money` | `none` |  |
+| `currency` | `Currency` | `str` | `none` |  |
+
+## `delivery_raid`
+
+Table `delivery_raid`, key (`raid_id`).
+
+### mapping `delivery_raid` (module delivery, load mode `full_snapshot`)
+
+File globs: `delivery_raid*.csv`, `delivery_raid*.xlsx`, `raid_log*.xlsx`, `raid_log*.csv`.
+
+| field | from (first aliases) | transform | pii | required |
+|---|---|---|---|---|
+| `raid_id` | `ID`, `RAID ID`, `Ref` | `str` | `none` | yes |
+| `project_id` | `Project ID`, `Project` | `str` | `none` | yes |
+| `raid_type` | `Type`, `Category` | `str` | `none` |  |
+| `title` | `Title`, `Summary` | `str` | `free_text` |  |
+| `description` | `Description`, `Details` | `str` | `free_text` |  |
+| `owner` | `Owner`, `Action Owner` | `str` | `person` |  |
+| `severity` | `Severity`, `Impact`, `Rating` | `str` | `none` |  |
+| `status` | `Status` | `str` | `none` |  |
+| `raised_on` | `Raised On`, `Date Raised`, `Raised` | `date` | `none` |  |
+| `due_date` | `Due Date`, `Target Date`, `Due` | `date` | `none` |  |
+| `closed_on` | `Closed On`, `Date Closed` | `date` | `none` |  |
+
 ## `doc_page`
 
 Table `doc_page`, key (`page_id`).

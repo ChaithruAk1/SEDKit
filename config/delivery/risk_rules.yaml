@@ -1,0 +1,20 @@
+# Thresholds of the delivery rule findings ("system-detected" delivery risks). Real values go in
+# DATA_DIR\config\delivery\risk_rules.yaml.
+milestone_slip:
+  enabled: true
+  min_slip_days: 14          # forecast finish later than the baseline by at least this many days
+  high_slip_days: 30
+  min_replans: 2             # or: the forecast moved later in at least this many plan versions
+raid_overdue:
+  enabled: true
+  severities: [high, critical]
+  grace_days: 0
+scope_growth:
+  enabled: true
+  window_weeks: 4
+  min_growth_pct: 20         # story points added in the window, against the scope at its start
+  min_points: 10
+forecast_late:
+  enabled: true
+  velocity_weeks: 4          # resolved story points per week over this window
+  min_days_late: 7           # forecast completion later than the target go-live by at least this many days

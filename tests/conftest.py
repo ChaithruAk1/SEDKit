@@ -12,7 +12,7 @@ import sed
 
 REPO = Path(__file__).resolve().parents[1]
 
-pytest_plugins = ("tests.fixtures.ops_profile", "tests.fixtures.sap_profile")
+pytest_plugins = ("tests.fixtures.ops_profile", "tests.fixtures.sap_profile", "tests.fixtures.delivery_profile")
 
 # Worktrees share main's editable install: make sure this checkout's code is the one under test.
 if Path(sed.__file__).resolve().parent.parent != (REPO / "src").resolve():

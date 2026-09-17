@@ -25,7 +25,7 @@ def test_cli_mount_via_extra_modules():
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout.strip().splitlines()[-1]) == {"ok": True, "module": "hello", "reply": "pong"}
     listed = json.loads(_run("modules", "list", "--json").stdout.strip().splitlines()[-1])
-    assert {m["key"] for m in listed["modules"]} == {"ops", "sap", "hello"}
+    assert {m["key"] for m in listed["modules"]} == {"ops", "sap", "delivery", "hello"}
 
 
 def test_nav_includes_extra_module(monkeypatch):

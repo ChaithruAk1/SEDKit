@@ -55,6 +55,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/delivery/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portfolio */
+        get: operations["delivery_portfolio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/delivery/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Project */
+        get: operations["delivery_project"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dq/unmapped": {
         parameters: {
             query?: never;
@@ -1002,6 +1036,177 @@ export interface components {
             text: string;
             /** Unit */
             unit: string;
+        };
+        /** DeliveryDoc */
+        DeliveryDoc: {
+            /** Kind */
+            kind: string;
+            /** Last Updated */
+            last_updated: string | null;
+            /** Page Id */
+            page_id: string;
+            /** Title */
+            title: string;
+        };
+        /** DeliveryDocuments */
+        DeliveryDocuments: {
+            /** Adrs */
+            adrs: number;
+            /** Items */
+            items: components["schemas"]["DeliveryDoc"][];
+            /** Last Updated */
+            last_updated: string | null;
+            /** Pages */
+            pages: number;
+            /** Requirements */
+            requirements: number;
+        };
+        /** DeliveryPortfolioOut */
+        DeliveryPortfolioOut: {
+            /** As Of */
+            as_of: string;
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Findings */
+            findings: components["schemas"]["FindingOut"][];
+            /** Projects */
+            projects: components["schemas"]["DeliveryProjectRow"][];
+        };
+        /** DeliveryProgress */
+        DeliveryProgress: {
+            /** Forecast Finish */
+            forecast_finish: string | null;
+            /** Points Added Window */
+            points_added_window: number;
+            /** Points Done */
+            points_done: number;
+            /** Points Total */
+            points_total: number;
+            /** Scope Growth Pct */
+            scope_growth_pct: number | null;
+            /** Stories */
+            stories: number;
+            /** Velocity Per Week */
+            velocity_per_week: number;
+            /** Weekly */
+            weekly: components["schemas"]["DeliveryWeek"][];
+        };
+        /** DeliveryProjectOut */
+        DeliveryProjectOut: {
+            /** As Of */
+            as_of: string;
+            documents: components["schemas"]["DeliveryDocuments"];
+            /** Findings */
+            findings: components["schemas"]["FindingOut"][];
+            /** Plan Versions */
+            plan_versions: number;
+            progress: components["schemas"]["DeliveryProgress"];
+            project: components["schemas"]["DeliveryProjectRow"];
+            /** Raid */
+            raid: components["schemas"]["DeliveryRaid"][];
+            /** Tasks */
+            tasks: components["schemas"]["DeliveryTask"][];
+        };
+        /** DeliveryProjectRow */
+        DeliveryProjectRow: {
+            /** App Id */
+            app_id: string | null;
+            /** App Raw */
+            app_raw: string | null;
+            /** Budget Base */
+            budget_base: number | null;
+            /** Computed Rag */
+            computed_rag: string;
+            /** Confluence Space */
+            confluence_space: string | null;
+            /** Forecast Finish */
+            forecast_finish: string | null;
+            /** Jira Keys */
+            jira_keys: string[];
+            /** Name */
+            name: string;
+            next_milestone: components["schemas"]["DeliveryTask"] | null;
+            /** Open High Raid */
+            open_high_raid: number;
+            /** Overdue Raid */
+            overdue_raid: number;
+            /** Phase */
+            phase: string | null;
+            /** Plan Status Date */
+            plan_status_date: string | null;
+            /** Points Done Pct */
+            points_done_pct: number | null;
+            /** Project Id */
+            project_id: string;
+            /** Reasons */
+            reasons: string[];
+            /** Reported Rag */
+            reported_rag: string | null;
+            /** Start Date */
+            start_date: string | null;
+            /** Target Date */
+            target_date: string | null;
+            /** Worst Slip Days */
+            worst_slip_days: number;
+        };
+        /** DeliveryRaid */
+        DeliveryRaid: {
+            /** Closed On */
+            closed_on: string | null;
+            /** Days Overdue */
+            days_overdue: number;
+            /** Due Date */
+            due_date: string | null;
+            /** Open */
+            open: boolean;
+            /** Project Id */
+            project_id: string;
+            /** Raid Id */
+            raid_id: string;
+            /** Raid Type */
+            raid_type: string | null;
+            /** Raised On */
+            raised_on: string | null;
+            /** Severity */
+            severity: string | null;
+            /** Status */
+            status: string | null;
+            /** Title */
+            title: string | null;
+        };
+        /** DeliveryTask */
+        DeliveryTask: {
+            /** Actual Finish */
+            actual_finish: string | null;
+            /** Baseline Finish */
+            baseline_finish: string | null;
+            /** Finish */
+            finish: string | null;
+            /** Is Milestone */
+            is_milestone: boolean;
+            /** Name */
+            name: string | null;
+            /** Overdue */
+            overdue: boolean;
+            /** Percent Complete */
+            percent_complete: number | null;
+            /** Replans */
+            replans: number;
+            /** Slip Days */
+            slip_days: number | null;
+            /** Task Id */
+            task_id: string;
+        };
+        /** DeliveryWeek */
+        DeliveryWeek: {
+            /** Done Points */
+            done_points: number;
+            /** Scope Points */
+            scope_points: number;
+            /** Week Ending */
+            week_ending: string;
         };
         /** DocRow */
         DocRow: {
@@ -2916,6 +3121,166 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    delivery_portfolio: {
+        parameters: {
+            query?: {
+                /** @description app_id (repeatable) */
+                app?: string[];
+                family?: string | null;
+                /** @description vendor_id */
+                vendor?: string | null;
+                /** @description assignment group */
+                group?: string | null;
+                /** @description 2026-W35, 2026-08 or 2026-Q3 */
+                period?: string | null;
+                /** @description YYYY-MM-DD (default: data as-of) */
+                as_of?: string | null;
+                /** @description Include unapproved AI content */
+                include_drafts?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryPortfolioOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    delivery_project: {
+        parameters: {
+            query?: {
+                /** @description app_id (repeatable) */
+                app?: string[];
+                family?: string | null;
+                /** @description vendor_id */
+                vendor?: string | null;
+                /** @description assignment group */
+                group?: string | null;
+                /** @description 2026-W35, 2026-08 or 2026-Q3 */
+                period?: string | null;
+                /** @description YYYY-MM-DD (default: data as-of) */
+                as_of?: string | null;
+                /** @description Include unapproved AI content */
+                include_drafts?: boolean;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryProjectOut"];
                 };
             };
             /** @description Not found */

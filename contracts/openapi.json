@@ -1088,6 +1088,681 @@
         "title": "DefinitionOut",
         "type": "object"
       },
+      "DeliveryDoc": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Updated"
+          },
+          "page_id": {
+            "title": "Page Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id",
+          "title",
+          "kind",
+          "last_updated"
+        ],
+        "title": "DeliveryDoc",
+        "type": "object"
+      },
+      "DeliveryDocuments": {
+        "additionalProperties": false,
+        "properties": {
+          "adrs": {
+            "title": "Adrs",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryDoc"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Updated"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "requirements": {
+            "title": "Requirements",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requirements",
+          "adrs",
+          "pages",
+          "last_updated",
+          "items"
+        ],
+        "title": "DeliveryDocuments",
+        "type": "object"
+      },
+      "DeliveryPortfolioOut": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/FindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryProjectRow"
+            },
+            "title": "Projects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "projects",
+          "counts",
+          "findings"
+        ],
+        "title": "DeliveryPortfolioOut",
+        "type": "object"
+      },
+      "DeliveryProgress": {
+        "additionalProperties": false,
+        "properties": {
+          "forecast_finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Finish"
+          },
+          "points_added_window": {
+            "title": "Points Added Window",
+            "type": "number"
+          },
+          "points_done": {
+            "title": "Points Done",
+            "type": "number"
+          },
+          "points_total": {
+            "title": "Points Total",
+            "type": "number"
+          },
+          "scope_growth_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Growth Pct"
+          },
+          "stories": {
+            "title": "Stories",
+            "type": "integer"
+          },
+          "velocity_per_week": {
+            "title": "Velocity Per Week",
+            "type": "number"
+          },
+          "weekly": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryWeek"
+            },
+            "title": "Weekly",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stories",
+          "points_total",
+          "points_done",
+          "points_added_window",
+          "scope_growth_pct",
+          "velocity_per_week",
+          "forecast_finish",
+          "weekly"
+        ],
+        "title": "DeliveryProgress",
+        "type": "object"
+      },
+      "DeliveryProjectOut": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "documents": {
+            "$ref": "#/components/schemas/DeliveryDocuments"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/FindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "plan_versions": {
+            "title": "Plan Versions",
+            "type": "integer"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/DeliveryProgress"
+          },
+          "project": {
+            "$ref": "#/components/schemas/DeliveryProjectRow"
+          },
+          "raid": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryRaid"
+            },
+            "title": "Raid",
+            "type": "array"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTask"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "project",
+          "tasks",
+          "plan_versions",
+          "raid",
+          "progress",
+          "documents",
+          "findings"
+        ],
+        "title": "DeliveryProjectOut",
+        "type": "object"
+      },
+      "DeliveryProjectRow": {
+        "additionalProperties": false,
+        "properties": {
+          "app_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Id"
+          },
+          "app_raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Raw"
+          },
+          "budget_base": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Base"
+          },
+          "computed_rag": {
+            "title": "Computed Rag",
+            "type": "string"
+          },
+          "confluence_space": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confluence Space"
+          },
+          "forecast_finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Finish"
+          },
+          "jira_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Jira Keys",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "next_milestone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryTask"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_high_raid": {
+            "title": "Open High Raid",
+            "type": "integer"
+          },
+          "overdue_raid": {
+            "title": "Overdue Raid",
+            "type": "integer"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "plan_status_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Status Date"
+          },
+          "points_done_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Done Pct"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "reported_rag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Rag"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "worst_slip_days": {
+            "title": "Worst Slip Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "name",
+          "app_id",
+          "app_raw",
+          "phase",
+          "reported_rag",
+          "computed_rag",
+          "reasons",
+          "target_date",
+          "start_date",
+          "jira_keys",
+          "confluence_space",
+          "budget_base",
+          "plan_status_date",
+          "next_milestone",
+          "worst_slip_days",
+          "open_high_raid",
+          "overdue_raid",
+          "points_done_pct",
+          "forecast_finish"
+        ],
+        "title": "DeliveryProjectRow",
+        "type": "object"
+      },
+      "DeliveryRaid": {
+        "additionalProperties": false,
+        "properties": {
+          "closed_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed On"
+          },
+          "days_overdue": {
+            "title": "Days Overdue",
+            "type": "integer"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "raid_id": {
+            "title": "Raid Id",
+            "type": "string"
+          },
+          "raid_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raid Type"
+          },
+          "raised_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raised On"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "raid_id",
+          "project_id",
+          "raid_type",
+          "title",
+          "severity",
+          "status",
+          "open",
+          "raised_on",
+          "due_date",
+          "closed_on",
+          "days_overdue"
+        ],
+        "title": "DeliveryRaid",
+        "type": "object"
+      },
+      "DeliveryTask": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Finish"
+          },
+          "baseline_finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Finish"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
+          "is_milestone": {
+            "title": "Is Milestone",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "boolean"
+          },
+          "percent_complete": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Complete"
+          },
+          "replans": {
+            "title": "Replans",
+            "type": "integer"
+          },
+          "slip_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slip Days"
+          },
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "name",
+          "is_milestone",
+          "baseline_finish",
+          "finish",
+          "actual_finish",
+          "percent_complete",
+          "slip_days",
+          "replans",
+          "overdue"
+        ],
+        "title": "DeliveryTask",
+        "type": "object"
+      },
+      "DeliveryWeek": {
+        "additionalProperties": false,
+        "properties": {
+          "done_points": {
+            "title": "Done Points",
+            "type": "number"
+          },
+          "scope_points": {
+            "title": "Scope Points",
+            "type": "number"
+          },
+          "week_ending": {
+            "title": "Week Ending",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week_ending",
+          "scope_points",
+          "done_points"
+        ],
+        "title": "DeliveryWeek",
+        "type": "object"
+      },
       "DocRow": {
         "additionalProperties": false,
         "properties": {
@@ -7664,6 +8339,391 @@
         "summary": "Create Alias",
         "tags": [
           "core"
+        ]
+      }
+    },
+    "/api/delivery/portfolio": {
+      "get": {
+        "operationId": "delivery_portfolio",
+        "parameters": [
+          {
+            "description": "app_id (repeatable)",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "schema": {
+              "description": "app_id (repeatable)",
+              "items": {
+                "type": "string"
+              },
+              "title": "App",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          },
+          {
+            "description": "vendor_id",
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "vendor_id",
+              "title": "Vendor"
+            }
+          },
+          {
+            "description": "assignment group",
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "assignment group",
+              "title": "Group"
+            }
+          },
+          {
+            "description": "2026-W35, 2026-08 or 2026-Q3",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2026-W35, 2026-08 or 2026-Q3",
+              "title": "Period"
+            }
+          },
+          {
+            "description": "YYYY-MM-DD (default: data as-of)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "YYYY-MM-DD (default: data as-of)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Include unapproved AI content",
+            "in": "query",
+            "name": "include_drafts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include unapproved AI content",
+              "title": "Include Drafts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryPortfolioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Portfolio",
+        "tags": [
+          "delivery"
+        ]
+      }
+    },
+    "/api/delivery/projects/{project_id}": {
+      "get": {
+        "operationId": "delivery_project",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "app_id (repeatable)",
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "schema": {
+              "description": "app_id (repeatable)",
+              "items": {
+                "type": "string"
+              },
+              "title": "App",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          },
+          {
+            "description": "vendor_id",
+            "in": "query",
+            "name": "vendor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "vendor_id",
+              "title": "Vendor"
+            }
+          },
+          {
+            "description": "assignment group",
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "assignment group",
+              "title": "Group"
+            }
+          },
+          {
+            "description": "2026-W35, 2026-08 or 2026-Q3",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2026-W35, 2026-08 or 2026-Q3",
+              "title": "Period"
+            }
+          },
+          {
+            "description": "YYYY-MM-DD (default: data as-of)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "YYYY-MM-DD (default: data as-of)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Include unapproved AI content",
+            "in": "query",
+            "name": "include_drafts",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include unapproved AI content",
+              "title": "Include Drafts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Project",
+        "tags": [
+          "delivery"
         ]
       }
     },

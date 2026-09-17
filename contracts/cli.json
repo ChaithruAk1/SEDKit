@@ -1314,6 +1314,67 @@
       "name": "db"
     },
     {
+      "commands": [
+        {
+          "help": "Projects with computed health, worst milestone slip, open high RAID items and forecast finish.",
+          "name": "portfolio",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_of",
+              "opts": [
+                "--as-of"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "Delivery management of new business applications",
+      "name": "delivery"
+    },
+    {
       "help": "Check environment, DATA_DIR location, schema, salt, hooks and Claude Code wiring.",
       "name": "doctor",
       "params": [

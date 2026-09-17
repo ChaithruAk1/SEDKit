@@ -7,8 +7,9 @@ knows nothing about any business domain. Each domain is a **module**:
 |---|---|---|
 | #1 | `ops` | tickets, SLA, backlog, costs, licenses, vendors; weekly, monthly, quarterly and vendor reports |
 | #2 | `sap` | SAP L3 support by area and landscape on top of the ops tickets, ChaRM changes and transports, IDoc health, SAP risks, SAP subcategories in AI triage, `sap-weekly` (`src/sed/modules/sap/CLAUDE.md`) |
+| #3 | `delivery` | delivery of new business applications: project register, plan milestones and slips, RAID log, Jira progress and forecast, requirements and ADR pages, delivery risks, `delivery-status` (`src/sed/modules/delivery/CLAUDE.md`) |
 
-Later modules (for example delivery management of new business apps) plug in the same way.
+Later modules plug in the same way.
 
 ## What a module declares
 
@@ -31,7 +32,7 @@ is a lazy import reference (`"package.module:attr"`), so the core imports module
 | Config | `config_files`, `data_subdirs` | `config/<key>/...`, overridable in `DATA_DIR\config\<key>\` |
 | Tables | `tables` | documentation and collision checks |
 
-Enable or disable modules in the layered `config/modules.yaml` (`enabled: [ops, sap]`). A disabled module's commands exit 4,
+Enable or disable modules in the layered `config/modules.yaml` (`enabled: [ops, sap, delivery]`). A disabled module's commands exit 4,
 its API routes are not mounted and its pages are hidden.
 
 ## Adding a module

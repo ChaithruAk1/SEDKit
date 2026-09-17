@@ -1,7 +1,7 @@
 # SED
 
 SED is a personal toolkit for an application owner, built as a platform of modules (ops is module #1, SAP application
-support is module #2; see `docs/modules.md`). It:
+support is module #2, delivery management is module #3; see `docs/modules.md`). It:
 
 1. **Imports** ITSM (incidents, requests, changes, problems, SLAs, CMDB), Jira, Confluence and Excel/SharePoint
    exports into one local SQLite database.
@@ -75,6 +75,7 @@ Outputs land in `DATA_DIR\out\<period>\`. Useful follow-ups: `sed alias list --u
 | quarterly | quarter | `uv run sed report build quarterly --period 2026-Q3 --profile synthetic` |
 | vendor | quarter or month | `uv run sed report build vendor --period 2026-Q3 --vendor V001 --profile synthetic` |
 | sap-weekly | ISO week | `uv run sed report build sap-weekly --period 2026-W35 --profile synthetic` |
+| delivery-status | month | `uv run sed report build delivery-status --period 2026-08 --profile synthetic` |
 
 - `--ai approved|none|draft` controls AI content; `none` builds deterministic, shareable files, `draft` stamps DRAFT on
   every page. Every report has Markdown, and AI-drafted sections (headline, executive summary, asks...) declared under
@@ -150,6 +151,33 @@ uv run sed sap eval-triage <run_id> --profile synthetic --json     # thresholds 
 accuracy; `--ai none` leaves it out.
 
 Metrics stay at group (area), system and partner level, never per person.
+
+## Delivery management (module `delivery`)
+
+The delivery module follows the projects that build new business applications. It imports three exports into
+`DATA_DIR\inbox`:
+- the project register (workbook or CSV: project, application, phase, reported RAG, sponsor, manager, Jira project
+  keys, Confluence space, start, target go-live, budget);
+- MS Project or Excel plan exports with a status date (task, milestone flag, start, finish, baseline finish, actual
+  finish, % complete); keep every weekly version, because slips and replans come from comparing them;
+- the RAID log (type, title, owner, severity, status, raised, due and closed dates).
+
+Jira stories and Confluence pages come in through the ops mappings and are linked by the register's Jira keys and
+Confluence space.
+
+```bash
+uv run sed synth --module delivery --profile synthetic   # four fictional projects with planted slips and risks
+uv run sed import --inbox --profile synthetic
+uv run sed analytics refresh --profile synthetic         # delivery risks (config/delivery/risk_rules.yaml)
+uv run sed delivery portfolio --profile synthetic --json
+uv run sed report build delivery-status --period 2026-08 --ai none --profile synthetic
+```
+
+Health is computed, not copied: red for a milestone 30+ days past baseline or overdue, an overdue high RAID item or a
+forecast finish after the target go-live; amber for a 14-day slip, open high RAID items or scope growth above the
+threshold. The reported RAG is shown next to it. Dashboard pages: `#/delivery` (portfolio) and
+`#/delivery/projects/<id>` (plan, burn-up, RAID, requirement and ADR pages, risks). SED never writes to Jira,
+Confluence or the plan tools.
 
 ## AI analysis (Claude Code)
 
