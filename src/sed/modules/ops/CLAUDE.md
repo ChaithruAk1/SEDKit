@@ -8,7 +8,9 @@ Module #1 of SED: ITSM tickets, SLA, backlog, costs, licenses, vendors and the r
 - **API:** routes at `/api/ops/...` (`api.py`), models in `api_models.py`, SQL in `queries/`.
 - **Dashboard pages:** `web/src/modules/ops/`.
 - **Reports:** `reports/<report>.py:build(req) -> SnapshotParts`, with specs in `config/ops/reports/<report>.yaml`.
-- **AI:** skill `sed-triage-batch`, handler `ai/triage.py:TriageBatchHandler`, workflow `.claude/workflows/sed-analyze.js`.
+- **AI:** skills `sed-triage-batch` (`ai/triage.py`), `sed-triage-open` (`ai/triage_open.py`), `sed-find-recurring`
+  (`ai/recurring.py`) and `sed-assess-risks` (`ai/risks.py`); evals in `evals.py` (`sed ops eval-*`). The workflow
+  `.claude/workflows/sed-analyze.js` runs import, triage, recurring issues and risks in one go.
   Other modules add packet fields and subcategories for their tickets through the extension point `ops.triage`
   (`ai/extensions.py`); ops never imports them.
 - **Legacy code still owned here:** `sed/metrics.py`, `sed/analytics.py`, `sed/synth/`, `sed/ingest/targets.py`.

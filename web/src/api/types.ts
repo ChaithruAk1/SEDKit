@@ -28,11 +28,18 @@ export type PostBody<P extends PostPath> =
   OperationOf<P, 'post'> extends { requestBody: { content: { 'application/json': infer B } } } ? B : never;
 export type PostResponse<P extends PostPath> =
   OperationOf<P, 'post'> extends { responses: { 200: infer R } } ? JsonOf<R> : never;
+export type PostPathParams<P extends PostPath> =
+  OperationOf<P, 'post'> extends { parameters: { path: infer X } } ? X : never;
 
 /** Options for a GET call: query parameters, plus path parameters when the route has any. */
 export type GetOptions<P extends GetPath> = {
   query?: GetQuery<P>;
 } & ([GetPathParams<P>] extends [never] ? { params?: undefined } : { params: GetPathParams<P> });
+
+/** Options for a POST call: path parameters when the route has any, and an abort signal. */
+export type PostOptions<P extends PostPath> = {
+  signal?: AbortSignal;
+} & ([PostPathParams<P>] extends [never] ? { params?: undefined } : { params: PostPathParams<P> });
 
 // Frequently used schema aliases.
 export type Kpi = Schema<'Kpi'>;

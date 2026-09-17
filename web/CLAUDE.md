@@ -17,7 +17,7 @@ bundled and `npm run check` enforces it.
 ## Rules
 - **Contract first.** Every request and response type comes from `src/api/schema.d.ts` through `src/api/types.ts`.
   Call the API only with `apiGet`/`apiPost` (`src/api/client.ts`) or the hooks in `src/api/useApi.ts`; URLs are
-  relative `/api/...` paths.
+  relative `/api/...` paths, and templated routes take `{params: {...}}` (GET and POST).
 - **Token.** POSTs send `X-SED-Token` from `<meta name="sed-token" content="__SED_TOKEN__">`, which `sed serve` fills in
   per launch. Never log the token, put it in a URL, or store it.
 - **Errors.** Non-2xx responses become `ApiError` from the ErrorEnvelope (`kind`, `message`, `details`); show them with
@@ -42,7 +42,7 @@ bundled and `npm run check` enforces it.
   URL; page-local state (tab, search, page, open ticket) uses `useSearchParam`.
 - `src/components/`: KpiTile, ChartCard, DataTable, Markdown, ProvenanceBadge, SystemDetectedBadge, FindingList,
   FreshnessList, EmptyState, ErrorState, AssignAliasModal, PageHeader, SectionCard, `format.ts`.
-- `src/core/`: platform pages (`#/data`).
+- `src/core/`: platform pages (`#/review`, `#/runs`, `#/runs/:runId`, `#/data`).
 - `src/modules/<key>/index.ts`: one web module per server module, default-exporting
   `{key, title, routes, filterOptions?} satisfies WebModule<'<key>'>`. Route paths must be `<key>` or `<key>/...`
   (checked at compile time and in `registry.ts`). Pages are lazy (`load: () => import('./pages/XPage')`).

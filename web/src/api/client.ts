@@ -15,7 +15,9 @@ import type {
   GetPathParams,
   GetResponse,
   PostBody,
+  PostOptions,
   PostPath,
+  PostPathParams,
   PostResponse,
 } from './types';
 
@@ -163,11 +165,21 @@ export async function apiGet<P extends GetPath>(path: P, ...args: GetArgs<P>): P
   return send<GetResponse<P>>('GET', buildUrl(path, params, query), undefined, signal);
 }
 
-/** Typed POST with the launch token: `apiPost('/api/aliases', {kind, raw_value, target})`. */
-export async function apiPost<P extends PostPath>(path: P, body: PostBody<P>, signal?: AbortSignal): Promise<PostResponse<P>> {
+/** Options are required (for the path parameters) only on templated routes. */
+export type PostArgs<P extends PostPath> = [PostPathParams<P>] extends [never]
+  ? [options?: PostOptions<P>]
+  : [options: PostOptions<P>];
+
+/**
+ * Typed POST with the launch token: `apiPost('/api/aliases', {kind, raw_value, target})`, or on a templated route
+ * `apiPost('/api/runs/{run_id}/review', {action}, {params: {run_id}})`.
+ */
+export async function apiPost<P extends PostPath>(path: P, body: PostBody<P>, ...args: PostArgs<P>): Promise<PostResponse<P>> {
+  const [options] = args as [PostOptions<P> | undefined];
+  const params = (options?.params ?? undefined) as Record<string, string> | undefined;
   if (FIXTURES_MODE) {
     const fixtures = await import('./fixtures');
-    return fixtures.fixturePost(path, body, signal) as Promise<PostResponse<P>>;
+    return fixtures.fixturePost(path, body, params ?? {}, options?.signal) as Promise<PostResponse<P>>;
   }
-  return send<PostResponse<P>>('POST', buildUrl(path), body, signal);
+  return send<PostResponse<P>>('POST', buildUrl(path, params), body, options?.signal);
 }

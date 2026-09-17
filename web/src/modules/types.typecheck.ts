@@ -64,6 +64,11 @@ export async function apiContractChecks(): Promise<void> {
 
   // @ts-expect-error the POST body must match AliasIn
   await apiPost('/api/aliases', { kind: 'app', raw: 'x' });
+
+  await apiPost('/api/runs/{run_id}/review', { action: 'approve' }, { params: { run_id: 'run-1' } });
+
+  // @ts-expect-error path parameters are required for templated POST routes
+  await apiPost('/api/runs/{run_id}/review', { action: 'approve' });
 }
 
 export function useApiContractChecks(): void {

@@ -192,6 +192,19 @@ class TriageBatchHandler:
 
     # -- ingest ----------------------------------------------------------------------------------------------------
 
+    def correction_options(self, paths: Any) -> dict[str, Any]:
+        """Valid values for a human correction: categories with their subcategories (portfolio, then each
+        extension's, which apply only to the tickets that extension claims) and the misfiled_as values."""
+        taxonomy = load_taxonomy(paths)
+        extensions = load_extensions(paths, taxonomy)
+        categories = []
+        for code, category in taxonomy.categories.items():
+            subs = [{"code": sub, "only": None} for sub in category.subcategories]
+            for ext in extensions:
+                subs += [{"code": sub, "only": ext.key} for sub in ext.by_category().get(code, ())]
+            categories.append({"code": code, "description": category.description, "subcategories": subs})
+        return {"categories": categories, "misfiled_as": list(taxonomy.misfiled_as)}
+
     def check_correction(
         self, paths: Any, conn: sqlite3.Connection, ticket_id: str, stage: str, correction: dict[str, Any]
     ) -> list[str]:

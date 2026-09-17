@@ -36,17 +36,19 @@ def test_harness_scenarios_pass():
     assert proc.returncode == 0, proc.stdout + proc.stderr
     report = json.loads(proc.stdout)
     cases = [c for w in report["workflows"] for c in w["cases"]]
-    assert report["ok"] and len(cases) >= 5 and all(c["ok"] for c in cases)
+    assert report["ok"] and len(cases) >= 16 and all(c["ok"] for c in cases)
 
 
 @pytest.mark.parametrize(
     ("find", "replace", "expected"),
     [
-        ("phase('Finish run')", "phase('Finish run'); const stamp = Date.now()", "Date.now()"),
-        ("const SKILL = 'sed-triage-batch'", "const SKILL: string = 'sed-triage-batch'", "does not compile"),
+        ("phase(cfg.phases.finish)", "phase(cfg.phases.finish); const stamp = Date.now()", "Date.now()"),
+        ("const OK = ['completed'", "const OK: string[] = ['completed'", "does not compile"),
         ("  name: 'sed-analyze',", "  name: NAME,", "meta must not reference variables"),
         ("log(`Failed batches: ", "log(`Failures: ", "Failed batches: batch_0002"),
-        ("  label: `batch ${input.batch}`,", "  label: 'batch',", "batch agents"),
+        ("work: (batch) => `batch ${batch}`", "work: (batch) => 'batch'", "batch agents"),
+        ("if (steps.import.status !== 'completed') return", "if (false) return", "import errors stop the workflow"),
+        ("if (!last || last.started_at.slice(0, 7) < month)", "if (!last)", "runs risks on the first run of a month"),
     ],
 )
 def test_harness_catches_broken_workflows(tmp_path, find, replace, expected):

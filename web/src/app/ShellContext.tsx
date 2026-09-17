@@ -53,12 +53,14 @@ export interface ShellValue {
 
 const ShellContext = createContext<ShellValue | null>(null);
 
+const CORE_ICONS: Record<string, string> = { '/review': 'list-check', '/runs': 'robot', '/data': 'database' };
+
 function localNav(): NavEntry[] {
   return REGISTERED_ROUTES.filter((r) => !r.path.includes(':')).map((r, index) => ({
     id: `${r.moduleKey}.${index}`,
     label: r.title,
     path: r.path,
-    icon: r.moduleKey === 'core' ? 'database' : null,
+    icon: r.moduleKey === 'core' ? (CORE_ICONS[r.path] ?? null) : null,
     order: r.moduleKey === 'core' ? 900 + index : 10 + index,
     module: r.moduleKey,
   }));

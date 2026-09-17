@@ -157,14 +157,20 @@
           "Failed batches: batch_0002",
           "Run 20260901T101500-triage-batch-0a1b: 100 items in 2 batches",
           "finish-run marked failed: batch_0002",
-          "uv run sed review sample 20260901T101500-triage-batch-0a1b"
+          "uv run sed review sample 20260901T101500-triage-batch-0a1b",
+          "sed-analyze completed. Runs: triage 20260901T101500-triage-batch-0a1b (completed)"
         ],
         "result": {
           "status": "completed",
-          "run_id": "20260901T101500-triage-batch-0a1b",
-          "failed_batches": [
-            "batch_0002"
-          ]
+          "steps": {
+            "triage": {
+              "status": "completed",
+              "run_id": "20260901T101500-triage-batch-0a1b",
+              "failed_batches": [
+                "batch_0002"
+              ]
+            }
+          }
         }
       }
     },
@@ -282,7 +288,11 @@
         ],
         "result": {
           "status": "completed",
-          "failed_batches": []
+          "steps": {
+            "triage": {
+              "failed_batches": []
+            }
+          }
         }
       }
     },
@@ -393,9 +403,13 @@
           }
         },
         "result": {
-          "failed_batches": [
-            "batch_0002"
-          ]
+          "steps": {
+            "triage": {
+              "failed_batches": [
+                "batch_0002"
+              ]
+            }
+          }
         }
       }
     },
@@ -438,7 +452,12 @@
           "start-run failed (exit 4)"
         ],
         "result": {
-          "status": "start_failed"
+          "status": "failed",
+          "steps": {
+            "triage": {
+              "status": "start_failed"
+            }
+          }
         }
       }
     },
@@ -452,7 +471,8 @@
         "scope": "period:2026-08",
         "limit": 100,
         "batchSize": 50,
-        "claudeVersion": "2.1.0 (Claude Code)"
+        "claudeVersion": "2.1.0 (Claude Code)",
+        "only": "sap"
       },
       "responses": {
         "start-run": {
@@ -486,119 +506,37 @@
           "Nothing to triage"
         ],
         "result": {
-          "status": "nothing_to_do"
+          "status": "completed",
+          "steps": {
+            "triage": {
+              "status": "nothing_to_do"
+            }
+          }
+        },
+        "prompt_contains": {
+          "start-run": [
+            "--scope period:2026-08 --limit 100 --only sap --batch-size 50"
+          ]
         }
       }
     },
     {
-      "name": "unsupported steps are logged, not silently dropped",
+      "name": "unknown steps are rejected before any agent runs",
       "args": {
         "profile": "synthetic",
         "steps": [
-          "import",
           "triage",
-          "recurring"
+          "report"
         ],
         "scope": "period:2026-08",
         "limit": 100,
         "batchSize": 50,
         "claudeVersion": "2.1.0 (Claude Code)"
       },
-      "responses": {
-        "start-run": {
-          "exit_code": 0,
-          "plan": {
-            "run_id": "20260901T101500-triage-batch-0a1b",
-            "skill": "sed-triage-batch",
-            "status": "running",
-            "dry_run": false,
-            "plan": {
-              "items": 100,
-              "batches": 2,
-              "est_agents": 2,
-              "max_chars_per_batch": 17600,
-              "longest_line_chars": 448,
-              "claimed": 100
-            },
-            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b",
-            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out",
-            "context": [
-              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/context.md"
-            ],
-            "inputs": [
-              {
-                "batch": "batch_0001",
-                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0001.jsonl",
-                "aux": [
-                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0001.txt"
-                ],
-                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0001.json",
-                "items": 50,
-                "chars": 17000
-              },
-              {
-                "batch": "batch_0002",
-                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/batch_0002.jsonl",
-                "aux": [
-                  "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/in/vocab_batch_0002.txt"
-                ],
-                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260901T101500-triage-batch-0a1b/out/batch_0002.json",
-                "items": 50,
-                "chars": 17600
-              }
-            ]
-          },
-          "error": null
-        },
-        "batch batch_0001": {
-          "batch": "batch_0001",
-          "status": "ingested",
-          "ingested": 50,
-          "errors_count": 0,
-          "low_conf": 7
-        },
-        "batch batch_0002": {
-          "batch": "batch_0002",
-          "status": "ingested",
-          "ingested": 50,
-          "errors_count": 0,
-          "low_conf": 5
-        },
-        "finish-run": {
-          "exit_code": 0,
-          "error": null,
-          "summary": {
-            "run_id": "20260901T101500-triage-batch-0a1b",
-            "status": "completed",
-            "counts": {
-              "items": 100,
-              "claimed": 100,
-              "batches": 2,
-              "ingested_batches": 2,
-              "failed_batches": 0,
-              "labelled": 100,
-              "low_confidence": 12,
-              "claims_released": 100,
-              "random_sample": 30,
-              "lowest_conf_sample": 30
-            },
-            "failed_batches": [],
-            "review": {
-              "random_sample": 30,
-              "lowest_conf": 30,
-              "next": "uv run sed review sample 20260901T101500-triage-batch-0a1b --profile synthetic --json"
-            }
-          }
-        }
-      },
+      "responses": {},
       "expect": {
-        "batch_agents": 2,
-        "logs_contain": [
-          "Steps not available yet and skipped: import, recurring"
-        ],
-        "result": {
-          "status": "completed"
-        }
+        "throws": "unknown steps: report",
+        "agent_labels": []
       }
     },
     {
@@ -649,6 +587,713 @@
       "responses": {},
       "expect": {
         "throws": "resumeRunIds must be an object",
+        "agent_labels": []
+      }
+    },
+    {
+      "name": "full analysis: import, triage, recurring issues and risks after a contracts import",
+      "args": {
+        "profile": "synthetic",
+        "analysisModel": "claude-opus-5",
+        "claudeVersion": "2.1.0 (Claude Code)"
+      },
+      "responses": {
+        "import": {
+          "exit_code": 0,
+          "error": null,
+          "result": {
+            "profile": "synthetic",
+            "dry_run": false,
+            "files": [
+              {
+                "file": "incident_2026-09-06.csv",
+                "status": "completed",
+                "mapping": "servicenow_incident"
+              },
+              {
+                "file": "Contracts_Register.xlsx",
+                "status": "completed",
+                "mapping": "contracts_xlsx"
+              }
+            ],
+            "skipped": [],
+            "summary": {
+              "imported": 2,
+              "errors": 0,
+              "skipped": 0,
+              "rows_read": 1200,
+              "rows_rejected": 4
+            }
+          }
+        },
+        "rule-refresh": {
+          "exit_code": 0,
+          "error": null,
+          "refresh": {
+            "as_of": "2026-09-01",
+            "stats": {
+              "ops": {
+                "active": 12
+              },
+              "sap": {
+                "active": 3
+              }
+            }
+          }
+        },
+        "start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": "20260907T060000-triage-batch-1c2d",
+            "skill": "sed-triage-batch",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 80,
+              "batches": 1,
+              "est_agents": 1,
+              "max_chars_per_batch": 21000,
+              "longest_line_chars": 1500
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T060000-triage-batch-1c2d",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T060000-triage-batch-1c2d/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T060000-triage-batch-1c2d/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T060000-triage-batch-1c2d/in/batch_0001.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T060000-triage-batch-1c2d/out/batch_0001.json",
+                "items": 80,
+                "chars": 21000
+              }
+            ]
+          }
+        },
+        "batch batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 80,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260907T060000-triage-batch-1c2d",
+            "status": "completed",
+            "counts": {
+              "batches": 1,
+              "ingested_batches": 1,
+              "labelled": 80,
+              "low_confidence": 6,
+              "claims_released": 80
+            },
+            "failed_batches": [],
+            "review": {}
+          }
+        },
+        "recurring start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": "20260907T061500-find-recurring-3e4f",
+            "skill": "sed-find-recurring",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 42,
+              "batches": 1,
+              "est_agents": 1,
+              "max_chars_per_batch": 21000,
+              "longest_line_chars": 1500
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/in/batch_0001.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/out/batch_0001.json",
+                "items": 42,
+                "chars": 21000
+              }
+            ]
+          }
+        },
+        "recurring batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 5,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "recurring finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260907T061500-find-recurring-3e4f",
+            "status": "completed",
+            "counts": {
+              "batches": 1,
+              "ingested_batches": 1,
+              "findings_new": 3,
+              "findings_carried_forward": 2
+            },
+            "failed_batches": [],
+            "review": {}
+          }
+        },
+        "risks start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": "20260907T063000-assess-risks-5a6b",
+            "skill": "sed-assess-risks",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 18,
+              "batches": 1,
+              "est_agents": 1,
+              "max_chars_per_batch": 21000,
+              "longest_line_chars": 1500
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T063000-assess-risks-5a6b",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T063000-assess-risks-5a6b/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T063000-assess-risks-5a6b/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T063000-assess-risks-5a6b/in/batch_0001.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T063000-assess-risks-5a6b/out/batch_0001.json",
+                "items": 18,
+                "chars": 21000
+              }
+            ]
+          }
+        },
+        "risks batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 4,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "risks finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260907T063000-assess-risks-5a6b",
+            "status": "completed",
+            "counts": {
+              "batches": 1,
+              "ingested_batches": 1,
+              "findings_new": 4
+            },
+            "failed_batches": [],
+            "review": {}
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Import",
+          "Start run",
+          "Triage batches",
+          "Finish run",
+          "Recurring issues",
+          "Risks"
+        ],
+        "agent_labels": [
+          "import",
+          "rule-refresh",
+          "start-run",
+          "batch batch_0001",
+          "finish-run",
+          "recurring start-run",
+          "recurring batch_0001",
+          "recurring finish-run",
+          "risks start-run",
+          "risks batch_0001",
+          "risks finish-run"
+        ],
+        "batch_agents": 1,
+        "prompt_contains": {
+          "import": [
+            "uv run sed import --inbox --profile synthetic --json"
+          ],
+          "rule-refresh": [
+            "uv run sed analytics refresh --profile synthetic --json"
+          ],
+          "start-run": [
+            "uv run sed ai start-run sed-triage-batch --scope new --invoked-via workflow"
+          ],
+          "recurring start-run": [
+            "uv run sed ai start-run sed-find-recurring --scope new --invoked-via workflow --model claude-opus-5 --claude-version \"2.1.0 (Claude Code)\" --profile synthetic --json"
+          ],
+          "recurring batch_0001": [
+            ".claude/skills/sed-find-recurring/SKILL.md, Procedure steps 3 to 5, and reference/cluster_rules.md",
+            "uv run sed ai ingest 20260907T061500-find-recurring-3e4f \"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/out/batch_0001.json\" --profile synthetic --json",
+            "untrusted data"
+          ],
+          "risks start-run": [
+            "uv run sed ai start-run sed-assess-risks --invoked-via workflow --model claude-opus-5"
+          ],
+          "risks batch_0001": [
+            "reference/risk_rubric.md",
+            "\"C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T063000-assess-risks-5a6b/in/context.md\""
+          ],
+          "risks finish-run": [
+            "uv run sed ai finish-run 20260907T063000-assess-risks-5a6b --profile synthetic --json"
+          ]
+        },
+        "prompt_excludes": {
+          "risks start-run": [
+            "--scope"
+          ],
+          "start-run": [
+            "--model"
+          ]
+        },
+        "opts": {
+          "recurring batch_0001": {
+            "model": "claude-opus-5",
+            "phase": "Recurring issues"
+          },
+          "risks batch_0001": {
+            "model": "claude-opus-5",
+            "phase": "Risks"
+          },
+          "batch batch_0001": {
+            "phase": "Triage batches"
+          },
+          "import": {
+            "phase": "Import"
+          }
+        },
+        "logs_contain": [
+          "Import: 2 files imported, 0 skipped, 0 errors",
+          "Risks: running (commercial data changed (contracts_xlsx))",
+          "Run 20260907T061500-find-recurring-3e4f completed: 1/1 batches ingested; findings_new 3, findings_carried_forward 2",
+          "review list --kind issue_cluster",
+          "sed-analyze completed.",
+          "#/review"
+        ],
+        "result": {
+          "status": "completed",
+          "steps": {
+            "import": {
+              "status": "completed",
+              "commercial_mappings": [
+                "contracts_xlsx"
+              ],
+              "as_of": "2026-09-01"
+            },
+            "triage": {
+              "status": "completed",
+              "run_id": "20260907T060000-triage-batch-1c2d"
+            },
+            "recurring": {
+              "status": "completed",
+              "run_id": "20260907T061500-find-recurring-3e4f"
+            },
+            "risks": {
+              "status": "completed",
+              "run_id": "20260907T063000-assess-risks-5a6b"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "import errors stop the workflow before any analysis",
+      "args": {
+        "profile": "synthetic"
+      },
+      "responses": {
+        "import": {
+          "exit_code": 2,
+          "error": null,
+          "result": {
+            "profile": "synthetic",
+            "dry_run": false,
+            "files": [
+              {
+                "file": "incident_2026-09-06.csv",
+                "status": "completed",
+                "mapping": "servicenow_incident"
+              },
+              {
+                "file": "jira_export_broken.csv",
+                "status": "error",
+                "mapping": null
+              }
+            ],
+            "skipped": [],
+            "summary": {
+              "imported": 1,
+              "errors": 1,
+              "skipped": 0,
+              "rows_read": 1200,
+              "rows_rejected": 4
+            }
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Import"
+        ],
+        "agent_labels": [
+          "import"
+        ],
+        "logs_contain": [
+          "Import errors in: jira_export_broken.csv",
+          "no analysis ran"
+        ],
+        "result": {
+          "status": "import_failed",
+          "steps": {
+            "import": {
+              "status": "import_failed",
+              "failed_files": [
+                "jira_export_broken.csv"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "riskMode auto skips risks when nothing commercial changed and risks already ran this month",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "risks",
+          "import"
+        ]
+      },
+      "responses": {
+        "import": {
+          "exit_code": 0,
+          "error": null,
+          "result": {
+            "profile": "synthetic",
+            "dry_run": false,
+            "files": [
+              {
+                "file": "incident_2026-09-06.csv",
+                "status": "completed",
+                "mapping": "servicenow_incident"
+              }
+            ],
+            "skipped": [],
+            "summary": {
+              "imported": 1,
+              "errors": 0,
+              "skipped": 0,
+              "rows_read": 1200,
+              "rows_rejected": 4
+            }
+          }
+        },
+        "rule-refresh": {
+          "exit_code": 0,
+          "error": null,
+          "refresh": {
+            "as_of": "2026-09-01",
+            "stats": {
+              "ops": {
+                "active": 12
+              },
+              "sap": {
+                "active": 3
+              }
+            }
+          }
+        },
+        "last-risks-run": {
+          "exit_code": 0,
+          "error": null,
+          "listing": {
+            "runs": [
+              {
+                "run_id": "20260903T080000-assess-risks-9f9f",
+                "status": "rejected",
+                "started_at": "2026-09-03T08:00:00Z"
+              },
+              {
+                "run_id": "20260902T080000-assess-risks-8e8e",
+                "status": "approved",
+                "started_at": "2026-09-02T08:00:00Z"
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "phases": [
+          "Import",
+          "Risks"
+        ],
+        "agent_labels": [
+          "import",
+          "rule-refresh",
+          "last-risks-run"
+        ],
+        "prompt_contains": {
+          "last-risks-run": [
+            "uv run sed ai runs --skill sed-assess-risks --limit 10 --profile synthetic --json"
+          ]
+        },
+        "logs_contain": [
+          "Risks skipped: no commercial data changed and risks were assessed on 2026-09-02 (20260902T080000-assess-risks-8e8e)"
+        ],
+        "result": {
+          "status": "completed",
+          "steps": {
+            "risks": {
+              "status": "skipped"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "riskMode auto runs risks on the first run of a month",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "risks",
+          "import"
+        ]
+      },
+      "responses": {
+        "import": {
+          "exit_code": 0,
+          "error": null,
+          "result": {
+            "profile": "synthetic",
+            "dry_run": false,
+            "files": [
+              {
+                "file": "incident_2026-09-06.csv",
+                "status": "completed",
+                "mapping": "servicenow_incident"
+              }
+            ],
+            "skipped": [],
+            "summary": {
+              "imported": 1,
+              "errors": 0,
+              "skipped": 0,
+              "rows_read": 1200,
+              "rows_rejected": 4
+            }
+          }
+        },
+        "rule-refresh": {
+          "exit_code": 0,
+          "error": null,
+          "refresh": {
+            "as_of": "2026-09-01",
+            "stats": {
+              "ops": {
+                "active": 12
+              },
+              "sap": {
+                "active": 3
+              }
+            }
+          }
+        },
+        "last-risks-run": {
+          "exit_code": 0,
+          "error": null,
+          "listing": {
+            "runs": [
+              {
+                "run_id": "20260815T080000-assess-risks-7d7d",
+                "status": "approved",
+                "started_at": "2026-08-15T08:00:00Z"
+              }
+            ]
+          }
+        },
+        "risks start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": null,
+            "skill": "sed-assess-risks",
+            "status": "planned",
+            "dry_run": false,
+            "plan": {
+              "items": 0,
+              "batches": 0,
+              "est_agents": 0,
+              "max_chars_per_batch": 21000,
+              "longest_line_chars": 1500
+            },
+            "run_dir": null,
+            "out_dir": null,
+            "context": [],
+            "inputs": []
+          }
+        }
+      },
+      "expect": {
+        "agent_labels": [
+          "import",
+          "rule-refresh",
+          "last-risks-run",
+          "risks start-run"
+        ],
+        "logs_contain": [
+          "Risks: running (first risk assessment for 2026-09)",
+          "Nothing to assess for risks"
+        ],
+        "result": {
+          "status": "completed",
+          "steps": {
+            "risks": {
+              "status": "nothing_to_do"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "recurring resume passes the run id; a failed step makes the workflow partial",
+      "args": {
+        "profile": "synthetic",
+        "steps": [
+          "triage",
+          "recurring"
+        ],
+        "resumeRunIds": {
+          "recurring": "20260907T061500-find-recurring-3e4f"
+        }
+      },
+      "responses": {
+        "start-run": {
+          "exit_code": 3,
+          "plan": null,
+          "error": {
+            "kind": "busy",
+            "message": "database is busy"
+          }
+        },
+        "recurring start-run": {
+          "exit_code": 0,
+          "error": null,
+          "plan": {
+            "run_id": "20260907T061500-find-recurring-3e4f",
+            "skill": "sed-find-recurring",
+            "status": "running",
+            "dry_run": false,
+            "plan": {
+              "items": 42,
+              "batches": 1,
+              "est_agents": 1,
+              "max_chars_per_batch": 21000,
+              "longest_line_chars": 1500
+            },
+            "run_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f",
+            "out_dir": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/out",
+            "context": [
+              "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/in/context.md"
+            ],
+            "inputs": [
+              {
+                "batch": "batch_0001",
+                "packet": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/in/batch_0001.jsonl",
+                "aux": [],
+                "out": "C:/Users/tester/AppData/Local/sed/synthetic/runs/20260907T061500-find-recurring-3e4f/out/batch_0001.json",
+                "items": 42,
+                "chars": 21000
+              }
+            ]
+          }
+        },
+        "recurring batch_0001": {
+          "batch": "batch_0001",
+          "status": "ingested",
+          "ingested": 5,
+          "errors_count": 0,
+          "low_conf": 0
+        },
+        "recurring finish-run": {
+          "exit_code": 0,
+          "error": null,
+          "summary": {
+            "run_id": "20260907T061500-find-recurring-3e4f",
+            "status": "completed",
+            "counts": {
+              "batches": 1,
+              "ingested_batches": 1,
+              "findings_new": 5
+            },
+            "failed_batches": [],
+            "review": {}
+          }
+        }
+      },
+      "expect": {
+        "agent_labels": [
+          "start-run",
+          "recurring start-run",
+          "recurring batch_0001",
+          "recurring finish-run"
+        ],
+        "prompt_contains": {
+          "recurring start-run": [
+            "uv run sed ai start-run sed-find-recurring --resume 20260907T061500-find-recurring-3e4f --invoked-via workflow"
+          ]
+        },
+        "prompt_excludes": {
+          "recurring start-run": [
+            "--scope"
+          ]
+        },
+        "logs_contain": [
+          "start-run failed (exit 3)",
+          "sed-analyze partial."
+        ],
+        "result": {
+          "status": "partial",
+          "steps": {
+            "triage": {
+              "status": "start_failed"
+            },
+            "recurring": {
+              "status": "completed"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "an unknown riskMode is rejected",
+      "args": {
+        "profile": "synthetic",
+        "riskMode": "sometimes"
+      },
+      "responses": {},
+      "expect": {
+        "throws": "riskMode has an invalid value",
         "agent_labels": []
       }
     }

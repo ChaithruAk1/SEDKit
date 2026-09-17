@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -219,3 +220,169 @@ class RunRow(ApiModel):
 
 class RunsOut(ApiModel):
     items: list[RunRow]
+
+
+# -- review (M4) ---------------------------------------------------------------------------------------------------
+
+
+class ReviewItem(ApiModel):
+    finding_id: str
+    origin: Literal["rule", "ai"]
+    run_id: str | None
+    kind: str
+    status: str
+    severity: str | None
+    confidence: float | None
+    title: str
+    subject_type: str | None
+    subject_id: str | None
+    body_md: str | None
+    pending_body_md: str | None
+    carried_forward_from: str | None
+    evidence: list[Evidence]
+    ticket_count: int | None
+    periodicity: str | None
+    suspected_change: str | None
+    recommendation: str | None
+    decision_due: str | None
+    material_change: list[str]
+
+
+class ReviewQueueOut(ApiModel):
+    items: list[ReviewItem]
+    counts: dict[str, int]
+
+
+class FindingReviewIn(ApiModel):
+    action: Literal["approve", "reject", "edit", "approve_update", "acknowledge", "suppress_until"]
+    note: str | None = Field(None, max_length=1000)
+    body_md: str | None = Field(None, max_length=5000)
+    until: date | None = None
+
+
+class BulkReviewIn(ApiModel):
+    finding_ids: list[str] = Field(min_length=1, max_length=200)
+    action: Literal["approve", "reject", "approve_update", "acknowledge"]
+    note: str | None = Field(None, max_length=1000)
+
+
+class ReviewResult(ApiModel):
+    finding_id: str
+    action: str
+    status: str
+
+
+class FindingReviewOut(ApiModel):
+    action: str
+    reviewed_by: str
+    results: list[ReviewResult]
+
+
+class SampleLabel(ApiModel):
+    am_category: str | None = None
+    am_subcategory: str | None = None
+    symptom_key: str | None = None
+    misfiled_as: str | None = None
+    confidence: float | None = None
+    rationale: str | None = None
+
+
+class SampleTicket(ApiModel):
+    number: str | None = None
+    kind: str | None = None
+    priority: int | None = None
+    app: str | None = None
+    sn_category: str | None = None
+    short_description: str | None = None
+
+
+class Correction(ApiModel):
+    category: str | None = Field(None, max_length=40)
+    subcategory: str | None = Field(None, max_length=40)
+
+
+class SampleCard(ApiModel):
+    key: str
+    item_id: str
+    stage: str
+    sample_kind: Literal["random", "lowest_conf"]
+    stratum: str
+    weight: float
+    verdict: Literal["correct", "incorrect"] | None
+    correction: Correction | None
+    label: SampleLabel
+    ticket: SampleTicket
+
+
+class SubcategoryOption(ApiModel):
+    code: str
+    only: str | None = Field(description="Extension key whose tickets alone may take this subcategory (null = any)")
+
+
+class CategoryOption(ApiModel):
+    code: str
+    description: str
+    subcategories: list[SubcategoryOption]
+
+
+class RunDetailOut(ApiModel):
+    run: RunRow
+    skill_hash: str | None
+    model_reported: str | None
+    input_run_ids: list[str]
+    random: list[SampleCard]
+    lowest_confidence: list[SampleCard]
+    matrix: list[dict[str, Any]]
+    misfiled: dict[str, int]
+    findings: dict[str, int]
+    eval_passed: bool | None
+    eval_checks: dict[str, bool]
+    categories: list[CategoryOption]
+    misfiled_as: list[str]
+
+
+class VerdictsIn(ApiModel):
+    verdicts: dict[str, Literal["correct", "incorrect"] | None]
+    corrections: dict[str, Correction] = Field(default_factory=dict)
+
+
+class VerdictsOut(ApiModel):
+    run_id: str
+    recorded: int
+    skipped: int
+    incorrect: int
+    random_missing: int
+    lowest_conf_missing: int
+
+
+class RunReviewIn(ApiModel):
+    action: Literal["approve", "reject"]
+    note: str | None = Field(None, max_length=1000)
+
+
+class RunReviewOut(ApiModel):
+    run_id: str
+    status: str
+    reviewed_by: str
+    sample_accuracy: float | None = None
+    sample_ci_low: float | None = None
+    sample_ci_high: float | None = None
+    corrections_applied: int = 0
+    findings_rejected: int = 0
+    dependent_findings_stale: int = 0
+
+
+class LabelCorrectionIn(ApiModel):
+    ticket_id: str = Field(min_length=3, max_length=80)
+    stage: Literal["open", "resolved"]
+    category: str = Field(min_length=1, max_length=40)
+    subcategory: str | None = Field(None, max_length=40)
+    symptom_key: str | None = Field(None, max_length=60)
+    misfiled_as: Literal["none", "request", "change", "problem"] | None = None
+    skill: str = Field("sed-triage-batch", max_length=60)
+
+
+class LabelCorrectionOut(ApiModel):
+    ticket_id: str
+    stage: str
+    run_id: str

@@ -146,8 +146,17 @@ Metrics stay at group (area), system and partner level, never per person.
 - Triage runs through the `sed-triage-batch` skill (small runs in-session) or the `sed-analyze` workflow (larger runs):
   start-run writes scrubbed packets, one agent per packet labels them, `sed ai ingest` validates, `sed ai finish-run`
   draws a review sample.
-- A human approves each run from its random sample: `uv run sed review sample RUN --template verdicts.json`, fill in
-  verdicts, `uv run sed review verdicts RUN --file verdicts.json`, then `uv run sed review approve-run RUN`.
+- The weekly analysis is one workflow run, `sed-analyze` with `{profile: "real"}`: import the inbox (stops on import
+  errors), refresh rule findings, triage, recurring issues, then risks when contract, license, cost or vendor files
+  changed or on the first run of a month (`riskMode: "always"|"never"` overrides). `steps` picks a subset, and
+  `resumeRunIds: {triage, recurring, risks}` resumes an interrupted run.
+- Recurring issues (`sed-find-recurring`), risks (`sed-assess-risks`) and open P1–P3 tickets (`sed-triage-open`) produce
+  draft findings; `sed-eval` scores runs against the synthetic ground truth.
+- Review happens in the dashboard or in the terminal. `#/review` is a keyboard queue: approve, reject, edit,
+  approve wording updates, acknowledge or suppress system-detected findings. `#/runs/<run_id>` shows a label run's
+  sample, where you record verdicts and approve or reject the run. In the terminal: `uv run sed review sample RUN
+  --template verdicts.json`, fill in verdicts, `uv run sed review verdicts RUN --file verdicts.json`, then
+  `uv run sed review approve-run RUN` (the `sed-review` skill walks through it).
 - Approved labels appear in reports with their sample accuracy and confidence interval. See
   `docs/ai/walking-skeleton-runbook.md`.
 
@@ -166,7 +175,7 @@ headless spike): `docs/real-data-onboarding.md`.
 | M2 | Modular platform, AI walking skeleton, all decks, API and dashboard core | done |
 | SAP S0–S4 | SAP module: L3 view, ChaRM changes, IDoc health, SAP subcategories in AI triage | done |
 | M3 | Reality check with real exports | tooling done; real run pending |
-| M4 | Full AI analysis & review | planned |
+| M4 | Full AI analysis & review | in progress |
 | M5 | AI-drafted reports | planned |
 | M6 | Automation & connectors | planned |
 | M7 | AI-native SDLC: delivery-management module and app factory | to be planned |

@@ -1,7 +1,8 @@
 # Local API (`sed.api`)
 
 - **App factory:** `app.create_app(paths, *, token, web_dist=None, modules=None)` builds the app.
-  - Core routes are mounted at `/api/...` (`routes_core.py`).
+  - Core routes are mounted at `/api/...` (`routes_core.py`; review queue, finding decisions, run detail, verdicts,
+    run approval and label corrections in `routes_review.py`).
   - Each enabled module's router is mounted at `/api/<key>/...`.
 - **Security:** mandatory for every route, including module routers.
   - The host allowlist is 127.0.0.1 and localhost; any other host gets 400. No CORS.

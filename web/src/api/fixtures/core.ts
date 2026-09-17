@@ -3,6 +3,7 @@ import { ApiError } from '../client';
 import type { GetQuery, PostBody, PostResponse, Schema } from '../types';
 import { APPS, GROUPS, RUNS, VENDORS } from './catalog';
 import { AS_OF, addDays, isoAt, lastMonths, lastQuarters, lastWeeks } from './random';
+import { runReviewState } from './review';
 
 type Definitions = Schema<'MetaOut'>['definitions'];
 
@@ -75,6 +76,8 @@ export function nav(): Schema<'NavOut'> {
       { id: 'sap.tickets', module: 'sap', label: 'SAP L3 tickets', path: '/sap/tickets', order: 61, icon: 'ticket' },
       { id: 'sap.changes', module: 'sap', label: 'SAP changes', path: '/sap/changes', order: 62, icon: 'git-pull-request' },
       { id: 'sap.idocs', module: 'sap', label: 'SAP IDocs', path: '/sap/idocs', order: 63, icon: 'arrows-exchange' },
+      { id: 'core.review', module: 'core', label: 'Review', path: '/review', order: 800, icon: 'list-check' },
+      { id: 'core.runs', module: 'core', label: 'AI runs', path: '/runs', order: 810, icon: 'robot' },
       { id: 'core.data', module: 'core', label: 'Data', path: '/data', order: 900, icon: 'database' },
     ],
   };
@@ -247,12 +250,12 @@ export function allFindings(): Schema<'FindingOut'>[] {
   return FINDINGS;
 }
 
-export function runs(query: GetQuery<'/api/runs'> | undefined): Schema<'RunsOut'> {
+export function allRuns(): Schema<'RunRow'>[] {
   const items: Schema<'RunRow'>[] = [
     {
       run_id: RUNS.triageDraft,
       skill: 'sed-triage-batch',
-      status: 'finished',
+      status: 'completed',
       invoked_via: 'workflow:sed-analyze',
       started_at: isoAt(AS_OF, 8, 0),
       finished_at: isoAt(AS_OF, 8, 42),
@@ -266,7 +269,7 @@ export function runs(query: GetQuery<'/api/runs'> | undefined): Schema<'RunsOut'
     },
     {
       run_id: RUNS.risksApproved,
-      skill: 'sed-triage-batch',
+      skill: 'sed-assess-risks',
       status: 'approved',
       invoked_via: 'workflow:sed-analyze',
       started_at: isoAt(addDays(AS_OF, -2), 9, 0),
@@ -295,9 +298,13 @@ export function runs(query: GetQuery<'/api/runs'> | undefined): Schema<'RunsOut'
       reviewed_at: isoAt(addDays(AS_OF, -3), 17, 5),
     },
   ];
+  return items.map((run) => ({ ...run, ...runReviewState(run.run_id) }));
+}
+
+export function runs(query: GetQuery<'/api/runs'> | undefined): Schema<'RunsOut'> {
   const q = query ?? {};
   return {
-    items: items.filter((r) => (!q.skill || r.skill === q.skill) && (!q.status || r.status === q.status)).slice(0, q.limit ?? 50),
+    items: allRuns().filter((r) => (!q.skill || r.skill === q.skill) && (!q.status || r.status === q.status)).slice(0, q.limit ?? 50),
   };
 }
 

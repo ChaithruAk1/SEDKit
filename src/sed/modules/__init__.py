@@ -58,7 +58,13 @@ CORE_CLI_NAMES = frozenset(
 )
 # Skills that belong to the platform rather than a module (no run handler, no module surface).
 CORE_SKILLS = ("sed-map-export", "sed-review", "sed-eval")
-CORE_NAV = (NavItem("core.data", "Data", "/data", 900, "database"),)
+CORE_NAV = (
+    NavItem("core.review", "Review", "/review", 800, "list-check"),
+    NavItem("core.runs", "AI runs", "/runs", 810, "robot"),
+    NavItem("core.data", "Data", "/data", 900, "database"),
+)
+# First path segment of every core page: module keys must not take them (pages are #/<key>/...).
+CORE_PAGE_KEYS = frozenset(item.path.strip("/").split("/")[0] for item in CORE_NAV)
 CORE_TABLES = (
     "meta",
     "import_batch",
@@ -385,6 +391,8 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
     for m in mods:
         if not MODULE_KEY_RE.match(m.key):
             problems.append(f"module key '{m.key}' must match {MODULE_KEY_RE.pattern}")
+        if m.key in CORE_PAGE_KEYS:
+            problems.append(f"module key '{m.key}' is reserved by the core page #/{m.key}")
         claim("module", m.key, m.key)
         problems += [f"{m.key}: missing dependency '{d}'" for d in m.depends_on if d not in keys]
         problems += [f"{m.key}: invalid import reference '{r}'" for r in declared_refs(m) if not IMPORT_REF_RE.match(r)]

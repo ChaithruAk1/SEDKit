@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
-import { ApiError, type GetArgs, apiGet, apiPost, isAbortError } from './client';
+import { ApiError, type GetArgs, type PostArgs, apiGet, apiPost, isAbortError } from './client';
 import type { GetOptions, GetPath, GetPathParams, GetResponse, PostBody, PostPath, PostResponse } from './types';
 
 export interface ApiState<T> {
@@ -160,7 +160,8 @@ export function useCachedApi<P extends GetPath>(path: P): ApiState<GetResponse<P
 // ---------------------------------------------------------------------------
 
 export interface PostState<P extends PostPath> {
-  run: (body: PostBody<P>) => Promise<PostResponse<P>>;
+  /** Templated routes take `{params: {...}}` as the second argument. */
+  run: (body: PostBody<P>, ...args: PostArgs<P>) => Promise<PostResponse<P>>;
   data: PostResponse<P> | undefined;
   error: ApiError | undefined;
   pending: boolean;
@@ -173,11 +174,11 @@ export function useApiPost<P extends PostPath>(path: P): PostState<P> {
   const [error, setError] = useState<ApiError | undefined>(undefined);
 
   const run = useCallback(
-    async (body: PostBody<P>) => {
+    async (body: PostBody<P>, ...args: PostArgs<P>) => {
       setPending(true);
       setError(undefined);
       try {
-        const result = await apiPost(path, body);
+        const result = await apiPost(path, body, ...args);
         setData(result);
         return result;
       } catch (caught) {

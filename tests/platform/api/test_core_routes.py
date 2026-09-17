@@ -41,6 +41,7 @@ def test_every_core_get_returns_its_model(ops_profile, core_gets):
         "/api/dq/unmapped",
         "/api/alias-targets",
         "/api/runs",
+        "/api/review/queue",
     }
     for path, model in core_gets:
         response = client.get(path)
@@ -122,7 +123,7 @@ def test_nav_and_modules_follow_the_served_modules(ops_profile):
     assert [m["key"] for m in with_hello.get("/api/meta").json()["modules"]] == ["ops", "hello"]
 
     only_core = api_client(paths, modules=[])
-    assert [i["id"] for i in only_core.get("/api/nav").json()["items"]] == ["core.data"]
+    assert [i["id"] for i in only_core.get("/api/nav").json()["items"]] == ["core.review", "core.runs", "core.data"]
     assert not any(m["enabled"] for m in only_core.get("/api/modules").json()["modules"])
     assert only_core.get("/api/meta").json()["definitions"] == {}
 

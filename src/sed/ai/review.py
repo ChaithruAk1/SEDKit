@@ -134,6 +134,15 @@ def record_verdicts(paths: Paths, run_id: str, file: Path, *, reviewer: str | No
         raise ValidationFailed(f"Cannot read verdicts file {path.as_posix()}: {exc}") from exc
     except (UnicodeDecodeError, ValueError) as exc:
         raise ValidationFailed(f"Verdicts file is not valid JSON: {exc}") from exc
+    return record_verdict_data(paths, run_id, data, reviewer=reviewer)
+
+
+def record_verdict_data(paths: Paths, run_id: str, data: Any, *, reviewer: str | None = None) -> dict[str, Any]:
+    """Record verdicts given as {"<item_id>|<stage>": verdict} (same values as the verdicts file)."""
+    if reviewer is None:
+        from sed.bootstrap import reviewer_name
+
+        reviewer = reviewer_name()
     if not isinstance(data, dict):
         raise ValidationFailed('Verdicts file must be a JSON object {"<item_id>|<stage>": verdict}')
     conn = open_db(paths)
@@ -345,6 +354,16 @@ def _apply_sample_corrections(conn: Any, paths: Paths, run: Any, rows: list[Any]
             _insert_correction(conn, paths, handler, reviewer, r["item_id"], r["stage"], correction)
             done.add(key)
     return len(done)
+
+
+def correction_options(paths: Paths, skill: str) -> dict[str, Any]:
+    """Valid correction values of a label skill ({} when the skill takes no label corrections)."""
+    try:
+        handler = resolve_handler(paths, skill)
+    except (PreconditionFailed, ValidationFailed):
+        return {}
+    options = getattr(handler, "correction_options", None)
+    return options(paths) if callable(options) else {}
 
 
 def correct_label(

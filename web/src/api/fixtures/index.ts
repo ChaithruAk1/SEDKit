@@ -5,16 +5,17 @@
  * contracts/openapi.json fails `npm run typecheck` until its fixture is updated. Data is fictional only.
  */
 import { ApiError, isAbortError } from '../client';
-import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostResponse } from '../types';
+import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostPathParams, PostResponse } from '../types';
 import * as core from './core';
 import * as ops from './ops';
+import * as review from './review';
 import * as sap from './sap';
 
 type GetHandlers = {
   [P in GetPath]: (params: GetPathParams<P>, query: GetQuery<P>) => GetResponse<P>;
 };
 type PostHandlers = {
-  [P in PostPath]: (body: PostBody<P>) => PostResponse<P>;
+  [P in PostPath]: (body: PostBody<P>, params: PostPathParams<P>) => PostResponse<P>;
 };
 
 const GET_HANDLERS: GetHandlers = {
@@ -27,6 +28,8 @@ const GET_HANDLERS: GetHandlers = {
   '/api/dq/unmapped': (_, query) => core.unmapped(query),
   '/api/alias-targets': (_, query) => core.aliasTargets(query),
   '/api/runs': (_, query) => core.runs(query),
+  '/api/runs/{run_id}': (params) => review.runDetail(params.run_id, core.allRuns()),
+  '/api/review/queue': (_, query) => review.queue(query),
   '/api/ops/filters': () => ops.filters(),
   '/api/ops/overview': (_, query) => ops.overview(query),
   '/api/ops/attention': (_, query) => ops.attention(query),
@@ -50,6 +53,11 @@ const GET_HANDLERS: GetHandlers = {
 
 const POST_HANDLERS: PostHandlers = {
   '/api/aliases': (body) => core.createAlias(body),
+  '/api/findings/{finding_id}/review': (body, params) => review.reviewFinding(params.finding_id, body),
+  '/api/findings/bulk-review': (body) => review.bulkReview(body),
+  '/api/runs/{run_id}/verdicts': (body, params) => review.runVerdicts(params.run_id, body),
+  '/api/runs/{run_id}/review': (body, params) => review.runReview(params.run_id, body),
+  '/api/labels/correct': (body) => review.correctLabel(body),
 };
 
 const LATENCY_MS = 150;
@@ -90,9 +98,14 @@ export async function fixtureGet(
   }
 }
 
-export async function fixturePost(path: PostPath, body: unknown, signal?: AbortSignal): Promise<unknown> {
+export async function fixturePost(
+  path: PostPath,
+  body: unknown,
+  params: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<unknown> {
   await delay(signal);
-  const handler = POST_HANDLERS[path] as unknown as ((b: unknown) => unknown) | undefined;
+  const handler = POST_HANDLERS[path] as unknown as ((b: unknown, p: Record<string, string>) => unknown) | undefined;
   if (!handler) throw new ApiError(404, 'not_found', `No fixture for POST ${path}`);
-  return clone(handler(body));
+  return clone(handler(clone(body), params));
 }

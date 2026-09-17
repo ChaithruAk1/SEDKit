@@ -22,8 +22,11 @@ def test_builtin_modules_are_valid_and_every_reference_imports():
 def test_builtin_modules_are_enabled_by_default_and_nav_is_namespaced():
     assert [m.key for m in modules.enabled()] == ["ops", "sap"]
     for key, item in modules.nav():
-        prefix = "/data" if key == "core" else f"/{key}"
-        assert item.path == prefix or item.path.startswith(prefix + "/")
+        if key == "core":
+            assert item.path.strip("/").split("/")[0] in modules.CORE_PAGE_KEYS
+        else:
+            assert item.path == f"/{key}" or item.path.startswith(f"/{key}/")
+    assert sorted(modules.CORE_PAGE_KEYS) == ["data", "review", "runs"]
     assert [item.id for _, item in modules.nav()][:1] == ["ops.overview"]
 
 
@@ -78,7 +81,8 @@ def test_validate_flags_collisions_and_bad_names():
         finding_kinds=("renewal_risk",),
     )
     rules_without_kinds = Module(key="norules", title="No kinds", rule_findings="x.y:compute")
-    problems = "\n".join(modules.validate([ops, bad, rules_without_kinds]))
+    page_clash = Module(key="runs", title="Runs")
+    problems = "\n".join(modules.validate([ops, bad, rules_without_kinds, page_clash]))
     for fragment in (
         "module key 'Bad-Key'",
         "duplicate report 'weekly'",
@@ -90,6 +94,7 @@ def test_validate_flags_collisions_and_bad_names():
         "table 'meta' is core-owned",
         "duplicate finding kind 'renewal_risk'",
         "norules: rule_findings needs the finding kinds",
+        "module key 'runs' is reserved by the core page #/runs",
     ):
         assert fragment in problems, fragment
 

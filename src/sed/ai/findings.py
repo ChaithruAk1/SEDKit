@@ -310,10 +310,14 @@ def review_finding(
 def queue(
     conn: sqlite3.Connection, *, kind: str | None = None, include_rule: bool = True, limit: int = 200
 ) -> list[dict]:
-    """Findings waiting for a person: AI drafts, update_pending and stale_input, plus active rule findings."""
+    """Findings waiting for a person: AI drafts, update_pending and stale_input, plus active rule findings that are not
+    suppressed (same rule as v_findings_published: suppressed until a date before today)."""
     where = ["(origin = 'ai' AND status IN ('draft', 'update_pending', 'stale_input'))"]
     if include_rule:
-        where.append("(origin = 'rule' AND status = 'active')")
+        where.append(
+            "(origin = 'rule' AND status = 'active' "
+            "AND (suppress_until IS NULL OR suppress_until < strftime('%Y-%m-%d', 'now')))"
+        )
     sql = f"SELECT * FROM finding WHERE ({' OR '.join(where)})"
     params: list[Any] = []
     if kind:

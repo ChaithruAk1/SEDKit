@@ -72,6 +72,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/findings/bulk-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Many */
+        post: operations["core_review_many"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/findings/{finding_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review One */
+        post: operations["core_review_one"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -100,6 +134,23 @@ export interface paths {
         get: operations["core_imports"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/correct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Correct Label */
+        post: operations["core_correct_label"];
         delete?: never;
         options?: never;
         head?: never;
@@ -412,6 +463,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/review/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review Queue */
+        get: operations["core_review_queue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs": {
         parameters: {
             query?: never;
@@ -423,6 +491,57 @@ export interface paths {
         get: operations["core_runs"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Detail */
+        get: operations["core_run_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Review */
+        post: operations["core_run_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/verdicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Verdicts */
+        post: operations["core_run_verdicts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -671,6 +790,27 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** BulkReviewIn */
+        BulkReviewIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "approve" | "reject" | "approve_update" | "acknowledge";
+            /** Finding Ids */
+            finding_ids: string[];
+            /** Note */
+            note?: string | null;
+        };
+        /** CategoryOption */
+        CategoryOption: {
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /** Subcategories */
+            subcategories: components["schemas"]["SubcategoryOption"][];
+        };
         /** ChangeRow */
         ChangeRow: {
             /** Change Type */
@@ -685,6 +825,13 @@ export interface components {
             short_description: string | null;
             /** Start Date */
             start_date: string | null;
+        };
+        /** Correction */
+        Correction: {
+            /** Category */
+            category?: string | null;
+            /** Subcategory */
+            subcategory?: string | null;
         };
         /** CostRow */
         CostRow: {
@@ -805,6 +952,29 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** FindingReviewIn */
+        FindingReviewIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "approve" | "reject" | "edit" | "approve_update" | "acknowledge" | "suppress_until";
+            /** Body Md */
+            body_md?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Until */
+            until?: string | null;
+        };
+        /** FindingReviewOut */
+        FindingReviewOut: {
+            /** Action */
+            action: string;
+            /** Results */
+            results: components["schemas"]["ReviewResult"][];
+            /** Reviewed By */
+            reviewed_by: string;
+        };
         /** FindingsOut */
         FindingsOut: {
             /** Items */
@@ -912,6 +1082,38 @@ export interface components {
             unit: string;
             /** Value */
             value: number | string | null;
+        };
+        /** LabelCorrectionIn */
+        LabelCorrectionIn: {
+            /** Category */
+            category: string;
+            /** Misfiled As */
+            misfiled_as?: ("none" | "request" | "change" | "problem") | null;
+            /**
+             * Skill
+             * @default sed-triage-batch
+             */
+            skill: string;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "open" | "resolved";
+            /** Subcategory */
+            subcategory?: string | null;
+            /** Symptom Key */
+            symptom_key?: string | null;
+            /** Ticket Id */
+            ticket_id: string;
+        };
+        /** LabelCorrectionOut */
+        LabelCorrectionOut: {
+            /** Run Id */
+            run_id: string;
+            /** Stage */
+            stage: string;
+            /** Ticket Id */
+            ticket_id: string;
         };
         /** LabelOut */
         LabelOut: {
@@ -1154,6 +1356,146 @@ export interface components {
             /** Items */
             items: components["schemas"]["RenewalRow"][];
         };
+        /** ReviewItem */
+        ReviewItem: {
+            /** Body Md */
+            body_md: string | null;
+            /** Carried Forward From */
+            carried_forward_from: string | null;
+            /** Confidence */
+            confidence: number | null;
+            /** Decision Due */
+            decision_due: string | null;
+            /** Evidence */
+            evidence: components["schemas"]["Evidence"][];
+            /** Finding Id */
+            finding_id: string;
+            /** Kind */
+            kind: string;
+            /** Material Change */
+            material_change: string[];
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "rule" | "ai";
+            /** Pending Body Md */
+            pending_body_md: string | null;
+            /** Periodicity */
+            periodicity: string | null;
+            /** Recommendation */
+            recommendation: string | null;
+            /** Run Id */
+            run_id: string | null;
+            /** Severity */
+            severity: string | null;
+            /** Status */
+            status: string;
+            /** Subject Id */
+            subject_id: string | null;
+            /** Subject Type */
+            subject_type: string | null;
+            /** Suspected Change */
+            suspected_change: string | null;
+            /** Ticket Count */
+            ticket_count: number | null;
+            /** Title */
+            title: string;
+        };
+        /** ReviewQueueOut */
+        ReviewQueueOut: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Items */
+            items: components["schemas"]["ReviewItem"][];
+        };
+        /** ReviewResult */
+        ReviewResult: {
+            /** Action */
+            action: string;
+            /** Finding Id */
+            finding_id: string;
+            /** Status */
+            status: string;
+        };
+        /** RunDetailOut */
+        RunDetailOut: {
+            /** Categories */
+            categories: components["schemas"]["CategoryOption"][];
+            /** Eval Checks */
+            eval_checks: {
+                [key: string]: boolean;
+            };
+            /** Eval Passed */
+            eval_passed: boolean | null;
+            /** Findings */
+            findings: {
+                [key: string]: number;
+            };
+            /** Input Run Ids */
+            input_run_ids: string[];
+            /** Lowest Confidence */
+            lowest_confidence: components["schemas"]["SampleCard"][];
+            /** Matrix */
+            matrix: {
+                [key: string]: unknown;
+            }[];
+            /** Misfiled */
+            misfiled: {
+                [key: string]: number;
+            };
+            /** Misfiled As */
+            misfiled_as: string[];
+            /** Model Reported */
+            model_reported: string | null;
+            /** Random */
+            random: components["schemas"]["SampleCard"][];
+            run: components["schemas"]["RunRow"];
+            /** Skill Hash */
+            skill_hash: string | null;
+        };
+        /** RunReviewIn */
+        RunReviewIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "approve" | "reject";
+            /** Note */
+            note?: string | null;
+        };
+        /** RunReviewOut */
+        RunReviewOut: {
+            /**
+             * Corrections Applied
+             * @default 0
+             */
+            corrections_applied: number;
+            /**
+             * Dependent Findings Stale
+             * @default 0
+             */
+            dependent_findings_stale: number;
+            /**
+             * Findings Rejected
+             * @default 0
+             */
+            findings_rejected: number;
+            /** Reviewed By */
+            reviewed_by: string;
+            /** Run Id */
+            run_id: string;
+            /** Sample Accuracy */
+            sample_accuracy?: number | null;
+            /** Sample Ci High */
+            sample_ci_high?: number | null;
+            /** Sample Ci Low */
+            sample_ci_low?: number | null;
+            /** Status */
+            status: string;
+        };
         /** RunRow */
         RunRow: {
             /** Counts */
@@ -1189,6 +1531,59 @@ export interface components {
         RunsOut: {
             /** Items */
             items: components["schemas"]["RunRow"][];
+        };
+        /** SampleCard */
+        SampleCard: {
+            correction: components["schemas"]["Correction"] | null;
+            /** Item Id */
+            item_id: string;
+            /** Key */
+            key: string;
+            label: components["schemas"]["SampleLabel"];
+            /**
+             * Sample Kind
+             * @enum {string}
+             */
+            sample_kind: "random" | "lowest_conf";
+            /** Stage */
+            stage: string;
+            /** Stratum */
+            stratum: string;
+            ticket: components["schemas"]["SampleTicket"];
+            /** Verdict */
+            verdict: ("correct" | "incorrect") | null;
+            /** Weight */
+            weight: number;
+        };
+        /** SampleLabel */
+        SampleLabel: {
+            /** Am Category */
+            am_category?: string | null;
+            /** Am Subcategory */
+            am_subcategory?: string | null;
+            /** Confidence */
+            confidence?: number | null;
+            /** Misfiled As */
+            misfiled_as?: string | null;
+            /** Rationale */
+            rationale?: string | null;
+            /** Symptom Key */
+            symptom_key?: string | null;
+        };
+        /** SampleTicket */
+        SampleTicket: {
+            /** App */
+            app?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Number */
+            number?: string | null;
+            /** Priority */
+            priority?: number | null;
+            /** Short Description */
+            short_description?: string | null;
+            /** Sn Category */
+            sn_category?: string | null;
         };
         /** SapAging */
         SapAging: {
@@ -1835,6 +2230,16 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** SubcategoryOption */
+        SubcategoryOption: {
+            /** Code */
+            code: string;
+            /**
+             * Only
+             * @description Extension key whose tickets alone may take this subcategory (null = any)
+             */
+            only: string | null;
+        };
         /** TicketDetail */
         TicketDetail: {
             /** Am Category */
@@ -2019,6 +2424,32 @@ export interface components {
             items: components["schemas"]["VendorTrendRow"][];
             /** Months */
             months: number;
+        };
+        /** VerdictsIn */
+        VerdictsIn: {
+            /** Corrections */
+            corrections?: {
+                [key: string]: components["schemas"]["Correction"];
+            };
+            /** Verdicts */
+            verdicts: {
+                [key: string]: ("correct" | "incorrect") | null;
+            };
+        };
+        /** VerdictsOut */
+        VerdictsOut: {
+            /** Incorrect */
+            incorrect: number;
+            /** Lowest Conf Missing */
+            lowest_conf_missing: number;
+            /** Random Missing */
+            random_missing: number;
+            /** Recorded */
+            recorded: number;
+            /** Run Id */
+            run_id: string;
+            /** Skipped */
+            skipped: number;
         };
         /** VolumeRow */
         VolumeRow: {
@@ -2338,6 +2769,164 @@ export interface operations {
             };
         };
     };
+    core_review_many: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingReviewOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_review_one: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                finding_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FindingReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingReviewOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     core_health: {
         parameters: {
             query?: never;
@@ -2421,6 +3010,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportsOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_correct_label: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelCorrectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelCorrectionOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -3853,6 +4520,75 @@ export interface operations {
             };
         };
     };
+    core_review_queue: {
+        parameters: {
+            query?: {
+                kind?: string | null;
+                include_rule?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewQueueOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     core_runs: {
         parameters: {
             query?: {
@@ -3873,6 +4609,233 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunsOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_run_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetailOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_run_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunReviewOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_run_verdicts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerdictsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerdictsOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
