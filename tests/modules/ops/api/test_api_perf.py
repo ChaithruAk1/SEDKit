@@ -78,7 +78,17 @@ PERF_PARAMS: dict[str, dict[str, Any]] = {
     "/api/sap/l3": {},
     "/api/sap/changes": {},
     "/api/sap/idocs": {},
+    "/api/delivery/portfolio": {},
+    "/api/delivery/projects/{project_id}": {},
+    "/api/review/queue": {},
+    "/api/runs/{run_id}": {},
+    "/api/ai/review-rates": {},
+    "/api/reports": {},
+    "/api/reports/readiness": {"report": "weekly", "period": "2026-W35"},
+    "/api/sources": {},
 }
+# GET operations that read in-memory state rather than the database: not timed (they would only measure a 412).
+NOT_TIMED = {"/api/jobs/{job_id}": "background job status (in-memory lookup)"}
 # Full-text searches held to the 300 ms budget: planted multi-word text, a common word, a very broad word, a prefix.
 SEARCH_QUERIES = ("interface timeout", "timeout", "error", "time*")
 
@@ -201,7 +211,8 @@ def build_or_reuse(root: Path) -> dict[str, Any]:
 
 
 def ids(paths: Any) -> dict[str, str]:
-    """Worst-case path parameters: the application with the most tickets and the newest ticket."""
+    """Worst-case path parameters: the application with the most tickets, the newest ticket, the first delivery
+    project and the newest AI run (routes needing a run are skipped when the profile has none)."""
     from sed import db
 
     conn = db.connect(paths.db, readonly=True)
@@ -211,9 +222,18 @@ def ids(paths: Any) -> dict[str, str]:
         ).fetchone()[0]
         newest = conn.execute("SELECT ticket_id FROM ticket ORDER BY opened_at DESC, ticket_id LIMIT 1").fetchone()
         ticket_id = newest[0]
+        project = conn.execute(
+            "SELECT project_id FROM delivery_project WHERE is_deleted = 0 ORDER BY project_id LIMIT 1"
+        ).fetchone()
+        run = conn.execute("SELECT run_id FROM ai_run ORDER BY run_seq DESC LIMIT 1").fetchone()
     finally:
         conn.close()
-    return {"app_id": quote(app_id, safe=""), "ticket_id": quote(ticket_id, safe="")}
+    return {
+        "app_id": quote(app_id, safe=""),
+        "ticket_id": quote(ticket_id, safe=""),
+        "project_id": quote(project[0], safe="") if project else "PRJ-101",
+        "run_id": quote(run[0], safe="") if run else "",
+    }
 
 
 def nearest_rank(values: list[float], pct: float) -> float:
@@ -250,13 +270,16 @@ def run_all(paths: Any) -> list[dict[str, Any]]:
     client = api_client(paths)
     spec = json.loads((REPO / "contracts" / "openapi.json").read_text(encoding="utf-8"))
     gets = sorted(p for p, item in spec["paths"].items() if "get" in item)
-    missing = [p for p in gets if p not in PERF_PARAMS]
-    stale = [p for p in PERF_PARAMS if p not in gets]
+    missing = [p for p in gets if p not in PERF_PARAMS and p not in NOT_TIMED]
+    stale = [p for p in [*PERF_PARAMS, *NOT_TIMED] if p not in gets]
     assert not missing, f"GET operations without a PERF_PARAMS entry: {missing}"
     assert not stale, f"PERF_PARAMS entries that are not GET operations in openapi.json: {stale}"
     path_ids = ids(paths)
     results = []
-    for path in gets:
+    for path in [p for p in gets if p not in NOT_TIMED]:
+        if "{run_id}" in path and not path_ids.get("run_id"):
+            results.append({"path": path, "params": {}, "limit_ms": P95_LIMIT_MS, "status": 501, "skipped": True})
+            continue
         url = path.format(**path_ids)
         results.append(
             {
