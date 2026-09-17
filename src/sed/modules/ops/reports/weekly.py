@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 from sed import analytics, metrics
 from sed.modules.ops.reports import queries
-from sed.modules.ops.reports.ai_provenance import weekly_ai
+from sed.modules.ops.reports.ai_provenance import approved_findings, weekly_ai
 from sed.reports.snapshot import SnapshotParts, SnapshotRequest, fact, table
 
 
@@ -291,13 +291,16 @@ def build(req: SnapshotRequest) -> SnapshotParts:
         ),
     }
     ai = weekly_ai(req)
+    findings_table, ai_findings = approved_findings(req)
     facts.update(ai.facts)
+    facts.update(ai_findings.facts)
+    tables["ai_findings"] = findings_table
     return SnapshotParts(
         facts=facts,
         tables=tables,
         sla_source=src,
         freshness=metrics.freshness(conn),
-        ai_runs=list(ai.ai_runs),
-        ai_derived_tables=list(ai.ai_derived_tables),
-        ai_derived_facts=list(ai.ai_derived_facts),
+        ai_runs=[*ai.ai_runs, *ai_findings.ai_runs],
+        ai_derived_tables=[*ai.ai_derived_tables, *ai_findings.ai_derived_tables],
+        ai_derived_facts=[*ai.ai_derived_facts, *ai_findings.ai_derived_facts],
     )

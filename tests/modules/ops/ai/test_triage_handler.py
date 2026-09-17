@@ -15,7 +15,7 @@ from sed.errors import ValidationFailed
 from sed.modules import metric_definitions
 from sed.modules.ops.ai.definitions import AI_DEFINITIONS
 from sed.modules.ops.ai.taxonomy import load_taxonomy, slugify_symptom
-from sed.modules.ops.reports.ai_provenance import AI_FACTS, weekly_ai
+from sed.modules.ops.reports.ai_provenance import AI_FACTS, FINDINGS_FACT, weekly_ai
 from sed.reports.snapshot import build_request
 from tests.fake_agent.flow import context_text, fake_output, finished_run, label_all, query, review_and_approve, start
 from tests.fake_agent.triage import parse_taxonomy
@@ -129,7 +129,7 @@ def test_weekly_ai_without_runs(ops_profile_rw):
     finally:
         conn.close()
     assert parts.ai_runs == [] and parts.ai_derived_tables == ("category_breakdown",)
-    assert set(parts.ai_derived_facts) == set(parts.facts) == set(AI_FACTS) == set(AI_DEFINITIONS)
+    assert set(parts.ai_derived_facts) == set(parts.facts) == set(AI_FACTS) == set(AI_DEFINITIONS) - {FINDINGS_FACT}
     assert all(f["value"] is None and f["definition"] in AI_DEFINITIONS for f in parts.facts.values())
     definitions = metric_definitions(paths)
     assert all(definitions[k][0] == "pct" for k in AI_FACTS)

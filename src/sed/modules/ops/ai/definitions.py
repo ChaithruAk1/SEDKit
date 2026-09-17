@@ -22,4 +22,9 @@ AI_DEFINITIONS: dict[str, tuple[str, str]] = {
         "pct",
         "Upper bound of the Wilson 95% interval around the AI category sample accuracy (n = random sample size).",
     ),
+    "ai.findings.approved.count": (
+        "count",
+        "AI findings (recurring issues and risks) approved by a person and still published when the snapshot was "
+        "taken; update-pending findings count with their approved text.",
+    ),
 }

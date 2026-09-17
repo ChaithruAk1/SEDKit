@@ -71,6 +71,12 @@ def render_weekly_md(snapshot: Snapshot, spec: ReportSpec, *, ai_mode: str) -> s
         lines.append("**System-detected risks (top):**")
         for f in critical[:3]:
             lines.append(f"- [{f['severity']}] {f['title']}")
+    ai_findings = view.tables.get("ai_findings", {}).get("rows", [])
+    if ai_findings:
+        lines.append("")
+        lines.append("**AI-assisted findings (approved):**")
+        for f in ai_findings[:3]:
+            lines.append(f"- [{f['severity']}] {f['title']}")
     soon = [r for r in renewals if r.get("days_to_notice") is not None and r["days_to_notice"] <= 30]
     if soon:
         lines.append("")

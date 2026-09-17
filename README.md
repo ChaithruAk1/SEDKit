@@ -157,8 +157,9 @@ Metrics stay at group (area), system and partner level, never per person.
   sample, where you record verdicts and approve or reject the run. In the terminal: `uv run sed review sample RUN
   --template verdicts.json`, fill in verdicts, `uv run sed review verdicts RUN --file verdicts.json`, then
   `uv run sed review approve-run RUN` (the `sed-review` skill walks through it).
-- Approved labels appear in reports with their sample accuracy and confidence interval. See
-  `docs/ai/walking-skeleton-runbook.md`.
+- Approved labels appear in reports with their sample accuracy and confidence interval, and approved findings
+  (recurring issues, risks) appear in the weekly report (AI findings sheet and slide); `--ai none` leaves both out.
+  See `docs/ai/walking-skeleton-runbook.md`.
 
 ## Real data
 
@@ -175,7 +176,7 @@ headless spike): `docs/real-data-onboarding.md`.
 | M2 | Modular platform, AI walking skeleton, all decks, API and dashboard core | done |
 | SAP S0–S4 | SAP module: L3 view, ChaRM changes, IDoc health, SAP subcategories in AI triage | done |
 | M3 | Reality check with real exports | tooling done; real run pending |
-| M4 | Full AI analysis & review | in progress |
+| M4 | Full AI analysis & review | built; AI-run gates (90-day triage, eval slice, real 50-ticket sample) pending |
 | M5 | AI-drafted reports | planned |
 | M6 | Automation & connectors | planned |
 | M7 | AI-native SDLC: delivery-management module and app factory | to be planned |

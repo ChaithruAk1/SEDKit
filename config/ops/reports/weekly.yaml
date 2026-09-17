@@ -40,6 +40,7 @@ sheets:
     sheet: Cost vs budget
     conditional: [{column: variance_pct, rule: ">=", value: 25, style: bad}]
   - {table: findings, sheet: Risks}
+  - {table: ai_findings, sheet: AI findings}
 markdown:
   max_words: 250
 slides:
@@ -116,5 +117,10 @@ slides:
     title: System-detected risks
     table: findings
     columns: [severity, title, kind, subject_id]
+  - kind: findings
+    title: AI-assisted findings (approved)
+    table: ai_findings
+    columns: [severity, title, kind, subject_id, recommendation, reviewed_by]
+    when: has_rows
   - kind: provenance
     title: Provenance
