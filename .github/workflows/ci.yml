@@ -27,7 +27,9 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        # Pinned to an exact release: setup-uv stopped publishing floating major tags after v7, so @v10
+        # does not resolve. Bump it by hand; the latest release runs on node24.
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
