@@ -50,8 +50,10 @@ while not stop_file.exists() and time.monotonic() < deadline:
         out["ops"] += 1
     except Exception as exc:
         out["errors"].append(f"{type(exc).__name__}: {exc}")
-    if wal.exists():
+    try:  # a checkpoint can remove the WAL between the check and the stat
         out["max_wal"] = max(out["max_wal"], wal.stat().st_size)
+    except OSError:
+        pass
     time.sleep(0.02)
 print(json.dumps(out))
 """
