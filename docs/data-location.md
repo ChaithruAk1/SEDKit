@@ -56,6 +56,10 @@ the Claude desktop app.
 material, so they live here with the other machine-level files and never in the repository; the dashboard shows the
 plain SED name when the folder is empty.
 
+Keep the original artwork you feed to `sed branding` in `<data root>\branding\source\`. `sed branding` addresses
+only the exact names `logo`, `watermark` and `watermark-dark` (plus `branding.json`) in the folder above, so a
+subfolder of originals sits beside them untouched, and the whole brand set stays in one place off the repository.
+
 ## Other machines
 
 Before `sed init --profile real` on another machine, decide the data root first. If you will run SED from the Claude

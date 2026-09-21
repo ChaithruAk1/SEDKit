@@ -23,8 +23,9 @@ data/
 out/
 *.log
 
-# Branding files (company logos) stay on this machine: SED reads them from the branding folder under the
-# data root (see `sed branding` and docs/data-location.md)
+# Branding files (company logos) stay on this machine, in the branding folder under the data root: the images
+# SED serves and the originals they came from (see `sed branding` and docs/data-location.md). This entry is a
+# safety net for a logo dropped in the checkout by mistake; nothing is kept here.
 /Logo/
 
 # Secrets / machine-local config
