@@ -89,7 +89,7 @@ def run_checks(paths: Paths, *, skip: set[str] | None = None) -> list[Check]:
     add(_check("env_pythonutf8", os.environ.get("PYTHONUTF8") == "1", "PYTHONUTF8=1", severity="warn"))
 
     root = repo_root()
-    hook = root / ".git" / "hooks" / "pre-commit"
+    hook = _git_hooks_dir(root) / "pre-commit"
     hook_ok = hook.is_file() and "pre-commit" in hook.read_text(encoding="utf-8", errors="ignore")
     add(_check("git_hooks_installed", hook_ok, str(hook) if hook_ok else "run `uv run pre-commit install`"))
     email = _git_local_email(root)
@@ -315,6 +315,27 @@ def _claude_checks(paths: Paths, add) -> None:
             ", ".join(surface_problems) or "skills, commands, agents and the PreToolUse guard hook",
         )
     )
+
+
+def _git_hooks_dir(root: Path) -> Path:
+    """The hooks folder git actually uses for `root`.
+
+    `.git/hooks` is right only in a plain checkout. In a worktree (`.claude/worktrees/`, docs/playbooks/
+    parallel-build.md) `.git` is a file pointing at the main repository, and git runs the hooks the worktrees share;
+    `core.hooksPath` can move them again. `git rev-parse --git-path hooks` answers for all three, so ask git rather
+    than assume, and fall back to the plain spelling when git is not on PATH.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--git-path", "hooks"], cwd=root, capture_output=True, text=True, check=False
+        )
+    except FileNotFoundError:
+        return root / ".git" / "hooks"
+    answer = out.stdout.strip()
+    if out.returncode != 0 or not answer:
+        return root / ".git" / "hooks"
+    path = Path(answer)
+    return path if path.is_absolute() else root / path
 
 
 def _git_local_email(root: Path) -> str | None:

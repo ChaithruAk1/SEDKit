@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,7 @@ from typer.testing import CliRunner
 
 from sed import claude_setup, db
 from sed.cli import app
+from sed.doctor import _git_hooks_dir
 from sed.paths import get_paths
 from sed.salt import fingerprint, read_salt
 
@@ -256,3 +259,38 @@ def test_posix_rule_path():
     assert claude_setup.posix_rule_path(Path(r"C:\Users\me\AppData\Local\sed\real\runs")) == (
         "//c/Users/me/AppData/Local/sed/real/runs"
     )
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not available")
+def test_git_hooks_dir_follows_git_into_a_worktree(tmp_path: Path):
+    """`git_hooks_installed` must not cry wolf in a worktree.
+
+    There `.git` is a file pointing at the main repository, so `.git/hooks` does not exist, but git still runs the
+    hooks the worktrees share. Both spellings must resolve to the one folder git would use.
+    """
+    main = tmp_path / "main"
+    main.mkdir()
+    git = ["git", "-c", "user.email=t@example.invalid", "-c", "user.name=T"]
+    subprocess.run([*git, "init", "-b", "main"], cwd=main, check=True, capture_output=True)
+    (main / "seed.txt").write_text("seed\n", encoding="utf-8")
+    subprocess.run([*git, "add", "seed.txt"], cwd=main, check=True, capture_output=True)
+    subprocess.run([*git, "commit", "-m", "seed", "--no-verify"], cwd=main, check=True, capture_output=True)
+
+    linked = tmp_path / "linked"
+    subprocess.run([*git, "worktree", "add", str(linked)], cwd=main, check=True, capture_output=True)
+    assert (linked / ".git").is_file(), "a worktree's .git is a file, which is what used to break the check"
+    assert not (linked / ".git" / "hooks").exists()
+
+    shared = (main / ".git" / "hooks").resolve()
+    assert _git_hooks_dir(linked).resolve() == shared
+    assert _git_hooks_dir(main).resolve() == shared
+
+
+def test_git_hooks_dir_falls_back_without_git(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """No git on PATH is not a crash: fall back to the plain spelling so the check still reports something."""
+
+    def no_git(*_a, **_k):
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(subprocess, "run", no_git)
+    assert _git_hooks_dir(tmp_path) == tmp_path / ".git" / "hooks"
