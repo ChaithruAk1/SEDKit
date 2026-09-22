@@ -32,7 +32,7 @@ MODULE = Module(
             "Weekly SAP Operations Review",
             "sap/reports/sap-weekly.yaml",
             "sed.modules.sap.reports.weekly:build",
-            ("week",),
+            ("week", "range"),
             formats=("xlsx", "md", "pptx"),
             markdown="sed.modules.sap.reports.markdown:render",
         ),

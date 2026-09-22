@@ -9,6 +9,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
 
+# Longest period label: a custom range, `2024-10-01..2024-11-30`. The calendar labels are far shorter.
+PERIOD_MAX_LEN = 22
+
 
 class ApiModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -456,7 +459,7 @@ class ReadinessOut(ApiModel):
 
 class BuildIn(ApiModel):
     report: str = Field(min_length=1, max_length=40)
-    period: str = Field(min_length=4, max_length=12)
+    period: str = Field(min_length=4, max_length=PERIOD_MAX_LEN)
     vendor: str | None = Field(None, max_length=60)
     formats: list[Literal["xlsx", "md", "pptx"]] | None = Field(None, max_length=3)
     ai_mode: Literal["approved", "none", "draft"] = "approved"

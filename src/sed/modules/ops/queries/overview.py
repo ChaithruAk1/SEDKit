@@ -27,6 +27,7 @@ from sed.modules.ops.queries.common import (
     data_as_of_text,
     freshness_rows,
     has_entity_filter,
+    has_tickets_in,
     kpi,
     metrics_filters,
     pct,
@@ -153,11 +154,19 @@ def overview(ctx: Context) -> OpsOverview:
     attention_count = attention_data(ctx, 1)["count"]
     currency = ctx.settings.base_currency.lower()
 
+    # Nothing in the comparison window means no comparison, rather than a "fall" from zero (see has_tickets_in).
+    comparable = has_tickets_in(ctx, prev_period)
     kpis = [
-        kpi("inc.backlog", "Open incident backlog", backlog_now["total"], "count", compare=backlog_prev["total"]),
-        kpi("inc.sla.pct", "SLA met", sla_now, "pct", compare=sla_prev),
-        kpi("inc.mttr.median_h", "MTTR median (hours)", mttr_now, "hours", compare=mttr_prev),
-        kpi("inc.p1p2.opened", "P1/P2 opened", p1p2_now, "count", compare=p1p2_prev),
+        kpi(
+            "inc.backlog",
+            "Open incident backlog",
+            backlog_now["total"],
+            "count",
+            compare=backlog_prev["total"] if comparable else None,
+        ),
+        kpi("inc.sla.pct", "SLA met", sla_now, "pct", compare=sla_prev if comparable else None),
+        kpi("inc.mttr.median_h", "MTTR median (hours)", mttr_now, "hours", compare=mttr_prev if comparable else None),
+        kpi("inc.p1p2.opened", "P1/P2 opened", p1p2_now, "count", compare=p1p2_prev if comparable else None),
         kpi("cost.actual.ytd", "Spend YTD", actual_ytd, currency, compare=budget_ytd),
         kpi("cost.budget.ytd", "Budget YTD", budget_ytd, currency),
         kpi("cost.variance.ytd_pct", "Spend vs budget YTD", variance, "pct"),

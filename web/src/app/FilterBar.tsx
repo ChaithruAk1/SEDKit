@@ -1,13 +1,24 @@
 import { Badge, Button, Group, MultiSelect, Paper, Select, Switch, TextInput, Tooltip } from '@mantine/core';
 import { IconFilterOff } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 
-import { type FilterKey, type Filters, useFilters } from '../hooks/useFilters';
+import { type FilterKey, type Filters, RANGE_PERIOD_RE, useFilters } from '../hooks/useFilters';
 import { useShell } from './ShellContext';
+
+const RANGE_RE = RANGE_PERIOD_RE;
+/** Sentinel option that opens the two date fields; never sent to the API. */
+const PICK_RANGE = 'Custom range…';
 
 function isActive(filters: Filters, key: FilterKey): boolean {
   if (key === 'app') return filters.app.length > 0;
   if (key === 'include_drafts') return filters.include_drafts;
   return Boolean(filters[key]);
+}
+
+function rangeParts(period: string | null): [string, string] {
+  if (!period || !RANGE_RE.test(period)) return ['', ''];
+  const [from = '', to = ''] = period.split('..');
+  return [from, to];
 }
 
 /**
@@ -20,14 +31,30 @@ export function FilterBar({ keys }: { keys: readonly FilterKey[] }) {
   if (keys.length === 0) return null;
   const show = (key: FilterKey) => keys.includes(key);
   const periods = meta.data?.periods;
+  const isRange = RANGE_RE.test(filters.period ?? '');
+  const [pickingRange, setPickingRange] = useState(false);
+  // The two fields hold their own value while being filled in: one date alone is not yet a period, so until both
+  // are set there is nothing to put in the URL and the typed date would otherwise vanish on the next render.
+  const [draft, setDraft] = useState<[string, string]>(() => rangeParts(filters.period));
+  useEffect(() => setDraft(rangeParts(filters.period)), [filters.period]);
+  const [from, to] = draft;
+  const showRangeFields = isRange || pickingRange;
   const periodData = periods
     ? [
         { group: 'Weeks', items: periods.weeks },
         { group: 'Months', items: periods.months },
         { group: 'Quarters', items: periods.quarters },
+        // The chosen range is listed so the Select can show it; the sentinel opens the fields for a new one.
+        { group: 'Custom', items: isRange ? [filters.period as string, PICK_RANGE] : [PICK_RANGE] },
       ].filter((g) => g.items.length > 0)
     : [];
   const active = keys.filter((key) => isActive(filters, key)).length;
+
+  /** Keep what was typed, and write the pair as one period label once both ends are set and in order. */
+  const setRange = (nextFrom: string, nextTo: string) => {
+    setDraft([nextFrom, nextTo]);
+    if (nextFrom && nextTo && nextFrom <= nextTo) setFilter('period', `${nextFrom}..${nextTo}`);
+  };
 
   return (
     <Paper withBorder radius="md" p="xs" mb="md" component="section" aria-label="Filters">
@@ -91,12 +118,39 @@ export function FilterBar({ keys }: { keys: readonly FilterKey[] }) {
             label="Period"
             placeholder="Default (last full week)"
             data={periodData}
-            value={filters.period}
-            onChange={(value) => setFilter('period', value)}
+            value={isRange ? filters.period : (filters.period ?? null)}
+            onChange={(value) => {
+              if (value === PICK_RANGE) {
+                setPickingRange(true);
+                return;
+              }
+              setPickingRange(false);
+              setFilter('period', value);
+            }}
             searchable
             clearable
             w={170}
           />
+        ) : null}
+        {show('period') && showRangeFields ? (
+          <>
+            <TextInput
+              size="xs"
+              type="date"
+              label="From"
+              value={from}
+              onChange={(event) => setRange(event.currentTarget.value, to)}
+              w={140}
+            />
+            <TextInput
+              size="xs"
+              type="date"
+              label="To"
+              value={to}
+              onChange={(event) => setRange(from, event.currentTarget.value)}
+              w={140}
+            />
+          </>
         ) : null}
         {show('as_of') ? (
           <TextInput

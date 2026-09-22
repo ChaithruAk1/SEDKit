@@ -34,8 +34,12 @@ export const EMPTY_FILTERS: Filters = {
   include_drafts: false,
 };
 
-const DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const DATE = String.raw`\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])`;
+const DATE_RE = new RegExp(`^${DATE}$`);
 const PERIOD_RE = /^\d{4}-(W(0[1-9]|[1-4]\d|5[0-3])|0[1-9]|1[0-2]|Q[1-4])$/;
+/** A custom range period, `2024-10-01..2024-11-30` (sed.calendar.RANGE_RE). A period that matches neither shape is
+ * dropped rather than sent on, so this has to know about ranges or the URL silently loses them. */
+export const RANGE_PERIOD_RE = new RegExp(`^${DATE}\\.\\.${DATE}$`);
 const MAX_TEXT = 200;
 
 function text(value: string | null): string | null {
@@ -51,7 +55,7 @@ export function parseFilters(params: URLSearchParams): Filters {
     family: text(params.get('family')),
     vendor: text(params.get('vendor')),
     group: text(params.get('group')),
-    period: period && PERIOD_RE.test(period) ? period : null,
+    period: period && (PERIOD_RE.test(period) || RANGE_PERIOD_RE.test(period)) ? period : null,
     as_of: asOf && DATE_RE.test(asOf) ? asOf : null,
     include_drafts: params.get('include_drafts') === 'true',
   };

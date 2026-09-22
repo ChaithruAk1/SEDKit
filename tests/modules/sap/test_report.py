@@ -138,8 +138,14 @@ def test_provenance_lists_only_sap_suppressions(sap_profile_rw):
 
 
 def test_needs_a_week_period(sap_profile_rw):
-    with pytest.raises(ValidationFailed, match="needs a week period"):
+    """A month is still refused. The report takes its own week, or a custom range as the extra option."""
+    with pytest.raises(ValidationFailed, match="needs a week or range period"):
         _snapshot(sap_profile_rw, period="2026-08")
+
+
+def test_a_custom_range_is_accepted(sap_profile_rw):
+    snapshot = _snapshot(sap_profile_rw, period="2026-08-24..2026-08-30")
+    assert snapshot.period == "2026-08-24..2026-08-30"
 
 
 def test_refused_when_the_module_is_disabled(sap_profile_rw):

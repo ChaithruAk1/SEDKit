@@ -288,6 +288,19 @@ def kpi(
     return Kpi(key=key, label=label, value=value, unit=unit, compare=compare, delta=delta, definition=definition)
 
 
+def has_tickets_in(ctx: Context, period: Period) -> bool:
+    """Whether any ticket falls in a window at all.
+
+    A comparison against an empty window reads as a fall to zero, which tells the reader less than no comparison
+    does. It happens whenever the window predates the data: a custom range compares with the same dates a year
+    earlier, and early in a store's life there is nothing there.
+    """
+    row = ctx.conn.execute(
+        "SELECT 1 FROM ticket WHERE opened_at >= ? AND opened_at < ? LIMIT 1", (period.start_iso, period.end_iso)
+    ).fetchone()
+    return row is not None
+
+
 def review_queue_count(conn: sqlite3.Connection) -> int:
     row = conn.execute(
         "SELECT (SELECT COUNT(*) FROM finding WHERE origin = 'ai' AND status IN ('draft', 'update_pending')) + "

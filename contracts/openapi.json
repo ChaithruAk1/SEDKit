@@ -781,7 +781,7 @@
             "title": "Formats"
           },
           "period": {
-            "maxLength": 12,
+            "maxLength": 22,
             "minLength": 4,
             "title": "Period",
             "type": "string"
@@ -13470,7 +13470,7 @@
             "name": "period",
             "required": true,
             "schema": {
-              "maxLength": 12,
+              "maxLength": 22,
               "minLength": 4,
               "title": "Period",
               "type": "string"

@@ -25,8 +25,14 @@ def _file_part(value: str) -> str:
     return safe or "_"
 
 
+def _period_part(period: str) -> str:
+    """A period label for a filename. A custom range reads `2024-10-01_to_2024-11-30`: `..` is legal in a file name
+    but looks like a relative path, and `_file_part` would keep it."""
+    return _file_part(period.replace("..", "_to_"))
+
+
 def artifact_name(snapshot: Snapshot, ext: str, ai_mode: str) -> str:
-    parts = [snapshot.report_key, snapshot.period]
+    parts = [snapshot.report_key, _period_part(snapshot.period)]
     if snapshot.vendor_id:
         parts.append(_file_part(snapshot.vendor_id))
     if snapshot.data_class == "synthetic":
@@ -106,7 +112,7 @@ def build_report(
             check_spec_refs(snapshot, spec)
         view = render_view(snapshot, ai_mode)
         run_ids = [run["run_id"] for run in view.ai_runs]
-        out_dir = paths.out / snapshot.period
+        out_dir = paths.out / _period_part(snapshot.period)
         generated = db.utc_now()
         artifacts = []
         for fmt in wanted:

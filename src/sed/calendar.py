@@ -17,6 +17,9 @@ WEEK_RE = re.compile(r"^(\d{4})-W(\d{2})$")
 MONTH_RE = re.compile(r"^(\d{4})-(\d{2})$")
 QUARTER_RE = re.compile(r"^(\d{4})-Q([1-4])$")
 FY_RE = re.compile(r"^FY(\d{4})$")
+# A custom range, both days inclusive: `2024-10-01..2024-11-30`. It is a period label like any other, so a range
+# travels through filters, URLs and queries on the paths the calendar periods already use.
+RANGE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$")
 # Years a period label may name: keeps date arithmetic on neighbouring periods inside Python's date range.
 MIN_YEAR, MAX_YEAR = 1900, 9998
 
@@ -24,7 +27,7 @@ MIN_YEAR, MAX_YEAR = 1900, 9998
 @dataclass(frozen=True)
 class Period:
     label: str
-    kind: str  # week | month | quarter | year
+    kind: str  # week | month | quarter | year | range
     start_local: date
     end_local: date  # exclusive
     tz: str
@@ -59,7 +62,12 @@ class Period:
         return 1
 
     def previous(self, n: int = 1) -> Period:
-        """The period `n` steps earlier, with the same fiscal-year start."""
+        """The period `n` steps earlier, with the same fiscal-year start.
+
+        A step is one period of the same kind, except for a custom range, where it is one year: an arbitrary window
+        has no predecessor of its own shape in the calendar, and the same dates a year earlier stay meaningful
+        whatever window was picked (the owner's choice, 2026-09-22).
+        """
         p = self
         for _ in range(n):
             p = parse_period(shift_label(p.label, -1, p.kind), p.tz, self.fiscal_year_start)
@@ -111,7 +119,20 @@ def parse_period(label: str, tz: str, fiscal_year_start: int = 1) -> Period:
     if m := FY_RE.match(label):
         start = fiscal_quarter_start(int(m.group(1)), 1, fiscal_year_start)
         return Period(label, "year", start, date(start.year + 1, start.month, 1), tz)
-    raise ValidationFailed(f"Unrecognised period '{label}' (use 2026-W35, 2026-08, 2026-Q3 or FY2026)")
+    if m := RANGE_RE.match(label):
+        try:
+            first, last = date.fromisoformat(m.group(1)), date.fromisoformat(m.group(2))
+        except ValueError as exc:
+            raise ValidationFailed(f"Invalid date in range '{label}'") from exc
+        if last < first:
+            raise ValidationFailed(f"Range '{label}' ends before it starts")
+        for day in (first, last):
+            if not MIN_YEAR <= day.year <= MAX_YEAR:
+                raise ValidationFailed(f"Period '{label}' is outside the years {MIN_YEAR}-{MAX_YEAR}")
+        return Period(label, "range", first, last + timedelta(days=1), tz)  # end_local is exclusive
+    raise ValidationFailed(
+        f"Unrecognised period '{label}' (use 2026-W35, 2026-08, 2026-Q3, FY2026 or 2026-08-01..2026-08-31)"
+    )
 
 
 def shift_label(label: str, delta: int, kind: str | None = None) -> str:
@@ -127,7 +148,19 @@ def shift_label(label: str, delta: int, kind: str | None = None) -> str:
         return f"{idx // 4}-Q{idx % 4 + 1}"
     if m := FY_RE.match(label):
         return f"FY{int(m.group(1)) + delta}"
+    if m := RANGE_RE.match(label):
+        first = _shift_years(date.fromisoformat(m.group(1)), delta)
+        last = _shift_years(date.fromisoformat(m.group(2)), delta)
+        return f"{first.isoformat()}..{last.isoformat()}"
     raise ValidationFailed(f"Cannot shift period '{label}'")
+
+
+def _shift_years(day: date, delta: int) -> date:
+    """The same day `delta` years away; 29 February lands on the 28th in a common year."""
+    try:
+        return day.replace(year=day.year + delta)
+    except ValueError:
+        return day.replace(year=day.year + delta, day=28)
 
 
 def week_label(day: date) -> str:

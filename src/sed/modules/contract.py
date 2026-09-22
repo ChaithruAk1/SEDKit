@@ -16,7 +16,9 @@ ImportRef = str
 MODULE_KEY_RE = re.compile(r"^[a-z][a-z0-9]{1,15}$")
 IMPORT_REF_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$")
 EXTENSION_POINT_RE = re.compile(r"^[a-z][a-z0-9_]{1,31}$")
-PeriodKind = Literal["week", "month", "quarter"]
+# "range" is a custom `<from>..<to>` window, offered alongside a report's own calendar kinds rather than instead of
+# them: a weekly report still means a week, and a range is the extra option for a question the calendar does not ask.
+PeriodKind = Literal["week", "month", "quarter", "range"]
 ReportFormat = Literal["xlsx", "md", "pptx"]
 
 

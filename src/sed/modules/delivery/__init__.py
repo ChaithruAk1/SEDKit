@@ -28,7 +28,7 @@ MODULE = Module(
             "Monthly Delivery Status",
             "delivery/reports/delivery-status.yaml",
             "sed.modules.delivery.reports.status:build",
-            ("month",),
+            ("month", "range"),
             formats=("xlsx", "md", "pptx"),
             markdown="sed.modules.delivery.reports.markdown:render",
         ),

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
 from sed.api.deps import read_conn
-from sed.api.models import ArtifactRow, BuildIn, JobOut, ReadinessOut, ReportInfo, ReportsOut
+from sed.api.models import PERIOD_MAX_LEN, ArtifactRow, BuildIn, JobOut, ReadinessOut, ReportInfo, ReportsOut
 from sed.errors import PreconditionFailed
 
 router = APIRouter(tags=["core"])
@@ -101,7 +101,7 @@ def reports(
 def readiness(
     request: Request,
     report: str = Query(min_length=1, max_length=40),
-    period: str = Query(min_length=4, max_length=12),
+    period: str = Query(min_length=4, max_length=PERIOD_MAX_LEN),
     vendor: str | None = Query(None, max_length=60),
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> ReadinessOut:
