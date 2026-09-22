@@ -12,7 +12,7 @@ import {
   IconUpload,
 } from '@tabler/icons-react';
 import { type ReactNode, useMemo, useState } from 'react';
-import { Link, matchPath, useLocation } from 'react-router';
+import { Link, matchPath, useLocation, useNavigate } from 'react-router';
 
 import { useApi, useCachedApi } from '../api/useApi';
 import { filterSearch } from '../hooks/useFilters';
@@ -189,6 +189,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: {
 }) {
   const { nav, navState, meta } = useShell();
   const location = useLocation();
+  const navigate = useNavigate();
   const search = filterSearch(new URLSearchParams(location.search));
 
   const activeId = useMemo(
@@ -219,7 +220,17 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: {
           ))}
         </nav>
         <Tooltip label="Upload an export" position="right" withinPortal disabled={!collapsed}>
-          <Link to="/data" className="sed-nav-item sed-nav-action" onClick={onNavigate}>
+          {/* Navigate on click rather than through the Link's own state: the stamp has to be fresh on every click,
+              including a repeat click while already on /data, or the upload card never scrolls itself back into view. */}
+          <Link
+            to="/data"
+            className="sed-nav-item sed-nav-action"
+            onClick={(event) => {
+              event.preventDefault();
+              onNavigate?.();
+              navigate('/data', { state: { focusUpload: Date.now() } });
+            }}
+          >
             <IconUpload />
             <span className="sed-nav-text">Upload an export</span>
           </Link>

@@ -1,6 +1,7 @@
 import { Badge, Button, Code, Grid, Group, HoverCard, SegmentedControl, Stack, Text } from '@mantine/core';
 import { IconLink } from '@tabler/icons-react';
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router';
 
 import type { Schema } from '../../api/types';
 import { useApi } from '../../api/useApi';
@@ -93,6 +94,7 @@ const IMPORT_COLUMNS: Column<ImportRow>[] = [
 
 export default function DataPage() {
   const { meta } = useShell();
+  const location = useLocation();
   const [kind, setKind] = useSearchParam('kind', 'all');
   const [assigning, setAssigning] = useState<UnmappedRow | null>(null);
 
@@ -170,6 +172,8 @@ export default function DataPage() {
     sources.reload();
     meta.reload();
   };
+  // Stamp set by the sidebar's "Upload an export", fresh on every click so a repeat click scrolls the card again.
+  const focusUpload = (location.state as { focusUpload?: number } | null)?.focusUpload;
 
   return (
     <Stack gap="md">
@@ -177,12 +181,13 @@ export default function DataPage() {
         title="Data"
         description="Sources, uploads, import batches, data quality and unmapped values. Assigning an alias re-links existing rows."
       />
+      {/* Stacked (below lg) the upload card goes first: the sources table is long enough to push it off-screen. */}
       <Grid gap="md">
-        <Grid.Col span={{ base: 12, lg: 8 }}>
+        <Grid.Col span={{ base: 12, lg: 8 }} order={{ base: 2, lg: 1 }}>
           <SourcesCard sources={sources.data} loading={sources.loading} error={sources.error} onRetry={sources.reload} onChanged={afterImport} />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 4 }}>
-          <UploadCard sources={sources.data} onImported={afterImport} />
+        <Grid.Col span={{ base: 12, lg: 4 }} order={{ base: 1, lg: 2 }}>
+          <UploadCard sources={sources.data} onImported={afterImport} focusKey={focusUpload ? String(focusUpload) : undefined} />
         </Grid.Col>
       </Grid>
       <Grid gap="md">

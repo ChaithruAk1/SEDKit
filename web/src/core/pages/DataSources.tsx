@@ -4,7 +4,7 @@
  */
 import { Alert, Badge, Button, Checkbox, FileInput, Group, List, Stack, Text } from '@mantine/core';
 import { IconCloudDownload, IconUpload } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, apiPost, apiUpload } from '../../api/client';
 import type { Schema } from '../../api/types';
@@ -73,7 +73,21 @@ function ImportOutcome({ result }: { result: ImportResult | null | undefined }) 
   );
 }
 
-export function UploadCard({ sources, onImported }: { sources: SourcesOut | undefined; onImported: () => void }) {
+/**
+ * `focusKey` changes on every click of the sidebar's "Upload an export": the card then scrolls itself into view and
+ * focuses the file field. Without it the click lands at the top of a long page, and below `lg` this card sits under
+ * the sources table, so "upload" reads as doing nothing.
+ */
+export function UploadCard({
+  sources,
+  onImported,
+  focusKey,
+}: {
+  sources: SourcesOut | undefined;
+  onImported: () => void;
+  focusKey?: string;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -83,6 +97,25 @@ export function UploadCard({ sources, onImported }: { sources: SourcesOut | unde
   const needsConfirmation = sources?.upload.needs_confirmation ?? false;
   const running = pending || job?.status === 'queued' || job?.status === 'running';
   const result = job?.status === 'done' ? (job.result as { import?: ImportResult } | null) : null;
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!focusKey || !card) return;
+    // Instant, not smooth: the navigation re-renders this card, which cancels an in-flight smooth scroll.
+    const bring = () => card.scrollIntoView({ behavior: 'auto', block: 'start' });
+    const frame = requestAnimationFrame(bring);
+    // Cards above this one settle their height a beat later: land again, then take focus, once they have.
+    const settled = window.setTimeout(() => {
+      bring();
+      // The first *visible* control: FileInput's own first child is a hidden file input, which cannot take focus.
+      const controls = Array.from(card.querySelectorAll<HTMLElement>('button, input'));
+      controls.find((element) => element.offsetParent !== null)?.focus({ preventScroll: true });
+    }, 300);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(settled);
+    };
+  }, [focusKey]);
 
   const start = async () => {
     if (!file) return;
@@ -99,47 +132,51 @@ export function UploadCard({ sources, onImported }: { sources: SourcesOut | unde
   };
 
   return (
-    <SectionCard
-      title="Upload an export"
-      description="ServiceNow, Jira, SAP, Excel or CSV exports, or a Confluence space export (.zip), imported like files dropped in the inbox"
-    >
-      <Stack gap="sm">
-        <FileInput
-          value={file}
-          onChange={(value) => {
-            setFile(value);
-            setJobId(null);
-          }}
-          placeholder="Choose a file"
-          accept={(sources?.upload.suffixes ?? []).join(',')}
-          clearable
-        />
-        {needsConfirmation ? (
-          <Checkbox
-            checked={confirmed}
-            onChange={(event) => setConfirmed(event.currentTarget.checked)}
-            label="This is a hand-made fictional file (the synthetic profile never takes real exports)"
+    // Wraps the whole card, so landing here shows the title and not just the file field. A plain div because the ref
+    // has to be a DOM node to scroll and focus; the scroll margin clears the sticky data-class strip.
+    <div ref={cardRef} style={{ scrollMarginTop: 'var(--sed-strip-h)' }}>
+      <SectionCard
+        title="Upload an export"
+        description="ServiceNow, Jira, SAP, Excel or CSV exports, or a Confluence space export (.zip), imported like files dropped in the inbox"
+      >
+        <Stack gap="sm">
+          <FileInput
+            value={file}
+            onChange={(value) => {
+              setFile(value);
+              setJobId(null);
+            }}
+            placeholder="Choose a file"
+            accept={(sources?.upload.suffixes ?? []).join(',')}
+            clearable
           />
-        ) : null}
-        <Group>
-          <Button
-            leftSection={<IconUpload size={14} />}
-            onClick={() => void start()}
-            loading={running}
-            disabled={!file || (needsConfirmation && !confirmed)}
-          >
-            Upload and import
-          </Button>
-          {job ? (
-            <Badge variant="light" color={job.status === 'failed' ? 'red' : job.status === 'done' ? 'teal' : 'blue'}>
-              {job.status}
-            </Badge>
+          {needsConfirmation ? (
+            <Checkbox
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.currentTarget.checked)}
+              label="This is a hand-made fictional file (the synthetic profile never takes real exports)"
+            />
           ) : null}
-        </Group>
-        <ErrorState error={error ?? pollError ?? jobError(job)} compact />
-        <ImportOutcome result={result?.import} />
-      </Stack>
-    </SectionCard>
+          <Group>
+            <Button
+              leftSection={<IconUpload size={14} />}
+              onClick={() => void start()}
+              loading={running}
+              disabled={!file || (needsConfirmation && !confirmed)}
+            >
+              Upload and import
+            </Button>
+            {job ? (
+              <Badge variant="light" color={job.status === 'failed' ? 'red' : job.status === 'done' ? 'teal' : 'blue'}>
+                {job.status}
+              </Badge>
+            ) : null}
+          </Group>
+          <ErrorState error={error ?? pollError ?? jobError(job)} compact />
+          <ImportOutcome result={result?.import} />
+        </Stack>
+      </SectionCard>
+    </div>
   );
 }
 
