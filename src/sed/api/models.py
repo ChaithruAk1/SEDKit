@@ -593,3 +593,30 @@ class LayoutDeletedOut(ApiModel):
     table_key: str
     name: str
     deleted: bool
+
+
+class DataSourceRow(ApiModel):
+    """One importing source and what it currently holds (see `sed.dataclear`)."""
+
+    key: str
+    label: str
+    description: str
+    tables: dict[str, int]
+    rows: int
+
+
+class DataSourcesOut(ApiModel):
+    items: list[DataSourceRow]
+
+
+class ClearDataIn(ApiModel):
+    source: str = Field(min_length=1, max_length=40)
+
+
+class ClearDataOut(ApiModel):
+    source: str
+    label: str
+    deleted: dict[str, int]
+    detached: dict[str, int]
+    import_batches: int
+    rows: int

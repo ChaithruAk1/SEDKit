@@ -466,3 +466,27 @@ export function layoutDeleted(layoutId: number) {
   LAYOUTS.splice(index, 1);
   return { layout_id: row.layout_id, table_key: row.table_key, name: row.name, deleted: true };
 }
+
+/** Importing sources and what they hold (`sed.dataclear`). Fixtures answer with plausible, fictional counts. */
+const DATA_SOURCES: { key: string; label: string; description: string; tables: Record<string, number>; rows: number }[] = [
+  { key: 'servicenow', label: 'ServiceNow', description: 'Incidents, requests, changes, problems, SLA records, CI links and support groups', tables: { ticket: 1240, task_sla: 2480 }, rows: 3720 },
+  { key: 'jira', label: 'Jira', description: 'Issues', tables: { work_item: 180 }, rows: 180 },
+  { key: 'confluence', label: 'Confluence', description: 'Pages', tables: { doc_page: 24 }, rows: 24 },
+  { key: 'sap', label: 'SAP', description: 'ChaRM changes, transport imports and IDocs', tables: { sap_change: 96, sap_idoc: 310 }, rows: 406 },
+  { key: 'delivery', label: 'Delivery', description: 'Projects, plan milestones and the RAID log', tables: { delivery_project: 4 }, rows: 4 },
+  { key: 'commercial', label: 'Contracts, licences and costs', description: 'Contracts, licence inventory and usage, cost actuals and budget', tables: { contract: 141, license: 221 }, rows: 362 },
+  { key: 'portfolio', label: 'Applications and vendors', description: 'The application list and vendor master', tables: { application: 60, vendor: 18 }, rows: 78 },
+];
+
+export function dataSources() {
+  return { items: DATA_SOURCES };
+}
+
+export function clearData(source: string) {
+  const row = DATA_SOURCES.find((s) => s.key === source);
+  if (!row) throw new Error(`Unknown source ${source}`);
+  const deleted = { ...row.tables };
+  row.tables = Object.fromEntries(Object.keys(row.tables).map((k) => [k, 0]));
+  row.rows = 0;
+  return { source, label: row.label, deleted, detached: {}, import_batches: 1, rows: Object.values(deleted).reduce((a, b) => a + b, 0) };
+}

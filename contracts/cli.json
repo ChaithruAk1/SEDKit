@@ -1234,6 +1234,73 @@
     {
       "commands": [
         {
+          "help": "Delete the data one source imported. Mappings, layouts, the salt and branding are untouched.",
+          "name": "clear",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "argument",
+              "multiple": false,
+              "name": "source",
+              "opts": [
+                "source"
+              ],
+              "required": true,
+              "type": "str"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "yes",
+              "opts": [
+                "--yes"
+              ],
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
           "help": "Copy the whole data root (every profile) to a new folder, verify it and mark the old one as moved.",
           "name": "move",
           "params": [
@@ -1260,6 +1327,49 @@
               ],
               "required": false,
               "type": "boolean"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "help": "What each source has imported, and what `sed data clear` would remove.",
+          "name": "sources",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
             },
             {
               "default": false,

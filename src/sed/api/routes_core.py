@@ -23,6 +23,10 @@ from sed.api.models import (
     AliasTarget,
     AliasTargetsOut,
     BrandingOut,
+    ClearDataIn,
+    ClearDataOut,
+    DataSourceRow,
+    DataSourcesOut,
     DefinitionOut,
     FilterOption,
     FindingsOut,
@@ -393,3 +397,23 @@ def remove_layout(body: LayoutRefIn, conn: sqlite3.Connection = Depends(write_co
     with db.write_tx(conn):
         row = delete_layout(conn, body.layout_id)
     return LayoutDeletedOut(**row)
+
+
+@router.get("/data/sources", response_model=DataSourcesOut)
+def data_sources(conn: sqlite3.Connection = Depends(read_conn)) -> DataSourcesOut:
+    # What each importing source holds, so a screen can offer to clear one of them.
+    from sed.dataclear import counts
+
+    return DataSourcesOut(items=[DataSourceRow(**row) for row in counts(conn)])
+
+
+@router.post("/data/clear", response_model=ClearDataOut)
+def clear_data(body: ClearDataIn, request: Request, conn: sqlite3.Connection = Depends(write_conn)) -> ClearDataOut:
+    # Delete the data one source imported. Never the mappings, layouts, salt or branding: those are how SED is set
+    # up, not what was imported.
+    from sed import db
+    from sed.dataclear import clear
+
+    with db.write_tx(conn):
+        result = clear(conn, body.source, request.app.state.paths)
+    return ClearDataOut(**result)

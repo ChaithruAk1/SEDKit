@@ -62,11 +62,13 @@ const GET_HANDLERS: GetHandlers = {
   '/api/delivery/projects/{project_id}': (params) => delivery.project(params.project_id),
   '/api/sources': () => sources.sources(),
   '/api/layouts': (_, query) => core.layouts(String(query?.table ?? '')),
+  '/api/data/sources': () => core.dataSources(),
 };
 
 const POST_HANDLERS: PostHandlers = {
   '/api/aliases': (body) => core.createAlias(body),
   '/api/layouts': (body) => core.saveLayout(body),
+  '/api/data/clear': (body) => core.clearData(body.source),
   '/api/layouts/default': (body) => core.layoutDefault(body.layout_id),
   '/api/layouts/delete': (body) => core.layoutDeleted(body.layout_id),
   '/api/findings/{finding_id}/review': (body, params) => review.reviewFinding(params.finding_id, body),

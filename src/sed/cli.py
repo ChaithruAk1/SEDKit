@@ -184,6 +184,70 @@ data_app = typer.Typer(no_args_is_help=True, help="Where sed keeps its data")
 app.add_typer(data_app, name="data")
 
 
+@data_app.command("sources")
+@handle_errors
+def data_sources(profile: ProfileOpt = None, data_dir: DataDirOpt = None, as_json: JsonOpt = False) -> None:
+    """What each source has imported, and what `sed data clear` would remove."""
+    from sed import dataclear
+
+    paths = _paths(profile, data_dir)
+    conn = db.connect(paths.db, readonly=True)
+    try:
+        rows = dataclear.counts(conn)
+    finally:
+        conn.close()
+
+    def human(result: list[dict[str, Any]]) -> None:
+        c = console()
+        for s in result:
+            c.print(f"{s['label']:34} {s['rows']:>9,} rows   [dim]{s['description']}[/]")
+
+    emit(rows, as_json, human)
+
+
+@data_app.command("clear")
+@handle_errors
+def data_clear(
+    source: Annotated[
+        str, typer.Argument(help="servicenow | jira | confluence | sap | delivery | commercial | portfolio")
+    ],
+    yes: Annotated[bool, typer.Option("--yes", help="Do not ask; required when not a terminal")] = False,
+    profile: ProfileOpt = None,
+    data_dir: DataDirOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Delete the data one source imported. Mappings, layouts, the salt and branding are untouched."""
+    from sed import dataclear
+
+    paths = _paths(profile, data_dir)
+    conn = db.connect(paths.db)
+    try:
+        before = next((s for s in dataclear.counts(conn) if s["key"] == source), None)
+        if before is None:
+            raise ValidationFailed(f"Unknown source '{source}'", {"sources": sorted(dataclear.BY_KEY)})
+        if not yes and not as_json:
+            c = console()
+            c.print(f"About to delete {before['rows']:,} rows of {before['label']} data from profile {paths.profile}.")
+            if not typer.confirm("Continue?"):
+                c.print("Nothing was changed.")
+                return
+        with db.write_tx(conn):
+            result = dataclear.clear(conn, source, paths)
+    finally:
+        conn.close()
+
+    def human(r: dict[str, Any]) -> None:
+        c = console()
+        c.print(f"Cleared {r['rows']:,} rows of {r['label']} data.")
+        for table, n in r["deleted"].items():
+            if n:
+                c.print(f"  {table}: {n:,}")
+        for ref, n in r.get("detached", {}).items():
+            c.print(f"  unlinked {ref}: {n:,}")
+
+    emit(result, as_json, human)
+
+
 @data_app.command("move")
 @handle_errors
 def data_move(

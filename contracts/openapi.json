@@ -960,6 +960,67 @@
         "title": "ChangeRow",
         "type": "object"
       },
+      "ClearDataIn": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "ClearDataIn",
+        "type": "object"
+      },
+      "ClearDataOut": {
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Deleted",
+            "type": "object"
+          },
+          "detached": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Detached",
+            "type": "object"
+          },
+          "import_batches": {
+            "title": "Import Batches",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "label",
+          "deleted",
+          "detached",
+          "import_batches",
+          "rows"
+        ],
+        "title": "ClearDataOut",
+        "type": "object"
+      },
       "ConnectorSourceRow": {
         "additionalProperties": false,
         "properties": {
@@ -1223,6 +1284,61 @@
           "total_budget"
         ],
         "title": "CostsOut",
+        "type": "object"
+      },
+      "DataSourceRow": {
+        "additionalProperties": false,
+        "description": "One importing source and what it currently holds (see `sed.dataclear`).",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "tables": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Tables",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "tables",
+          "rows"
+        ],
+        "title": "DataSourceRow",
+        "type": "object"
+      },
+      "DataSourcesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DataSourceRow"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DataSourcesOut",
         "type": "object"
       },
       "DefinitionOut": {
@@ -8972,6 +9088,168 @@
           }
         },
         "summary": "Branding",
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/data/clear": {
+      "post": {
+        "operationId": "core_clear_data",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClearDataIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClearDataOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing or invalid X-SED-Token"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Clear Data",
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/data/sources": {
+      "get": {
+        "operationId": "core_data_sources",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSourcesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Database busy; retry"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Precondition failed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Data Sources",
         "tags": [
           "core"
         ]
