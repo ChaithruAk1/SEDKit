@@ -45,6 +45,9 @@ import { ticketColumns } from '../components/ticketColumns';
 import { useFindings } from '../components/useFindings';
 import { findingSubjectHref } from '../links';
 
+/** Column key prefix for a column the export carried, so it cannot collide with the table's own keys. */
+const EXPORT_PREFIX = 'export:';
+
 type Granularity = 'week' | 'month';
 type TicketQuery = NonNullable<GetQuery<'/api/ops/tickets'>>;
 type Sort = NonNullable<TicketQuery['sort']>;
@@ -323,7 +326,18 @@ function SearchTab() {
   });
   const data = tickets.data;
   const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
-  const allColumns = useMemo(() => ticketColumns(), []);
+  // The table's own columns, plus one per column the export carried (`export:<name>`). A real export brings dozens,
+  // and which of them matter is the reader's choice, so all of them are offered rather than a chosen few.
+  const allColumns = useMemo(() => {
+    const built = ticketColumns();
+    const extra: Column<Schema<'TicketRow'>>[] = (data?.export_columns ?? []).map((name) => ({
+      key: `${EXPORT_PREFIX}${name}`,
+      header: name,
+      value: (t) => t.export_fields?.[name] ?? '',
+      sortable: false,
+    }));
+    return [...built, ...extra];
+  }, [data?.export_columns]);
   const layouts = useTableLayouts(
     'ops.tickets',
     useMemo(

@@ -115,6 +115,7 @@ const TICKETS = buildTickets();
 
 function toRow(t: TicketDetail): TicketRow {
   return {
+    export_fields: t.export_fields,
     ticket_id: t.ticket_id,
     number: t.number,
     kind: t.kind,
@@ -305,6 +306,7 @@ export function tickets(q: NonNullable<GetQuery<'/api/ops/tickets'>> | undefined
     page_size: pageSize,
     total: items.length,
     items: items.slice((page - 1) * pageSize, page * pageSize).map(toRow),
+    export_columns: ['Channel', 'Incident state', 'Support Level', 'Initial Assignment Group'],
   };
 }
 

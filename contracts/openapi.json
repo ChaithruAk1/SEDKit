@@ -7964,6 +7964,7 @@
           "am_subcategory",
           "label_confidence",
           "label_run_id",
+          "export_fields",
           "description",
           "close_code",
           "close_notes",
@@ -7979,7 +7980,6 @@
           "reassignment_count",
           "reopen_count",
           "made_sla",
-          "export_fields",
           "labels"
         ],
         "title": "TicketDetail",
@@ -7988,6 +7988,13 @@
       "TicketPage": {
         "additionalProperties": false,
         "properties": {
+          "export_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Export Columns",
+            "type": "array"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/TicketRow"
@@ -8074,6 +8081,13 @@
               }
             ],
             "title": "Assignment Group"
+          },
+          "export_fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Export Fields",
+            "type": "object"
           },
           "is_open": {
             "title": "Is Open",

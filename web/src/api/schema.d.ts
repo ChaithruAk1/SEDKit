@@ -3071,6 +3071,8 @@ export interface components {
         };
         /** TicketPage */
         TicketPage: {
+            /** Export Columns */
+            export_columns?: string[];
             /** Items */
             items: components["schemas"]["TicketRow"][];
             /** Page */
@@ -3092,6 +3094,10 @@ export interface components {
             app_name: string | null;
             /** Assignment Group */
             assignment_group: string | null;
+            /** Export Fields */
+            export_fields?: {
+                [key: string]: string;
+            };
             /** Is Open */
             is_open: boolean;
             /** Kind */

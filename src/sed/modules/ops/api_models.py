@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from sed.api.models import ApiModel, FindingOut, FreshnessRow, Kpi
 
 Granularity = Literal["week", "month"]
@@ -75,6 +77,9 @@ class TicketRow(ApiModel):
     label_confidence: float | None
     label_run_id: str | None
     label_run_status: str | None = None
+    # The export's own columns for this row, kept by the mapping's `raw_keep`. Text as it came, never parsed, and
+    # never a person's name or free text: a mapping may not keep those without a field carrying a PII rule.
+    export_fields: dict[str, str] = Field(default_factory=dict)
 
 
 class TicketPage(ApiModel):
@@ -82,6 +87,8 @@ class TicketPage(ApiModel):
     page_size: int
     total: int
     items: list[TicketRow]
+    # Every export column this store holds, so the table can offer them all rather than only those on this page.
+    export_columns: list[str] = Field(default_factory=list)
 
 
 class LabelOut(ApiModel):

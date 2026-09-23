@@ -115,7 +115,21 @@ def rows_for(
 
 
 def ticket_rows(conn: sqlite3.Connection, rowids: list[int], include_drafts: bool = False) -> list[TicketRow]:
-    return [TicketRow(**_row_from(r)) for r in rows_for(conn, rowids, label_statuses(include_drafts))]
+    rows = rows_for(conn, rowids, label_statuses(include_drafts), "t.raw_keep_json")
+    return [TicketRow(**_row_from(r), export_fields=_export_fields(r["raw_keep_json"])) for r in rows]
+
+
+def export_columns(conn: sqlite3.Connection) -> list[str]:
+    """Every column name the stored exports carry, so the table can offer them all rather than only those on the
+    page being looked at. Names only: no value from any ticket is read here."""
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT j.key FROM ticket t, json_each(t.raw_keep_json) j "
+            "WHERE t.raw_keep_json IS NOT NULL ORDER BY j.key"
+        ).fetchall()
+    except sqlite3.OperationalError:  # a store whose json1 is unavailable still lists its tickets
+        return []
+    return [str(r[0]) for r in rows]
 
 
 def search(
@@ -187,7 +201,13 @@ def search(
         if match is not None and "locked" not in message and "busy" not in message:
             raise ValidationFailed("Search text could not be parsed", {"q": q}) from exc
         raise
-    return TicketPage(page=page, page_size=page_size, total=total, items=ticket_rows(ctx.conn, ids, f.include_drafts))
+    return TicketPage(
+        page=page,
+        page_size=page_size,
+        total=total,
+        items=ticket_rows(ctx.conn, ids, f.include_drafts),
+        export_columns=export_columns(ctx.conn),
+    )
 
 
 DETAIL_COLUMNS = (

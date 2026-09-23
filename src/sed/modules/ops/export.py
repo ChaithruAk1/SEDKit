@@ -38,15 +38,26 @@ DEFAULT_ORDER = ("number", "priority", "state", "opened_at", "resolved_at", "gro
 MAX_WIDTH = 60
 
 
-def _value(row: Any, attr: str) -> Any:
-    value = getattr(row, attr, None)
+# The dashboard's key for a column the export carried, so it cannot collide with a column of SED's own.
+EXPORT_PREFIX = "export:"
+
+
+def _heading(key: str) -> str:
+    return key[len(EXPORT_PREFIX) :] if key.startswith(EXPORT_PREFIX) else COLUMNS[key][0]
+
+
+def _value(row: Any, key: str) -> Any:
+    if key.startswith(EXPORT_PREFIX):
+        return (getattr(row, "export_fields", None) or {}).get(key[len(EXPORT_PREFIX) :], "")
+    value = getattr(row, COLUMNS[key][1], None)
     return "" if value is None else value
 
 
 def write_ticket_workbook(paths: Paths, rows: list[Any], column_keys: list[str] | None) -> Path:
     """Write `rows` as a workbook and return its path. Unknown column keys are ignored, so a layout naming a column
     this export does not carry still produces a file rather than an error."""
-    chosen = [k for k in (column_keys or DEFAULT_ORDER) if k in COLUMNS] or list(DEFAULT_ORDER)
+    chosen = [k for k in (column_keys or DEFAULT_ORDER) if k in COLUMNS or k.startswith(EXPORT_PREFIX)]
+    chosen = chosen or list(DEFAULT_ORDER)
     folder = paths.out / "exports"
     folder.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -59,12 +70,12 @@ def write_ticket_workbook(paths: Paths, rows: list[Any], column_keys: list[str] 
         head = book.add_format({"bold": True, "bg_color": "#EFEFEF", "bottom": 1})
         widths = []
         for index, key in enumerate(chosen):
-            heading = COLUMNS[key][0]
+            heading = _heading(key)
             sheet.write_string(0, index, heading, head)
             widths.append(len(heading) + 2)
         for r, row in enumerate(rows, start=1):
             for c, key in enumerate(chosen):
-                value = _value(row, COLUMNS[key][1])
+                value = _value(row, key)
                 if isinstance(value, bool):  # before int: bool is an int in Python
                     sheet.write_string(r, c, "Yes" if value else "No")
                 elif isinstance(value, int | float):

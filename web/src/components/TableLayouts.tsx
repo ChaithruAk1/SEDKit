@@ -30,6 +30,7 @@ export function useTableLayouts(tableKey: string, all: { key: string; label: str
   const [chosen, setChosen] = useState<string[] | null>(null);
   const [activeName, setActiveName] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
 
   const items = useMemo(() => layouts.data?.items ?? [], [layouts.data]);
@@ -94,6 +95,8 @@ export function useTableLayouts(tableKey: string, all: { key: string; label: str
     }
   };
 
+  const needle = filter.trim().toLowerCase();
+  const shown = needle ? all.filter((c) => c.label.toLowerCase().includes(needle)) : all;
   const shownCount = visible ? visible.length : all.length;
   const active = items.find((l) => l.name === activeName);
 
@@ -149,9 +152,18 @@ export function useTableLayouts(tableKey: string, all: { key: string; label: str
           ) : null}
 
           <Divider label="Show" labelPosition="left" />
+          {/* A real export brings dozens of columns; without this the list is a scroll hunt. */}
+          {all.length > 12 ? (
+            <TextInput
+              size="xs"
+              placeholder="Find a column"
+              value={filter}
+              onChange={(event) => setFilter(event.currentTarget.value)}
+            />
+          ) : null}
           <ScrollArea.Autosize mah={240}>
             <Stack gap={4}>
-              {all.map((column) => (
+              {shown.map((column) => (
                 <Checkbox
                   key={column.key}
                   size="xs"
