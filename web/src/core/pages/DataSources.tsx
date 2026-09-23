@@ -14,11 +14,24 @@ import { type Column, DataTable } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { formatDateTime, formatInt, humanize } from '../../components/format';
 import { SectionCard } from '../../components/SectionCard';
+import { useApi } from '../../api/useApi';
+import { ClearSourceButton } from './ClearSourceButton';
 
 type SourcesOut = Schema<'SourcesOut'>;
 type ConnectorRow = Schema<'SourceConnectorRow'>;
 type FileSourceRow = Schema<'FileSourceRow'>;
 type Job = Schema<'JobOut'>;
+
+/** The data group each connector's imports land in (`sed.dataclear`), so "Clear" sits on the row it belongs to. */
+const CONNECTOR_DATA: Record<string, string> = {
+  servicenow: 'servicenow',
+  jira: 'jira',
+  confluence: 'confluence',
+  sap: 'sap',
+  sharepoint: 'commercial', // the registers: contracts, licences, costs and budget
+};
+/** Groups that arrive as uploaded files rather than through a connector, so they have no row of their own above. */
+const FILE_ONLY_DATA = ['delivery', 'portfolio'];
 
 const CONNECTOR_LABELS: Record<string, string> = {
   servicenow: 'ServiceNow',
@@ -237,6 +250,13 @@ export function SourcesCard({
   onRetry: () => void;
   onChanged: () => void;
 }) {
+  const data = useApi('/api/data/sources');
+  const group = (key: string) => data.data?.items.find((s) => s.key === key);
+  const afterClear = () => {
+    data.reload();
+    onChanged();
+  };
+
   const connectorColumns: Column<ConnectorRow>[] = [
     { key: 'connector', header: 'Connector', value: (r) => r.connector, render: (r) => <Text size="sm" fw={500}>{CONNECTOR_LABELS[r.connector] ?? humanize(r.connector)}</Text> },
     {
@@ -271,7 +291,18 @@ export function SourcesCard({
         </Stack>
       ),
     },
-    { key: 'action', header: '', sortable: false, align: 'right', render: (r) => <PullButton row={r} onDone={onChanged} /> },
+    {
+      key: 'action',
+      header: '',
+      sortable: false,
+      align: 'right',
+      render: (r) => (
+        <Group gap={6} justify="flex-end" wrap="nowrap">
+          <PullButton row={r} onDone={onChanged} />
+          <ClearSourceButton source={group(CONNECTOR_DATA[r.connector] ?? '')} onCleared={afterClear} />
+        </Group>
+      ),
+    },
   ];
 
   const fileColumns: Column<FileSourceRow>[] = [
@@ -331,6 +362,21 @@ export function SourcesCard({
           emptyDescription="Configure connectors.yaml in the profile's config folder (see docs/sources.md)."
           minWidth={760}
         />
+        {/* Delivery files and the portfolio arrive as uploads, so they have no connector row to sit on. */}
+        <Group gap="xs" wrap="wrap" align="center">
+          <Text size="xs" c="dimmed">
+            Uploaded, not pulled:
+          </Text>
+          {FILE_ONLY_DATA.map((key) => {
+            const row = group(key);
+            return row ? (
+              <Group key={key} gap={6} wrap="nowrap">
+                <Text size="xs">{row.label}</Text>
+                <ClearSourceButton source={row} onCleared={afterClear} />
+              </Group>
+            ) : null;
+          })}
+        </Group>
         <DataTable
           rows={sources?.files}
           columns={fileColumns}

@@ -14,7 +14,6 @@ import { formatDate, formatDateTime, formatInt, humanize } from '../../component
 import { PageHeader } from '../../components/PageHeader';
 import { SectionCard } from '../../components/SectionCard';
 import { useSearchParam } from '../../hooks/useFilters';
-import { ClearDataCard } from './ClearDataCard';
 import { SourcesCard, UploadCard } from './DataSources';
 
 type ImportRow = Schema<'ImportRow'>;
@@ -232,7 +231,6 @@ export default function DataPage() {
           </SectionCard>
         </Grid.Col>
       </Grid>
-      <ClearDataCard onCleared={afterImport} />
       <SectionCard title="Import batches" description="Latest 100 imports, newest first" count={imports.data?.items.length ?? null}>
         <DataTable
           rows={imports.data?.items}
