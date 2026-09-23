@@ -26,26 +26,31 @@ function rangeParts(period: string | null): [string, string] {
  * which filters it honours; only those are shown.
  */
 export function FilterBar({ keys }: { keys: readonly FilterKey[] }) {
+  // Every hook runs before the early return below: a page that declares no filters renders nothing, and a component
+  // that calls fewer hooks on that render than on the next one breaks React (error #310).
   const { filters, setFilter, clearFilters } = useFilters();
   const { meta, filterOptions } = useShell();
-  if (keys.length === 0) return null;
-  const show = (key: FilterKey) => keys.includes(key);
-  const periods = meta.data?.periods;
-  const isRange = RANGE_RE.test(filters.period ?? '');
   const [pickingRange, setPickingRange] = useState(false);
   // The two fields hold their own value while being filled in: one date alone is not yet a period, so until both
   // are set there is nothing to put in the URL and the typed date would otherwise vanish on the next render.
   const [draft, setDraft] = useState<[string, string]>(() => rangeParts(filters.period));
   useEffect(() => setDraft(rangeParts(filters.period)), [filters.period]);
+
+  if (keys.length === 0) return null;
+  const show = (key: FilterKey) => keys.includes(key);
+  const periods = meta.data?.periods;
+  const isRange = RANGE_RE.test(filters.period ?? '');
   const [from, to] = draft;
   const showRangeFields = isRange || pickingRange;
   const periodData = periods
     ? [
+        // First, not last: the shortcuts run to three dozen entries, and a custom range at the bottom of that list is
+        // a feature nobody finds.
+        // The chosen range is listed so the Select can show it; the sentinel opens the fields for a new one.
+        { group: 'Custom', items: isRange ? [filters.period as string, PICK_RANGE] : [PICK_RANGE] },
         { group: 'Weeks', items: periods.weeks },
         { group: 'Months', items: periods.months },
         { group: 'Quarters', items: periods.quarters },
-        // The chosen range is listed so the Select can show it; the sentinel opens the fields for a new one.
-        { group: 'Custom', items: isRange ? [filters.period as string, PICK_RANGE] : [PICK_RANGE] },
       ].filter((g) => g.items.length > 0)
     : [];
   const active = keys.filter((key) => isActive(filters, key)).length;
