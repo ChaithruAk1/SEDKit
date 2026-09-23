@@ -112,6 +112,9 @@ class TicketDetail(TicketRow):
     reassignment_count: int | None
     reopen_count: int | None
     made_sla: bool | None
+    # Columns the export carried that SED has no field of its own for, kept by the mapping's `raw_keep`. Text as it
+    # came, never parsed, and never a person's name or free text: those need a field with a PII rule.
+    export_fields: dict[str, str]
     labels: list[LabelOut]
 
 

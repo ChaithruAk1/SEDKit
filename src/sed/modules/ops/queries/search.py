@@ -9,6 +9,7 @@ joined for those rows only.
 
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 from typing import Any
@@ -192,8 +193,25 @@ def search(
 DETAIL_COLUMNS = (
     "t.description, t.close_code, t.close_notes, t.closed_at, t.sys_updated_on, t.caller_pid, t.assigned_to_pid, "
     "t.cmdb_ci_raw, t.business_service_raw, t.problem_id, t.caused_by, t.parent_incident, t.reassignment_count, "
-    "t.reopen_count, t.made_sla"
+    "t.reopen_count, t.made_sla, t.raw_keep_json"
 )
+
+
+def _export_fields(raw_keep_json: str | None) -> dict[str, str]:
+    """The export's own columns for this ticket, kept by the mapping's `raw_keep` and otherwise never shown.
+
+    Values are whatever the export held, so they are shown as text and never parsed. A mapping may not keep a column
+    naming a person or free text, so nothing here carries a PII rule of its own.
+    """
+    if not raw_keep_json:
+        return {}
+    try:
+        kept = json.loads(raw_keep_json)
+    except ValueError:
+        return {}
+    if not isinstance(kept, dict):
+        return {}
+    return {str(k): str(v) for k, v in sorted(kept.items()) if v not in (None, "")}
 
 
 def detail(conn: sqlite3.Connection, ticket_id: str, include_drafts: bool = False) -> TicketDetail | None:
@@ -246,5 +264,6 @@ def detail(conn: sqlite3.Connection, ticket_id: str, include_drafts: bool = Fals
         reassignment_count=r["reassignment_count"],
         reopen_count=r["reopen_count"],
         made_sla=None if r["made_sla"] is None else bool(r["made_sla"]),
+        export_fields=_export_fields(r["raw_keep_json"]),
         labels=labels,
     )

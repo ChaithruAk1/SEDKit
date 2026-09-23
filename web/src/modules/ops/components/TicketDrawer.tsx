@@ -118,6 +118,20 @@ function Body({ ticket }: { ticket: TicketDetail }) {
         </div>
       ) : null}
 
+      {Object.keys(ticket.export_fields).length > 0 ? (
+        <>
+          <Divider label={`All fields from your export (${Object.keys(ticket.export_fields).length})`} labelPosition="left" />
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs" verticalSpacing="xs">
+            {Object.entries(ticket.export_fields).map(([name, value]) => (
+              // Values are whatever the export held: shown as plain text, never parsed or rendered as markup.
+              <Field key={name} label={name}>
+                {value}
+              </Field>
+            ))}
+          </SimpleGrid>
+        </>
+      ) : null}
+
       {ticket.labels.length > 0 ? (
         <>
           <Divider label="AI labels" labelPosition="left" />

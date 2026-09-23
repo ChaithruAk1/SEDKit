@@ -98,6 +98,13 @@ function buildTickets(): TicketDetail[] {
       reassignment_count: reassign,
       reopen_count: reopen,
       made_sla: isOpen ? null : resolveHours < (priority <= 2 ? 8 : 120),
+      // Columns a real export carries that SED has no field for, kept by the mapping's `raw_keep`.
+      export_fields: {
+        Channel: pick(r, ['Self-service', 'Phone', 'Email', 'Chat']),
+        'Incident state': isOpen ? 'In Progress' : 'Closed',
+        'Support Level': pick(r, ['L1', 'L2', 'L3']),
+        'Initial Assignment Group': 'Service Desk',
+      },
       labels,
     });
   }
