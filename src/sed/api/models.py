@@ -560,3 +560,36 @@ class ReviewRateRow(ApiModel):
 
 class ReviewRatesOut(ApiModel):
     rows: list[ReviewRateRow]
+
+
+class LayoutOut(ApiModel):
+    """One named column layout for a table (see `sed.layouts`): column keys in display order, never any data."""
+
+    layout_id: int
+    table_key: str
+    name: str
+    columns: list[str]
+    is_default: bool
+    updated_at: str
+
+
+class LayoutsOut(ApiModel):
+    items: list[LayoutOut]
+
+
+class LayoutSaveIn(ApiModel):
+    table_key: str = Field(min_length=1, max_length=80)
+    name: str = Field(min_length=1, max_length=60)
+    columns: list[str] = Field(min_length=1, max_length=200)
+    make_default: bool = False
+
+
+class LayoutRefIn(ApiModel):
+    layout_id: int = Field(ge=1)
+
+
+class LayoutDeletedOut(ApiModel):
+    layout_id: int
+    table_key: str
+    name: str
+    deleted: bool

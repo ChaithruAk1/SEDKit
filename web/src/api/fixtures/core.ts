@@ -419,3 +419,50 @@ export function createAlias(body: PostBody<'/api/aliases'>): PostResponse<'/api/
     reresolved: { ticket: occurrences, contract: before === unmappedState.rows.length ? 0 : 1, license: 0, cost_line: 0 },
   };
 }
+
+/** Named column layouts (schema 011). Fixtures keep them in memory for the session. */
+const LAYOUTS: { layout_id: number; table_key: string; name: string; columns: string[]; is_default: boolean; updated_at: string }[] = [
+  {
+    layout_id: 1,
+    table_key: 'ops.tickets',
+    name: 'Weekly review',
+    columns: ['number', 'priority', 'state', 'opened_at', 'group'],
+    is_default: true,
+    updated_at: '2026-09-01T09:00:00Z',
+  },
+];
+
+export function layouts(tableKey: string) {
+  return { items: LAYOUTS.filter((l) => l.table_key === tableKey) };
+}
+
+export function saveLayout(body: { table_key: string; name: string; columns: string[]; make_default?: boolean }) {
+  const existing = LAYOUTS.find((l) => l.table_key === body.table_key && l.name === body.name);
+  const row = existing ?? {
+    layout_id: LAYOUTS.length + 1,
+    table_key: body.table_key,
+    name: body.name,
+    columns: body.columns,
+    is_default: false,
+    updated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+  };
+  row.columns = body.columns;
+  if (!existing) LAYOUTS.push(row);
+  if (body.make_default) for (const l of LAYOUTS) if (l.table_key === body.table_key) l.is_default = l === row;
+  return row;
+}
+
+export function layoutDefault(layoutId: number) {
+  const row = LAYOUTS.find((l) => l.layout_id === layoutId);
+  if (!row) throw new Error(`No layout ${layoutId}`);
+  for (const l of LAYOUTS) if (l.table_key === row.table_key) l.is_default = l === row;
+  return row;
+}
+
+export function layoutDeleted(layoutId: number) {
+  const index = LAYOUTS.findIndex((l) => l.layout_id === layoutId);
+  const row = LAYOUTS[index];
+  if (!row) throw new Error(`No layout ${layoutId}`);
+  LAYOUTS.splice(index, 1);
+  return { layout_id: row.layout_id, table_key: row.table_key, name: row.name, deleted: true };
+}

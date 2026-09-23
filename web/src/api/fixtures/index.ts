@@ -61,10 +61,14 @@ const GET_HANDLERS: GetHandlers = {
   '/api/delivery/portfolio': () => delivery.portfolio(),
   '/api/delivery/projects/{project_id}': (params) => delivery.project(params.project_id),
   '/api/sources': () => sources.sources(),
+  '/api/layouts': (_, query) => core.layouts(String(query?.table ?? '')),
 };
 
 const POST_HANDLERS: PostHandlers = {
   '/api/aliases': (body) => core.createAlias(body),
+  '/api/layouts': (body) => core.saveLayout(body),
+  '/api/layouts/default': (body) => core.layoutDefault(body.layout_id),
+  '/api/layouts/delete': (body) => core.layoutDeleted(body.layout_id),
   '/api/findings/{finding_id}/review': (body, params) => review.reviewFinding(params.finding_id, body),
   '/api/findings/bulk-review': (body) => review.bulkReview(body),
   '/api/runs/{run_id}/verdicts': (body, params) => review.runVerdicts(params.run_id, body),

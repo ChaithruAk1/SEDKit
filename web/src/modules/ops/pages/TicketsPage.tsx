@@ -37,7 +37,9 @@ import { FindingList } from '../../../components/FindingList';
 import { formatHours, formatInt, formatPct } from '../../../components/format';
 import { PageHeader } from '../../../components/PageHeader';
 import { SectionCard } from '../../../components/SectionCard';
+import { useTableLayouts } from '../../../components/TableLayouts';
 import { useFilters, usePatchSearchParams, useSearchParam } from '../../../hooks/useFilters';
+import { ExportButton } from '../components/ExportButton';
 import { TicketDrawer, useTicketParam } from '../components/TicketDrawer';
 import { ticketColumns } from '../components/ticketColumns';
 import { useFindings } from '../components/useFindings';
@@ -321,7 +323,20 @@ function SearchTab() {
   });
   const data = tickets.data;
   const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
-  const columns = useMemo(() => ticketColumns(), []);
+  const allColumns = useMemo(() => ticketColumns(), []);
+  const layouts = useTableLayouts(
+    'ops.tickets',
+    useMemo(
+      () => allColumns.map((c) => ({ key: c.key, label: typeof c.header === 'string' ? c.header : c.key })),
+      [allColumns],
+    ),
+  );
+  // A layout names the columns to show, in its own order; without one the table keeps its natural order.
+  const columns = useMemo(() => {
+    if (!layouts.visible) return allColumns;
+    const byKey = new Map(allColumns.map((c) => [c.key, c]));
+    return layouts.visible.map((key) => byKey.get(key)).filter((c): c is (typeof allColumns)[number] => Boolean(c));
+  }, [allColumns, layouts.visible]);
 
   return (
     <Stack gap="md">
@@ -385,9 +400,13 @@ function SearchTab() {
         count={data?.total ?? null}
         description={data ? `Page ${data.page} of ${pages}` : undefined}
         actions={
-          pages > 1 ? (
-            <Pagination size="sm" total={pages} value={Math.min(page, pages)} onChange={(p) => patch({ page: p === 1 ? null : String(p) })} />
-          ) : undefined
+          <Group gap="xs" wrap="wrap" justify="flex-end">
+            {layouts.control}
+            <ExportButton columns={columns.map((c) => c.key)} total={data?.total ?? 0} />
+            {pages > 1 ? (
+              <Pagination size="sm" total={pages} value={Math.min(page, pages)} onChange={(p) => patch({ page: p === 1 ? null : String(p) })} />
+            ) : null}
+          </Group>
         }
       >
         <DataTable

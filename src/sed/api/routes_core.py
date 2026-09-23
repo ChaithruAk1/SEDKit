@@ -30,6 +30,11 @@ from sed.api.models import (
     HealthOut,
     ImportRow,
     ImportsOut,
+    LayoutDeletedOut,
+    LayoutOut,
+    LayoutRefIn,
+    LayoutSaveIn,
+    LayoutsOut,
     MetaOut,
     ModuleOut,
     ModuleRef,
@@ -344,3 +349,47 @@ def runs(
         counts = _int_counts(values.pop("counts_json"))
         items.append(RunRow(**values, counts=counts))
     return RunsOut(items=items)
+
+
+@router.get("/layouts", response_model=LayoutsOut)
+def layouts(
+    table: str = Query(min_length=1, max_length=80, description="table key, e.g. ops.tickets"),
+    conn: sqlite3.Connection = Depends(read_conn),
+) -> LayoutsOut:
+    # Named column layouts for one table, the default first. Column keys only; no ticket data is involved.
+    from sed.layouts import list_layouts
+
+    return LayoutsOut(items=[LayoutOut(**row) for row in list_layouts(conn, table)])
+
+
+@router.post("/layouts", response_model=LayoutOut)
+def save_layout_route(body: LayoutSaveIn, conn: sqlite3.Connection = Depends(write_conn)) -> LayoutOut:
+    # Create a layout, or replace the columns of one already saved under that name for that table.
+    from sed import db
+    from sed.layouts import save_layout
+
+    with db.write_tx(conn):
+        row = save_layout(conn, body.table_key, body.name, body.columns, make_default=body.make_default)
+    return LayoutOut(**row)
+
+
+@router.post("/layouts/default", response_model=LayoutOut)
+def make_layout_default(body: LayoutRefIn, conn: sqlite3.Connection = Depends(write_conn)) -> LayoutOut:
+    # The layout its table opens with. At most one per table, enforced by a partial unique index.
+    from sed import db
+    from sed.layouts import set_default
+
+    with db.write_tx(conn):
+        row = set_default(conn, body.layout_id)
+    return LayoutOut(**row)
+
+
+@router.post("/layouts/delete", response_model=LayoutDeletedOut)
+def remove_layout(body: LayoutRefIn, conn: sqlite3.Connection = Depends(write_conn)) -> LayoutDeletedOut:
+    # POST rather than DELETE: every write carries the per-launch token, and the dashboard sends it on POSTs.
+    from sed import db
+    from sed.layouts import delete_layout
+
+    with db.write_tx(conn):
+        row = delete_layout(conn, body.layout_id)
+    return LayoutDeletedOut(**row)

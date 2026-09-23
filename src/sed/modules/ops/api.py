@@ -10,6 +10,7 @@ import sqlite3
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 
 from sed.api.deps import CommonFilters, common_filters, read_conn
 from sed.modules.ops.api_models import (
@@ -206,3 +207,50 @@ def vendor_sla_trend(
     conn: sqlite3.Connection = Depends(read_conn),
 ) -> VendorTrendsOut:
     return commercial.vendor_trend(_ctx(request, conn, f), months)
+
+
+# Not /tickets/export.xlsx: that path is matched by the "one ticket by id" route above, which would
+# read "export.xlsx" as a ticket id. A sibling path cannot be broken by route ordering.
+@router.get("/tickets-export.xlsx", include_in_schema=False)
+def export_tickets(
+    request: Request,
+    q: str | None = Query(None, max_length=200),
+    kind: str | None = None,
+    priority: list[int] = Query(default_factory=list),
+    state: str | None = None,
+    open: bool | None = None,
+    stale: bool | None = None,
+    sn_category: str | None = None,
+    am_category: str | None = None,
+    sort: Literal["opened_desc", "opened_asc", "priority", "updated_desc"] = "opened_desc",
+    columns: str | None = Query(None, max_length=2000, description="Comma-separated column keys, in order"),
+    limit: int = Query(20_000, ge=1, le=100_000),
+    f: CommonFilters = Depends(common_filters),
+    conn: sqlite3.Connection = Depends(read_conn),
+) -> FileResponse:
+    # The ticket list as the reader is looking at it: same filters, same columns, as a workbook. Read-only, and the
+    # file is written into the profile's out folder so nothing escapes DATA_DIR.
+    from sed.modules.ops.export import write_ticket_workbook
+
+    page = search.search(
+        _ctx(request, conn, f),
+        q=q,
+        kind=kind,
+        priority=priority,
+        state=state,
+        is_open=open,
+        stale=stale,
+        sn_category=sn_category,
+        am_category=am_category,
+        sort=sort,
+        page=1,
+        page_size=limit,
+    )
+    keys = [k.strip() for k in (columns or "").split(",") if k.strip()] or None
+    path = write_ticket_workbook(request.app.state.paths, page.items, keys)
+    return FileResponse(
+        path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=path.name,
+        headers={"Cache-Control": "no-store"},
+    )

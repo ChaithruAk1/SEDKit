@@ -16,7 +16,11 @@ SECURITY_HEADERS = {
     "referrer-policy": "no-referrer",
 }
 # Query strings needed by core GET routes that have required parameters.
-REQUIRED_QUERY = {"/alias-targets": "?kind=vendor", "/reports/readiness": "?report=weekly&period=2026-W35"}
+REQUIRED_QUERY = {
+    "/alias-targets": "?kind=vendor",
+    "/reports/readiness": "?report=weekly&period=2026-W35",
+    "/layouts": "?table=ops.tickets",
+}
 
 
 def core_get_routes() -> list[tuple[str, Any]]:
