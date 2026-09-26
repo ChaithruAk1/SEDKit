@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -103,16 +104,38 @@ def connect(path: Path, *, readonly: bool = False) -> sqlite3.Connection:
     else:
         path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_MS / 1000, check_same_thread=False)
-    conn.isolation_level = None
-    conn.row_factory = sqlite3.Row
-    conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
-    if readonly:
-        conn.execute("PRAGMA query_only=ON")
-    else:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=FULL")  # an entry that was acknowledged survives a power cut
-        _migrate(conn)
+    try:
+        conn.isolation_level = None
+        conn.row_factory = sqlite3.Row
+        conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
+        if readonly:
+            conn.execute("PRAGMA query_only=ON")
+        else:
+            _use_wal(conn)
+            conn.execute("PRAGMA synchronous=FULL")  # an entry that was acknowledged survives a power cut
+            _migrate(conn)
+    except BaseException:
+        conn.close()
+        raise
     return conn
+
+
+def _use_wal(conn: sqlite3.Connection) -> None:
+    """Switch a new file to WAL (a file already in WAL is left as it is).
+
+    SQLite does not wait for the lock this switch takes, as waiting could deadlock: when several processes create the
+    trail at the same moment, all but one are told at once that it is locked. They retry within the busy timeout,
+    rather than refuse their actions."""
+    deadline = time.monotonic() + BUSY_TIMEOUT_MS / 1000
+    while True:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            return
+        except sqlite3.OperationalError as exc:
+            message = str(exc).lower()
+            if ("locked" not in message and "busy" not in message) or time.monotonic() >= deadline:
+                raise
+        time.sleep(0.02)
 
 
 def _migrate(conn: sqlite3.Connection) -> None:

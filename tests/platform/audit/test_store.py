@@ -123,6 +123,35 @@ def test_concurrent_writers_keep_one_unbroken_chain(tmp_path):
     }
 
 
+def test_a_writer_waits_for_another_process_creating_the_trail(tmp_path):
+    # The other process holds the lock on the new file. SQLite answers the WAL switch "locked" at once instead of
+    # waiting, so without a retry this action would be refused (two commands started at the same moment).
+    path = tmp_path / "audit.db"
+    other = sqlite3.connect(str(path), isolation_level=None, check_same_thread=False)
+    other.execute("BEGIN IMMEDIATE")
+    release = threading.Timer(0.3, other.execute, args=("COMMIT",))
+    release.start()
+    try:
+        stored = store.append(path, _row(1))
+    finally:
+        release.join()
+        other.close()
+    assert stored["seq"] == 1 and store.verify(path)["intact"]
+
+
+def test_a_trail_locked_longer_than_the_busy_timeout_still_refuses(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "BUSY_TIMEOUT_MS", 200)
+    path = tmp_path / "audit.db"
+    other = sqlite3.connect(str(path), isolation_level=None)
+    other.execute("BEGIN IMMEDIATE")
+    try:
+        with pytest.raises(sqlite3.OperationalError, match="locked"):
+            store.append(path, _row(1))
+    finally:
+        other.execute("ROLLBACK")
+        other.close()
+
+
 def test_verify_reads_one_snapshot_while_others_write(tmp_path, monkeypatch):
     path = tmp_path / "audit.db"
     for n in (1, 2, 3):
