@@ -1,7 +1,7 @@
 """Dependency direction: the core never imports module code directly (only through registry import references).
 
-Core = kit files in src/sed/*.py, sed/ai, sed/api, sed/auth, sed/reports, sed/ingest (except targets.py) and the
-registry itself.
+Core = kit files in src/sed/*.py, sed/ai, sed/api, sed/audit, sed/auth, sed/reports, sed/ingest (except targets.py)
+and the registry itself.
 Forbidden from core: sed.modules.<key>..., sed.metrics, sed.analytics, sed.synth, sed.ingest.targets.
 
 Every spelling counts: `import a.b`, `from a import b` (b a submodule), relative imports and
@@ -37,7 +37,7 @@ ALLOWLIST = {
 
 def core_files() -> list[Path]:
     files = [p for p in SRC.glob("*.py") if p.name not in LEGACY_OPS]
-    for sub in ("ai", "api", "auth", "reports", "ingest"):
+    for sub in ("ai", "api", "audit", "auth", "reports", "ingest"):
         files += [p for p in (SRC / sub).rglob("*.py") if p.name != "targets.py" or sub != "ingest"]
     files += [SRC / rel for rel in REGISTRY_FILES]
     return [f for f in files if f.is_file()]

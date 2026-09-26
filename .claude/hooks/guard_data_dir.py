@@ -1,8 +1,8 @@
 """PreToolUse hook: refuse tool calls that reach into the data folder or hand-edit generated files.
 
-CLAUDE.md states the contract ("Never open sed.db, inbox\\, secret\\, config\\ or ground_truth\\ under DATA_DIR",
-"Generated contracts live in contracts/ ... never hand-edit"). Claude Code deny rules cover Read and Edit but not a
-shell command, so this hook closes that gap for Bash, PowerShell, Grep and Glob as well.
+CLAUDE.md states the contract ("Never open sed.db, inbox\\, secret\\, config\\, ground_truth\\ or audit\\ under
+DATA_DIR", "Generated contracts live in contracts/ ... never hand-edit"). Claude Code deny rules cover Read and Edit
+but not a shell command, so this hook closes that gap for Bash, PowerShell, Grep and Glob as well.
 
 Wired in .claude/settings.json under hooks.PreToolUse, which resolves this file through CLAUDE_PROJECT_DIR rather
 than a path relative to the working directory: Python exits 2 when it cannot open a file, and 2 is what Claude Code
@@ -19,7 +19,7 @@ import os
 import re
 import sys
 
-PROTECTED = ("inbox", "secret", "config", "ground_truth")
+PROTECTED = ("inbox", "secret", "config", "ground_truth", "audit")
 PATH_FIELDS = ("file_path", "notebook_path", "path", "command", "pattern", "glob")
 EDIT_TOOLS = ("Edit", "Write", "NotebookEdit", "MultiEdit")
 DRIVE_PREFIX = re.compile(r"(?<![a-z0-9])/{1,2}([a-z])/")

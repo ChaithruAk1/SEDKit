@@ -196,6 +196,39 @@ def sign_in_line(app: Any) -> str:
     return "Sign-in required: " + ", ".join(label for _, label, _ in runtime.providers()) + "."
 
 
+def record_start(paths: Paths, app: Any, port: int, *, developer_mode: bool) -> None:
+    """Put this launch on the audit trail (raises AuditUnavailable, so SED does not start unrecorded)."""
+    from sed.audit.record import clear_dashboard_session, record
+    from sed.auth.actor import command_line_actor
+
+    clear_dashboard_session(paths)  # a note left by an earlier launch that stopped without cleaning up
+    mode = app.state.auth.mode
+    if mode == "developer":
+        summary = "SED started in developer mode: nobody signs in" + (
+            " (for this launch only)." if developer_mode else "."
+        )
+    else:
+        summary = "SED started: the dashboard asks for a sign-in."
+    detail = {"mode": mode, "port": port, "developer_mode_flag": developer_mode}
+    record(paths, command_line_actor(), "serve_start", summary=summary, detail=detail)
+
+
+def record_stop(paths: Paths, port: int) -> None:
+    """Stopping signs everyone out: record it and forget the dashboard session (best effort; SED is stopping)."""
+    from sed.audit.record import AuditUnavailable, clear_dashboard_session, record
+    from sed.auth.actor import command_line_actor
+
+    clear_dashboard_session(paths)
+    with contextlib.suppress(AuditUnavailable):
+        record(
+            paths,
+            command_line_actor(),
+            "serve_stop",
+            summary="SED stopped: everyone is signed out.",
+            detail={"port": port},
+        )
+
+
 def run(
     paths: Paths, *, port: int = 8000, open_browser: bool = True, dev: bool = False, developer_mode: bool = False
 ) -> None:
@@ -225,6 +258,8 @@ def run(
                 log_level="info",
             )
             server = uvicorn.Server(config)
+            # On the audit trail before anything is served: SED does not start when the trail cannot take the entry.
+            record_start(paths, app, actual_port, developer_mode=developer_mode)
             data_class = paths.data_class.upper()
             _say(f"SED ({data_class}) profile '{paths.profile}' serving on {url}{' [dev token]' if dev else ''}")
             _say(sign_in_line(app))
@@ -245,6 +280,7 @@ def run(
             finally:
                 with _active_lock:
                     _active.remove(server)
+                record_stop(paths, actual_port)
         _say("SED server stopped.")
     finally:
         sock.close()

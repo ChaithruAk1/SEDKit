@@ -22,7 +22,7 @@ exports (ServiceNow, Jira, Confluence, Excel) -> DATA_DIR/inbox -> sed import
 
 - **Core** (`src/sed/`): paths, layered settings, database and migrations, PII, CLI plumbing, ingest engine
   (`ingest/`), report engines (`reports/`), AI run lifecycle (`ai/`), API host (`api/`), dashboard sign-in (`auth/`,
-  `docs/sign-in.md`) and the module registry (`modules/`). The core never imports module code directly (`tests/platform/test_core_boundaries.py`).
+  `docs/sign-in.md`), the audit trail (`audit/`, `docs/audit.md`) and the module registry (`modules/`). The core never imports module code directly (`tests/platform/test_core_boundaries.py`).
 - **Modules** (`src/sed/modules/<key>/`): a manifest (`MODULE`) declares CLI mounts, API routers, dashboard pages,
   reports, AI skills, ingest targets and hooks, synthetic data, metric definitions, doctor checks, config and tables
   as lazy import references. Ops is module #1. How to add one: `docs/modules.md`.
@@ -36,7 +36,9 @@ exports (ServiceNow, Jira, Confluence, Excel) -> DATA_DIR/inbox -> sed import
    excluded at render time (`--ai none`).
 3. Every report renders from one frozen snapshot (sha256), so tables, charts and text agree.
 4. Rule findings are deterministic and always published ("system-detected"); AI findings need human approval.
-5. Real data, salts, ground truth, corporate templates and real mappings live only in `DATA_DIR`
+5. Every action that reaches data (downloads, pulls, imports, clears, restores, AI runs) is on the audit trail
+   before it happens, in its own append-only file; an action the trail cannot record does not happen.
+6. Real data, salts, ground truth, corporate templates and real mappings live only in `DATA_DIR`
    (`<data root>\<profile>`: `SED_DATA_ROOT`, else `%LOCALAPPDATA%\sed`; see `docs/data-location.md`); the repo is
    synthetic-only and guarded at commit time.
 
@@ -50,4 +52,5 @@ exports (ServiceNow, Jira, Confluence, Excel) -> DATA_DIR/inbox -> sed import
 | AI runs and review | `src/sed/ai/`, `src/sed/modules/ops/ai/`, `.claude/skills/sed-triage-batch/`, `.claude/workflows/sed-analyze.js` |
 | API and dashboard | `src/sed/api/`, `src/sed/modules/ops/api.py`, `web/` |
 | Sign-in | `src/sed/auth/`, `src/sed/api/routes_auth.py`, `config/auth.yaml`, `web/src/core/auth/`, `docs/sign-in.md` |
+| Audit trail | `src/sed/audit/`, `docs/audit.md` |
 | Tests | `tests/platform/` (core contracts), `tests/modules/<key>/`, `tests/fixtures/ops_profile.py` |

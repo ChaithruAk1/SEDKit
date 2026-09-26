@@ -39,13 +39,18 @@ def report_build(
     as_json: JsonOpt = False,
 ) -> None:
     """Build a report from a fresh frozen snapshot."""
+    from sed.audit import actions
+    from sed.auth.actor import command_line_actor
     from sed.reports.build import build_report
 
     paths = paths_for(profile, data_dir)
     formats = [x.strip().lower() for x in fmt.split(",") if x.strip()] if fmt else None
-    result = build_report(
-        paths, report, period, formats, ai, vendor, template_map=template_map, require_complete=require_complete
-    )
+    params = {"formats": formats, "ai_mode": ai, "template_map": template_map, "require_complete": require_complete}
+    with actions.start_report_build(paths, command_line_actor(), report, period, vendor, params) as attempt:
+        result = build_report(
+            paths, report, period, formats, ai, vendor, template_map=template_map, require_complete=require_complete
+        )
+        actions.report_build_done(attempt, result)
     emit(result, as_json, lambda p: [console().print(f"{a['format']}: {a['path']}") for a in p["artifacts"]])
 
 

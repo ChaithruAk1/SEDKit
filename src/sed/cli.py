@@ -156,14 +156,19 @@ def db_restore(
     if expected_fp is None:
         salt = read_salt(paths.salt_file)
         expected_fp = fingerprint(salt) if salt else None
-    result = db.restore(
-        file,
-        paths.db,
-        paths.backups,
-        paths.serve_lock,
-        expected_data_class=paths.data_class,
-        expected_salt_fingerprint=expected_fp,
-    )
+    from sed.audit import actions
+    from sed.auth.actor import command_line_actor
+
+    with actions.start_restore(paths, command_line_actor(), file) as attempt:
+        result = db.restore(
+            file,
+            paths.db,
+            paths.backups,
+            paths.serve_lock,
+            expected_data_class=paths.data_class,
+            expected_salt_fingerprint=expected_fp,
+        )
+        actions.restore_done(attempt, result)
     emit(result, as_json)
 
 
@@ -231,8 +236,13 @@ def data_clear(
             if not typer.confirm("Continue?"):
                 c.print("Nothing was changed.")
                 return
-        with db.write_tx(conn):
-            result = dataclear.clear(conn, source, paths)
+        from sed.audit import actions
+        from sed.auth.actor import command_line_actor
+
+        with actions.start_clear(paths, command_line_actor(), source) as attempt:
+            with db.write_tx(conn):
+                result = dataclear.clear(conn, source, paths)
+            actions.clear_done(attempt, result)
     finally:
         conn.close()
 
@@ -258,7 +268,7 @@ def data_move(
     as_json: JsonOpt = False,
 ) -> None:
     """Copy the whole data root (every profile) to a new folder, verify it and mark the old one as moved."""
-    result = relocate.move_data_root(to, dry_run=dry_run)
+    result = relocate.move_data_root(to, dry_run=True) if dry_run else _move_data_root_on_record(to)
 
     def human(p: dict[str, Any]) -> None:
         c = console()
@@ -275,6 +285,31 @@ def data_move(
             c.print(f"{i}. {step}")
 
     emit(result, as_json, human)
+
+
+def _move_data_root_on_record(to: Path) -> dict[str, Any]:
+    """The move on every profile's audit trail: started in the old folder (so it travels with the copy), and its
+    outcome where the trail lives afterwards (the recorder follows the moved folder)."""
+    import os
+
+    from sed.audit import actions
+    from sed.audit.record import failure_reason
+    from sed.auth.actor import command_line_actor
+    from sed.paths import Paths, data_root
+
+    root = Path(os.path.abspath(data_root()))
+    who = command_line_actor()
+    profiles = sorted(db_file.parent.name for db_file in root.glob("*/sed.db"))
+    attempts = [actions.start_data_move(Paths(name, root / name), who, to) for name in profiles]
+    try:
+        result = relocate.move_data_root(to)
+    except Exception as exc:
+        for attempt in attempts:
+            attempt.failed(failure_reason(exc))
+        raise
+    for attempt in attempts:
+        attempt.done(f"{attempt.what}: {result['files']} files copied and verified.")
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -427,7 +462,15 @@ def import_cmd(
         allow_unmanifested=allow_unmanifested,
         move_files=not keep_files,
     )
-    result = run_import(paths, opts)
+    if dry_run:
+        result = run_import(paths, opts)
+    else:
+        from sed.audit import actions
+        from sed.auth.actor import command_line_actor
+
+        with actions.start_import(paths, command_line_actor(), list(files or []), inbox=inbox) as attempt:
+            result = run_import(paths, opts)
+            actions.import_done(attempt, result)
 
     def human(p: dict[str, Any]) -> None:
         c = console()
@@ -493,9 +536,15 @@ def mappings_draft(
     as_json: JsonOpt = False,
 ) -> None:
     """Profile a file (headers, fill rates, value shapes, safe categories) into runs/map-*/in/ for a mapping draft."""
+    from sed.audit import actions
+    from sed.auth.actor import command_line_actor
     from sed.ingest.onboarding import new_draft
 
-    emit(new_draft(file, _paths(profile, data_dir)), as_json)
+    paths = _paths(profile, data_dir)
+    with actions.start_export_profile(paths, command_line_actor(), file) as attempt:  # written for Claude to read
+        draft = new_draft(file, paths)
+        actions.export_profile_done(attempt, draft)
+    emit(draft, as_json)
 
 
 @mappings_app.command("try")
@@ -661,12 +710,24 @@ def inbox_prune(
         raise ValidationFailed("--older-than must look like 90d")
     cutoff = time.time() - int(m.group(1)) * 86400
     paths = _paths(profile, data_dir)
-    removed = []
+    removed: list[str] = []
+    old = []
     if paths.processed.is_dir():
-        for folder in sorted(paths.processed.iterdir()):
-            if folder.is_dir() and folder.stat().st_mtime < cutoff:
+        old = [f for f in sorted(paths.processed.iterdir()) if f.is_dir() and f.stat().st_mtime < cutoff]
+    if old:
+        from sed.audit import actions
+        from sed.audit.record import failure_reason
+        from sed.auth.actor import command_line_actor
+
+        attempt = actions.start_inbox_prune(paths, command_line_actor(), older_than.strip(), [f.name for f in old])
+        try:
+            for folder in old:
                 shutil.rmtree(folder)
                 removed.append(folder.name)
+        except Exception as exc:
+            attempt.failed(failure_reason(exc), detail={"deleted": removed})
+            raise
+        actions.inbox_prune_done(attempt, removed)
     emit({"removed_folders": removed}, as_json)
 
 
@@ -956,11 +1017,13 @@ def serve(
 def _mount_core_subapps() -> None:
     from sed import modules
     from sed.ai.cli import ai_app, review_app
+    from sed.audit.cli import audit_app
     from sed.auth.cli import auth_app
     from sed.connectors.cli import pull_app, schedule_app, sources_command
     from sed.modules.cli import modules_app
     from sed.reports.cli import report_app
 
+    app.add_typer(audit_app, name="audit")
     app.add_typer(auth_app, name="auth")
     app.add_typer(report_app, name="report")
     app.add_typer(modules_app, name="modules")

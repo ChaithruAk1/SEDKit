@@ -21,9 +21,11 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from sed.api.deps import read_conn
+from sed.api.deps import actor, read_conn
 from sed.api.models import JobOut, PullIn, SourcesOut
 from sed.api.routes_reports import _jobs
+from sed.audit import actions
+from sed.audit.record import failure_reason
 from sed.errors import PreconditionFailed, ValidationFailed
 
 router = APIRouter(tags=["core"])
@@ -65,14 +67,27 @@ async def upload(
             raise ValidationFailed(f"The upload is larger than {MAX_BYTES // (1024 * 1024)} MB")
         chunks.append(chunk)
     paths = request.app.state.paths
-    saved = save_upload(paths, name, b"".join(chunks), synthetic_ok=synthetic_ok)
+    # On the audit trail before the file is stored; the outcome follows when the import job ends.
+    attempt = actions.start_upload(paths, actor(request), name, size)
+    try:
+        saved = save_upload(paths, name, b"".join(chunks), synthetic_ok=synthetic_ok)
+    except Exception as exc:
+        attempt.failed(failure_reason(exc))
+        raise
     stored = Path(saved["path"])
     info = {k: v for k, v in saved.items() if k != "path"}
 
     def work() -> dict[str, Any]:
-        return {"upload": info, "import": import_paths(paths, [stored], synthetic_ok=synthetic_ok)}
+        with attempt:
+            result = import_paths(paths, [stored], synthetic_ok=synthetic_ok)
+            actions.import_done(attempt, result)
+        return {"upload": info, "import": result}
 
-    job = _jobs(request).submit("import_upload", {"name": name, **info}, work)
+    try:
+        job = _jobs(request).submit("import_upload", {"name": name, **info}, work)
+    except Exception as exc:
+        attempt.failed(failure_reason(exc))
+        raise
     return JobOut(**job.as_dict())
 
 
@@ -88,9 +103,17 @@ def pull_now(connector: str, body: PullIn, request: Request) -> JobOut:
     reason = pull_refusal(paths, connector)
     if reason:
         raise PreconditionFailed(f"Connector '{connector}' cannot pull: {reason}")
+    attempt = actions.start_pull(paths, actor(request), connector, source=body.source, full=body.full, then_import=True)
 
     def work() -> dict[str, Any]:
-        return pull_and_import(paths, connector, source=body.source, full=body.full)
+        with attempt:
+            result = pull_and_import(paths, connector, source=body.source, full=body.full)
+            actions.pull_done(attempt, result["pull"], result["import"])
+        return result
 
-    job = _jobs(request).submit("source_pull", {"connector": connector, **body.model_dump()}, work)
+    try:
+        job = _jobs(request).submit("source_pull", {"connector": connector, **body.model_dump()}, work)
+    except Exception as exc:
+        attempt.failed(failure_reason(exc))
+        raise
     return JobOut(**job.as_dict())

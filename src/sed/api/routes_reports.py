@@ -17,8 +17,10 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse
 
-from sed.api.deps import read_conn
+from sed.api.deps import actor, read_conn
 from sed.api.models import PERIOD_MAX_LEN, ArtifactRow, BuildIn, JobOut, ReadinessOut, ReportInfo, ReportsOut
+from sed.audit import actions
+from sed.audit.record import failure_reason
 from sed.errors import PreconditionFailed
 
 router = APIRouter(tags=["core"])
@@ -124,24 +126,31 @@ def build(body: BuildIn, request: Request) -> JobOut:
         raise PreconditionFailed(f"The {body.report} report needs a vendor")
     paths = request.app.state.paths
     params = body.model_dump()
+    attempt = actions.start_report_build(paths, actor(request), body.report, body.period, body.vendor, params)
 
     def work() -> dict[str, Any]:
-        result = build_report(
-            paths,
-            body.report,
-            body.period,
-            list(body.formats) if body.formats else None,
-            body.ai_mode,
-            body.vendor,
-            require_complete=body.require_complete,
-        )
-        for artifact in result["artifacts"]:
-            artifact["file_name"] = Path(artifact["path"]).name
-            artifact["artifact_id"] = _artifact_id(paths, result["snapshot_id"], artifact)
-            artifact.pop("path", None)
+        with attempt:
+            result = build_report(
+                paths,
+                body.report,
+                body.period,
+                list(body.formats) if body.formats else None,
+                body.ai_mode,
+                body.vendor,
+                require_complete=body.require_complete,
+            )
+            for artifact in result["artifacts"]:
+                artifact["file_name"] = Path(artifact["path"]).name
+                artifact["artifact_id"] = _artifact_id(paths, result["snapshot_id"], artifact)
+                artifact.pop("path", None)
+            actions.report_build_done(attempt, result)
         return result
 
-    job = _jobs(request).submit("report_build", params, work)
+    try:
+        job = _jobs(request).submit("report_build", params, work)
+    except Exception as exc:
+        attempt.failed(failure_reason(exc))
+        raise
     return JobOut(**job.as_dict())
 
 
@@ -170,12 +179,36 @@ def job_status(job_id: str, request: Request) -> JobOut:
 
 @router.get("/reports/artifacts/{artifact_id}/file", include_in_schema=False)
 def artifact_file(artifact_id: str, request: Request, conn: sqlite3.Connection = Depends(read_conn)) -> FileResponse:
-    # Download one recorded artifact; the file must be inside the profile's out folder.
-    row = conn.execute("SELECT path FROM report_artifact WHERE artifact_id = ?", (artifact_id,)).fetchone()
+    # Download one recorded artifact; the file must be inside the profile's out folder. Nothing leaves without its
+    # audit entry: when the entry cannot be written, the download is refused.
+    from sed.audit.record import file_sha256, record
+
+    row = conn.execute(
+        "SELECT a.path, a.format, a.sha256, a.ai_mode, s.report_key, s.period, s.vendor_id "
+        "FROM report_artifact a JOIN report_snapshot s USING (snapshot_id) WHERE a.artifact_id = ?",
+        (artifact_id,),
+    ).fetchone()
     if row is None:
         raise PreconditionFailed(f"Unknown artifact '{artifact_id}'")
-    out_dir = request.app.state.paths.out.resolve()
+    paths = request.app.state.paths
+    out_dir = paths.out.resolve()
     path = Path(row["path"]).resolve()
     if not path.is_relative_to(out_dir) or not path.is_file():
         raise PreconditionFailed(f"Artifact file for '{artifact_id}' is not available")
+    what = f"the {row['report_key']} report for {row['period']}" + (
+        f" ({row['vendor_id']})" if row["vendor_id"] else ""
+    )
+    detail = {k: row[k] for k in ("report_key", "period", "vendor_id", "format", "ai_mode")}
+    detail["sha256"] = file_sha256(path)  # the file as handed out now; it may have changed since it was built
+    if detail["sha256"] != row["sha256"]:
+        detail["built_sha256"] = row["sha256"]
+    record(
+        paths,
+        actor(request),
+        "download",
+        summary=f"Downloaded {what} as {row['format'].upper()}.",
+        target_type="report_file",
+        target_id=path.name,
+        detail={**detail, "artifact_id": artifact_id},
+    )
     return FileResponse(path, filename=path.name, media_type=MEDIA_TYPES.get(path.suffix.lower()))

@@ -127,6 +127,10 @@ On the real profile the dashboard asks you to sign in with Microsoft, Google or 
 get in; synthetic profiles run in developer mode and say so on every screen. Set it up with `sed auth` (providers and
 who is allowed): `docs/sign-in.md`. `sed serve --developer-mode` skips sign-in for one launch.
 
+SED keeps an audit trail of who did what: sign-ins, downloads, pulls, imports, cleared data, restored backups, AI
+runs and sign-in setting changes, kept forever in its own file and chained so that edits made by hand show (`sed audit
+verify`, `docs/audit.md`).
+
 The front screen greets you with one search across tickets, applications, delivery projects and vendors, a
 suggestion for what to do next, the three steps (bring in data, review findings, build reports) and a tile for every
 area. A sidebar lists the pages and the items waiting for your review; pages open in tabs. The look is light by

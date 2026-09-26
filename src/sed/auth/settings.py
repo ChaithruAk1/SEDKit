@@ -23,9 +23,9 @@ from typing import Any, Literal
 import yaml
 from pydantic import Field, field_validator, model_validator
 
-from sed.errors import SedError, ValidationFailed
+from sed.errors import ValidationFailed
 from sed.paths import Paths
-from sed.settings import StrictModel, _validate, load_layered, read_yaml
+from sed.settings import StrictModel, _validate, deep_merge, load_layered, read_yaml
 
 CONFIG_FILE = "auth.yaml"
 PROVIDERS = ("microsoft", "google", "github")  # display order on the sign-in screen
@@ -167,28 +167,44 @@ def local_file(paths: Paths) -> Path:
     return paths.config / CONFIG_FILE
 
 
-def update_local(paths: Paths, change: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
-    """Apply `change` to the DATA_DIR layer of auth.yaml, keep it only when the merged settings validate.
+def update_local(
+    paths: Paths,
+    change: Callable[[dict[str, Any]], None],
+    *,
+    on_change: Callable[[dict[str, Any], dict[str, Any]], Any] | None = None,
+) -> dict[str, Any]:
+    """Apply `change` to the DATA_DIR layer of auth.yaml.
 
-    Returns the local layer before and after. The file is replaced atomically and restored when validation fails.
+    In this order: the merged settings are validated in memory; `on_change(before, after)` puts the change on the audit
+    trail and answers the attempt (raising when it cannot, and then nothing is written); the file is replaced
+    atomically; the attempt records how it ended. The previous file comes back on any failure. Returns the local layer
+    before and after.
     """
     target = local_file(paths)
     previous = target.read_bytes() if target.is_file() else None
     before = read_yaml(target) if previous is not None else {}
     after = yaml.safe_load(yaml.safe_dump(before))  # a deep copy with YAML types only
     change(after)
+    _validate(AuthSettings, deep_merge(load_layered(CONFIG_FILE, None), after), CONFIG_FILE)
     text = "# Sign-in settings for this profile, written by `sed auth` (docs/sign-in.md).\n" + yaml.safe_dump(
         after, sort_keys=False, allow_unicode=True
     )
-    _replace(target, text.encode("utf-8"))
+    attempt = on_change(before, after) if on_change is not None and before != after else None
     try:
-        load_auth_settings(paths)
-    except SedError:
+        _replace(target, text.encode("utf-8"))
+        load_auth_settings(paths)  # the saved file reads back as it was validated
+    except BaseException as exc:
+        if attempt is not None:  # first: putting the old file back can fail the same way
+            from sed.audit.record import failure_reason
+
+            attempt.failed(failure_reason(exc))
         if previous is None:
             target.unlink(missing_ok=True)
         else:
             _replace(target, previous)
         raise
+    if attempt is not None:
+        attempt.done()
     return {"path": target.as_posix(), "before": before, "after": after}
 
 

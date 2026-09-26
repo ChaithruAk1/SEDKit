@@ -1,8 +1,8 @@
 """Machine-local Claude Code wiring written by `sed init`.
 
 * .claude/settings.local.json (gitignored): additionalDirectories + POSIX-form ``//c/...`` Read/Edit allow rules
-  for each profile's runs\\ folder, deny rules for ground_truth/secret/inbox/config, and Bash/PowerShell allow rules
-  for the effective command prefix when it differs from the committed default.
+  for each profile's runs\\ folder, deny rules for ground_truth/secret/inbox/config/audit, and Bash/PowerShell allow
+  rules for the effective command prefix when it differs from the committed default.
 * CLAUDE.md: the command-prefix block between markers is rendered from the machine-level agent config.
 
 Ownership: sed records exactly which entries it wrote in <data_root>\\claude_managed.json and only ever removes
@@ -25,7 +25,7 @@ PREFIX_START = "<!-- sed:prefix:start -->"
 PREFIX_END = "<!-- sed:prefix:end -->"
 DEFAULT_ALLOW_PREFIX = "uv run sed"
 PERMISSION_KEYS = ("additionalDirectories", "allow", "deny")
-BLOCKED_SUBDIRS = ("ground_truth", "secret", "inbox", "config")
+BLOCKED_SUBDIRS = ("ground_truth", "secret", "inbox", "config", "audit")
 
 
 def posix_rule_path(path: Path) -> str:

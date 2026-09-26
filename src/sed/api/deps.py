@@ -10,6 +10,7 @@ from datetime import date
 from fastapi import Query, Request
 
 from sed import db
+from sed.auth.actor import Actor
 from sed.errors import PreconditionFailed, ValidationFailed
 
 # as_of values outside this range would overflow the date arithmetic of period and window bounds.
@@ -18,6 +19,14 @@ AS_OF_MIN, AS_OF_MAX = date(1900, 1, 1), date(9998, 12, 31)
 
 def _paths(request: Request):
     return request.app.state.paths
+
+
+def actor(request: Request) -> Actor:
+    """Who is asking (set by the sign-in middleware for every request that got this far)."""
+    found = getattr(request.state, "actor", None)
+    if found is None:
+        raise PreconditionFailed("Please sign in to SED.")
+    return found
 
 
 def reviewer(request: Request) -> str:

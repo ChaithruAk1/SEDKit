@@ -119,6 +119,7 @@ def run_checks(paths: Paths, *, skip: set[str] | None = None) -> list[Check]:
     _module_checks(paths, root, add)
     _connector_checks(paths, add)
     _sign_in_checks(paths, add)
+    _audit_checks(paths, add)
 
     if paths.data_class == "real":
         add(
@@ -153,6 +154,25 @@ def _sign_in_checks(paths: Paths, add) -> None:
         else ", ".join(settings.enabled())
     )
     add(_check("sign_in_ready", not problems, detail, severity="fail" if paths.data_class == "real" else "warn"))
+
+
+def _audit_checks(paths: Paths, add) -> None:
+    """The audit trail's chain of entries is intact (docs/audit.md): nothing was changed or removed outside SED."""
+    from sed.audit.record import audit_path
+    from sed.audit.store import verify
+
+    try:
+        result = verify(audit_path(paths))
+    except Exception as exc:  # unreadable is a finding, never a crash of doctor
+        add(Check("audit_trail_intact", "fail", f"the audit trail cannot be read ({type(exc).__name__})"))
+        return
+    if result["intact"]:
+        since = f" since {result['first_at']}" if result["first_at"] else ""
+        count = f"{result['entries']} {'entry' if result['entries'] == 1 else 'entries'}"
+        add(Check("audit_trail_intact", "ok", f"{count}{since}, chain intact"))
+        return
+    detail = f"entry {result['first_break']} is missing or was changed outside SED (`sed audit verify`)"
+    add(_check("audit_trail_intact", False, detail, severity="fail" if paths.data_class == "real" else "warn"))
 
 
 def _database_checks(paths: Paths, add) -> dict[str, str]:

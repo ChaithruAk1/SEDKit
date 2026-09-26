@@ -14,6 +14,7 @@ import contextlib
 import json
 import os
 import shutil
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -39,16 +40,17 @@ def move_data_root(to: Path, *, dry_run: bool = False) -> dict[str, Any]:
     source = Path(os.path.abspath(data_root()))
     target = Path(os.path.abspath(to))
     _check_move(source, target)
-    databases, files, folders = _inventory(source)
+    databases, audit_logs, files, folders = _inventory(source)
     result: dict[str, Any] = {
         "from": str(source),
         "physical_from": str(app_package_location(source) or source),
         "to": str(target),
         "dry_run": dry_run,
         "profiles": [rel.parts[0] for rel in databases],
-        "files": len(databases) + len(files),
-        "bytes": sum((source / rel).stat().st_size for rel in (*databases, *files)),
+        "files": len(databases) + len(audit_logs) + len(files),
+        "bytes": sum((source / rel).stat().st_size for rel in (*databases, *audit_logs, *files)),
         "verified": [],
+        "audit_logs": [],
         "warnings": [],
     }
     if dry_run:
@@ -62,7 +64,7 @@ def move_data_root(to: Path, *, dry_run: bool = False) -> dict[str, Any]:
         if packaged is not None:
             raise PreconditionFailed(f"{target} is redirected into an app's private storage ({packaged}).")
         with contextlib.ExitStack() as locks:
-            for rel in databases:
+            for rel in (*databases, *audit_logs):
                 conn = locks.enter_context(contextlib.closing(db.connect(source / rel)))
                 locks.enter_context(db.write_tx(conn))  # no other writer commits until the old root is marked
             for rel in folders:
@@ -72,6 +74,7 @@ def move_data_root(to: Path, *, dry_run: bool = False) -> dict[str, Any]:
                 if (target / rel).stat().st_size != (source / rel).stat().st_size:
                     raise PreconditionFailed(f"Copying {source / rel} was incomplete.")
             result["verified"] = [_copy_database(source, target, rel, result["warnings"]) for rel in databases]
+            result["audit_logs"] = [_copy_audit_log(source, target, rel) for rel in audit_logs]
             claude_setup.rebase_registry(source, target)
             marker = {"moved_to": str(target), "moved_at": db.utc_now()}
             (source / MOVED_MARKER).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
@@ -128,9 +131,17 @@ def _check_move(source: Path, target: Path) -> None:
             )
 
 
-def _inventory(source: Path) -> tuple[list[Path], list[Path], list[Path]]:
-    """(profile databases, other files, folders) under the data root, as paths relative to it."""
+def _is_audit_log(rel: Path) -> bool:
+    return len(rel.parts) == 3 and rel.parts[1] == "audit" and rel.name == "audit.db"
+
+
+def _inventory(source: Path) -> tuple[list[Path], list[Path], list[Path], list[Path]]:
+    """(profile databases, audit trails, other files, folders) under the data root, as paths relative to it.
+
+    Both kinds of database are copied with SQLite's backup, which carries what still sits in the -wal file (skipped
+    as a plain file): for an audit trail those are its newest entries."""
     databases: list[Path] = []
+    audit_logs: list[Path] = []
     files: list[Path] = []
     folders: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(source):
@@ -140,8 +151,31 @@ def _inventory(source: Path) -> tuple[list[Path], list[Path], list[Path]]:
             rel = here / name
             if name in SKIPPED_NAMES or name.endswith(SKIPPED_SUFFIXES):
                 continue
-            (databases if name == "sed.db" and len(rel.parts) == 2 else files).append(rel)
-    return databases, files, folders
+            if name == "sed.db" and len(rel.parts) == 2:
+                databases.append(rel)
+            elif _is_audit_log(rel):
+                audit_logs.append(rel)
+            else:
+                files.append(rel)
+    return databases, audit_logs, files, folders
+
+
+def _copy_audit_log(source: Path, target: Path, rel: Path) -> dict[str, Any]:
+    """Copy one audit trail and check the copy holds the same unbroken chain."""
+    from sed.audit.store import verify
+
+    src = sqlite3.connect(f"file:{(source / rel).resolve().as_posix()}?mode=ro", uri=True)
+    dest = sqlite3.connect(str(target / rel))
+    try:
+        src.backup(dest)
+    finally:
+        src.close()
+        dest.close()
+    before, after = verify(source / rel), verify(target / rel)
+    keys = ("entries", "intact", "last_at")
+    if [after[k] for k in keys] != [before[k] for k in keys]:
+        raise PreconditionFailed(f"The copy of the audit trail {source / rel} does not match the original.")
+    return {"profile": rel.parts[0], "entries": after["entries"]}
 
 
 def _copy_database(source: Path, target: Path, rel: Path, warnings: list[str]) -> dict[str, Any]:

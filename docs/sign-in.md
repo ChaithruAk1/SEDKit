@@ -1,8 +1,7 @@
 # Signing in to SED
 
-SED asks who you are before it shows the dashboard, so that its audit trail can say who did what: who signed in, who
-downloaded data, who pulled it from ServiceNow, and later who changed it. (The audit trail itself is the next step of
-this work; until it lands, sign-in controls who gets in but nothing is recorded yet.)
+SED asks who you are before it shows the dashboard, so that its audit trail (`docs/audit.md`) can say who did what:
+who signed in, who downloaded data, who pulled it from ServiceNow, and later who changed it.
 
 **What it protects, and what it does not.** Signing in protects the dashboard. It does not protect the data file:
 anyone with your Windows login can still open the data folder directly. If the worry is the data at rest, the answer
@@ -141,8 +140,8 @@ A Microsoft error page saying the reply URL does not match means the app registr
 - **Code.** `src/sed/auth/` (settings, providers, identity, runtime, middleware, actor, cli), `src/sed/api/routes_auth.py`,
   `web/src/core/auth/`. Settings: `config/auth.yaml` overlaid by `DATA_DIR\config\auth.yaml`. Tests use a fake provider
   (`tests/fixtures/auth.py`); CI makes no network calls.
-- **Audit.** The runtime reports every sign-in, refusal, failure, sign-out and replaced session as an event to
-  `on_event`, and does not complete a sign-in whose event was refused. Nothing receives these events yet: the audit
-  trail that records them is the next phase (`docs/playbooks/sign-in-and-audit.md`).
+- **Audit.** The runtime reports every sign-in, refusal, failure, sign-out and replaced session to `on_event`, which
+  `sed serve` connects to the audit trail (`sed.audit.record.auth_recorder`); a sign-in whose entry cannot be written
+  does not complete (`docs/audit.md`).
 - **Module keys** `auth`, `health` and `branding` are reserved (`sed.modules.CORE_API_KEYS`), so no module router can
   land under a public prefix.

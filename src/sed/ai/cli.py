@@ -76,7 +76,17 @@ def ai_start_run(
     except ValidationError as exc:
         details = [{"loc": ".".join(str(p) for p in e["loc"]), "msg": e["msg"]} for e in exc.errors()]
         raise ValidationFailed("Invalid start-run options", details) from exc
-    plan = start_run(paths_for(profile, data_dir), skill, params)
+    paths = paths_for(profile, data_dir)
+    if dry_run:
+        plan = start_run(paths, skill, params)
+    else:
+        # Ticket text prepared for Claude leaves the laptop: on the audit trail before any packet is written.
+        from sed.audit import actions
+        from sed.auth.actor import command_line_actor
+
+        with actions.start_ai_run(paths, command_line_actor(), skill, params.model_dump()) as attempt:
+            plan = start_run(paths, skill, params)
+            actions.ai_run_done(attempt, plan.model_dump())
 
     def human(p: dict) -> None:
         console().print(f"run {p['run_id']} ({p['status']}): {p['plan']}", markup=False)

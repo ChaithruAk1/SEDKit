@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 from sed import __version__, db
-from sed.api.deps import read_conn, resolve_as_of, reviewer, write_conn
+from sed.api.deps import actor, read_conn, resolve_as_of, reviewer, write_conn
 from sed.api.findings import published_findings
 from sed.api.models import (
     AliasIn,
@@ -410,8 +410,12 @@ def clear_data(body: ClearDataIn, request: Request, conn: sqlite3.Connection = D
     # Delete the data one source imported. Never the mappings, layouts, salt or branding: those are how SED is set
     # up, not what was imported.
     from sed import db
+    from sed.audit import actions
     from sed.dataclear import clear
 
-    with db.write_tx(conn):
-        result = clear(conn, body.source, request.app.state.paths)
+    paths = request.app.state.paths
+    with actions.start_clear(paths, actor(request), body.source) as attempt:
+        with db.write_tx(conn):
+            result = clear(conn, body.source, paths)
+        actions.clear_done(attempt, result)
     return ClearDataOut(**result)

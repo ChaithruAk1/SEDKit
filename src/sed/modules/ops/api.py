@@ -12,7 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
-from sed.api.deps import CommonFilters, common_filters, read_conn
+from sed.api.deps import CommonFilters, actor, common_filters, read_conn
 from sed.modules.ops.api_models import (
     App360Out,
     AppsOut,
@@ -247,7 +247,50 @@ def export_tickets(
         page_size=limit,
     )
     keys = [k.strip() for k in (columns or "").split(",") if k.strip()] or None
-    path = write_ticket_workbook(request.app.state.paths, page.items, keys)
+    paths = request.app.state.paths
+    path = write_ticket_workbook(paths, page.items, keys)
+    # Nothing leaves without its audit entry: when the entry cannot be written the file is removed and refused.
+    from sed.audit.record import AuditUnavailable, file_sha256, record
+
+    chosen = {
+        "q": q,
+        "kind": kind,
+        "priority": priority or None,
+        "state": state,
+        "open": open,
+        "stale": stale,
+        "sn_category": sn_category,
+        "am_category": am_category,
+        "sort": sort,
+        "app": f.app or None,
+        "family": f.family,
+        "vendor": f.vendor,
+        "group": f.group,
+        "period": f.period,
+        "as_of": f.as_of.isoformat() if f.as_of else None,
+        "include_drafts": f.include_drafts or None,
+    }
+    detail = {
+        "rows": len(page.items),
+        "matching": page.total,
+        "columns": keys,
+        "filters": {k: v for k, v in chosen.items() if v is not None},
+        "sha256": file_sha256(path),
+    }
+    try:
+        summary = f"Downloaded {len(page.items)} tickets as a workbook."
+        record(
+            paths,
+            actor(request),
+            "download",
+            summary=summary,
+            target_type="ticket_workbook",
+            target_id=path.name,
+            detail=detail,
+        )
+    except AuditUnavailable:
+        path.unlink(missing_ok=True)
+        raise
     return FileResponse(
         path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

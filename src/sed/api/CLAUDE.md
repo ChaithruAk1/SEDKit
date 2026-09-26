@@ -11,8 +11,11 @@
   - Sign-in (`sed.auth`, `routes_auth.py`, `docs/sign-in.md`): every request needs the session cookie unless SED runs
     in developer mode, otherwise 401 `unauthenticated` (deny by default). Open: the dashboard shell (`/`, `/assets/*`,
     top-level files), `/auth/callback`, `/auth/finish`, `/api/health`, `/api/branding*`, `/api/auth/*`.
-    Routes read who is asking from `request.state.actor`; record decisions with `deps.reviewer(request)`, never the
+    Routes read who is asking with `deps.actor(request)`; record decisions with `deps.reviewer(request)`, never the
     Windows user name.
+  - Audit trail (`docs/audit.md`): a route that hands out data (a download) calls `sed.audit.record.record` before
+    returning it, and one that pulls, imports or clears wraps the work in `sed.audit.actions.start_*`. A job records
+    its outcome inside the job. When the trail cannot take the entry the route refuses (412).
   - Every non-GET/HEAD/OPTIONS request under `/api` needs the `X-SED-Token` header (the per-launch token), otherwise 403.
   - The token is never logged, and never put in a URL or response body.
   - Anti-framing and no-sniff headers go on every response. `index.html` is served `no-store`.

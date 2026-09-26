@@ -51,6 +51,18 @@ def _describe(paths: Any, *, full: bool) -> dict[str, Any]:
     return out
 
 
+def _audited(paths: Any, what: str) -> Any:
+    """Put a sign-in settings change on the audit trail (values before and after) before the file changes."""
+
+    def on_change(before: dict[str, Any], after: dict[str, Any]) -> Any:
+        from sed.audit.actions import start_sign_in_settings
+        from sed.auth.actor import command_line_actor
+
+        return start_sign_in_settings(paths, command_line_actor(), what, before, after)
+
+    return on_change
+
+
 def _count(n: int, one: str, many: str) -> str:
     return f"{n} {one if n == 1 else many}"
 
@@ -104,7 +116,8 @@ def mode(
         raise ValidationFailed(f"Unknown mode '{value}' (use auto, sign_in or developer)")
     paths = paths_for(profile, data_dir)
     resolve_mode(AuthSettings(mode=choice), paths)  # refuses developer for the real profile before anything is written
-    update_local(paths, lambda data: data.__setitem__("mode", choice))
+    what = f"Sign-in mode set to {choice.replace('_', '-')}"
+    update_local(paths, lambda data: data.__setitem__("mode", choice), on_change=_audited(paths, what))
     emit(_describe(paths, full=False), as_json, _print)
 
 
@@ -148,8 +161,11 @@ def provider(
         if redirect_host is not None:
             section["redirect_host"] = redirect_host.strip().lower()
 
+    from sed.auth.settings import LABELS
+
     paths = paths_for(profile, data_dir)
-    update_local(paths, change)
+    what = f"Sign-in with {LABELS[key]} switched {'off' if off else 'on'}"
+    update_local(paths, change, on_change=_audited(paths, what))
     emit(_describe(paths, full=False), as_json, _print)
 
 
@@ -189,9 +205,9 @@ def allow(
     """Let a person (by e-mail address) or a whole Microsoft organisation (by tenant ID) sign in."""
     from sed.auth.settings import update_local
 
-    _, change = _allow_list_change(value, add=True)
+    item, change = _allow_list_change(value, add=True)
     paths = paths_for(profile, data_dir)
-    update_local(paths, change)
+    update_local(paths, change, on_change=_audited(paths, f"Allowed {item} to sign in"))
     emit(_describe(paths, full=False), as_json, _print)
 
 
@@ -206,7 +222,7 @@ def disallow(
     """Take a person or organisation off the list. A session already open lasts until it ends or SED restarts."""
     from sed.auth.settings import update_local
 
-    _, change = _allow_list_change(value, add=False)
+    item, change = _allow_list_change(value, add=False)
     paths = paths_for(profile, data_dir)
-    update_local(paths, change)
+    update_local(paths, change, on_change=_audited(paths, f"Took {item} off the sign-in list"))
     emit(_describe(paths, full=False), as_json, _print)

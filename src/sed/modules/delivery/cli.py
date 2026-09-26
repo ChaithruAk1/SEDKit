@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -76,9 +77,17 @@ def export_cmd(
 ) -> None:
     """Write approved drafts as files (Jira CSV, Markdown) under DATA_DIR/out/delivery/<project>/. Nothing is sent
     to Jira or Confluence."""
+    from sed.audit import actions
+    from sed.auth.actor import command_line_actor
     from sed.modules.delivery.ai.export import export
 
-    result = export(paths_for(profile, data_dir), what, project, period=period)
+    paths = paths_for(profile, data_dir)
+    summary = f"Export the approved {what} of {project}" + (f" for {period}" if period else "")
+    detail = {"what": what, "project": project, "period": period}
+    with actions.start_export(paths, command_line_actor(), summary, "delivery_project", project, detail) as attempt:
+        result = export(paths, what, project, period=period)
+        files = [Path(str(f)).name for f in result.get("files") or []]
+        attempt.done(f"{summary}: {len(files)} files written.", detail={"files": files, "items": result.get("items")})
 
     def human(p: dict) -> None:
         console().print(

@@ -59,6 +59,7 @@ CORE_CLI_NAMES = frozenset(
         "sources",
         "branding",
         "auth",
+        "audit",
     }
 )
 # First path segment of the core API routes that are open without a sign-in (sed.auth.middleware.PUBLIC_API): a module

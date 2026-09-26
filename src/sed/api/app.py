@@ -113,8 +113,11 @@ def create_app(
 
     validate_token(token)
     if auth is None:
+        from sed.audit.record import auth_recorder
+
         settings = load_auth_settings(paths)
-        auth = AuthRuntime(settings, resolve_mode(settings, paths, developer_mode=developer_mode))
+        mode = resolve_mode(settings, paths, developer_mode=developer_mode)
+        auth = AuthRuntime(settings, mode, on_event=auth_recorder(paths))
     app = FastAPI(
         title="SED",
         version=__version__,

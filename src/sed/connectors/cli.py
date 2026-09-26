@@ -38,11 +38,21 @@ def _pull_command(connector: str) -> None:
         paths = paths_for(profile, data_dir)
         if run_import and dry_run:
             raise ValidationFailed("--import cannot be combined with --dry-run")
-        if run_import:
-            combined = pull_and_import(paths, connector, source=source, since=since, full=full)
-            result = {**combined["pull"], "import": combined["import"]}
+        if dry_run:
+            result = pull(paths, connector, source=source, since=since, full=full, dry_run=True)
         else:
-            result = pull(paths, connector, source=source, since=since, full=full, dry_run=dry_run)
+            from sed.audit import actions
+            from sed.auth.actor import command_line_actor
+
+            who = command_line_actor()
+            with actions.start_pull(paths, who, connector, source=source, full=full, then_import=run_import) as attempt:
+                if run_import:
+                    combined = pull_and_import(paths, connector, source=source, since=since, full=full)
+                    result = {**combined["pull"], "import": combined["import"]}
+                    actions.pull_done(attempt, combined["pull"], combined["import"])
+                else:
+                    result = pull(paths, connector, source=source, since=since, full=full)
+                    actions.pull_done(attempt, result)
 
         def human(p: dict) -> None:
             for s in p["sources"]:

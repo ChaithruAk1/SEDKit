@@ -32,6 +32,7 @@ SUBDIRS = (
     "config/templates",
     "secret",
     "jobs",
+    "audit",
 )
 
 
@@ -134,6 +135,11 @@ class Paths:
     @property
     def serve_lock(self) -> Path:
         return self.data_dir / "serve.lock"
+
+    @property
+    def audit(self) -> Path:
+        """The audit trail (sed.audit): its own database, kept apart from sed.db, never pruned."""
+        return self.data_dir / "audit"
 
     def ensure(self) -> None:
         for sub in SUBDIRS:

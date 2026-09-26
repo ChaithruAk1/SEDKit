@@ -993,6 +993,55 @@
     {
       "commands": [
         {
+          "help": "Walk the chain of entries: exit 0 when it is intact, 4 when an entry is missing or was changed outside SED.",
+          "name": "verify",
+          "params": [
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "profile",
+              "opts": [
+                "--profile",
+                "-p"
+              ],
+              "required": false,
+              "type": "str"
+            },
+            {
+              "default": null,
+              "is_flag": false,
+              "kind": "option",
+              "multiple": false,
+              "name": "data_dir",
+              "opts": [
+                "--data-dir"
+              ],
+              "required": false,
+              "type": "path"
+            },
+            {
+              "default": false,
+              "is_flag": true,
+              "kind": "option",
+              "multiple": false,
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "required": false,
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "help": "The audit trail: who did what and when (read-only)",
+      "name": "audit"
+    },
+    {
+      "commands": [
+        {
           "help": "Let a person (by e-mail address) or a whole Microsoft organisation (by tenant ID) sign in.",
           "name": "allow",
           "params": [
