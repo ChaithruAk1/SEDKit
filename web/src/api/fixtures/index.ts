@@ -6,6 +6,7 @@
  */
 import { ApiError, isAbortError } from '../client';
 import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostPathParams, PostResponse } from '../types';
+import * as auth from './auth';
 import * as core from './core';
 import * as delivery from './delivery';
 import * as jobs from './jobs';
@@ -24,6 +25,7 @@ type PostHandlers = {
 
 const GET_HANDLERS: GetHandlers = {
   '/api/health': () => ({ ok: true, version: '0.2.0' }),
+  '/api/auth/session': () => auth.session(),
   '/api/branding': () => ({ title: null, logo: false, watermark: false, watermark_dark: false }),
   '/api/meta': () => core.meta(),
   '/api/nav': () => core.nav(),
@@ -66,6 +68,10 @@ const GET_HANDLERS: GetHandlers = {
 };
 
 const POST_HANDLERS: PostHandlers = {
+  '/api/auth/start': () => auth.start(),
+  '/api/auth/device/start': () => auth.deviceStart(),
+  '/api/auth/device/poll': () => auth.devicePoll(),
+  '/api/auth/sign-out': () => auth.signOut(),
   '/api/aliases': (body) => core.createAlias(body),
   '/api/layouts': (body) => core.saveLayout(body),
   '/api/data/clear': (body) => core.clearData(body.source),

@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from sed.api.deps import read_conn
+from sed.api.deps import read_conn, reviewer
 from sed.api.models import (
     BulkReviewIn,
     CategoryOption,
@@ -44,10 +44,8 @@ from sed.errors import PreconditionFailed, ValidationFailed
 router = APIRouter(tags=["core"])
 
 
-def _reviewer() -> str:
-    from sed.bootstrap import reviewer_name
-
-    return reviewer_name()
+def _reviewer(request: Request) -> str:
+    return reviewer(request)
 
 
 def _evidence(payload: dict[str, Any]) -> list[Evidence]:
@@ -112,7 +110,7 @@ def review_one(finding_id: str, body: FindingReviewIn, request: Request) -> Find
         request.app.state.paths,
         [finding_id],
         body.action,
-        _reviewer(),
+        _reviewer(request),
         note=body.note,
         body_md=body.body_md,
         until=body.until,
@@ -129,7 +127,7 @@ def review_many(body: BulkReviewIn, request: Request) -> FindingReviewOut:
     # One action on several findings in one transaction (all or nothing), e.g. approving wording updates.
     from sed.ai.review import review_findings
 
-    result = review_findings(request.app.state.paths, body.finding_ids, body.action, _reviewer(), note=body.note)
+    result = review_findings(request.app.state.paths, body.finding_ids, body.action, _reviewer(request), note=body.note)
     return FindingReviewOut(
         action=result["action"],
         reviewed_by=result["reviewed_by"],
@@ -219,7 +217,7 @@ def run_verdicts(run_id: str, body: VerdictsIn, request: Request) -> VerdictsOut
             data[key] = {"verdict": "incorrect", **extra}
         else:
             data[key] = verdict
-    return VerdictsOut(**record_verdict_data(request.app.state.paths, run_id, data, reviewer=_reviewer()))
+    return VerdictsOut(**record_verdict_data(request.app.state.paths, run_id, data, reviewer=_reviewer(request)))
 
 
 @router.post("/runs/{run_id}/review", response_model=RunReviewOut)
@@ -227,7 +225,7 @@ def run_review(run_id: str, body: RunReviewIn, request: Request) -> RunReviewOut
     # Approve a label run once every random-sample verdict is present, or reject it (a note is required).
     from sed.ai.review import approve_run, reject_run
 
-    reviewer = _reviewer()
+    reviewer = _reviewer(request)
     if body.action == "approve":
         result = approve_run(request.app.state.paths, run_id, reviewer, body.note)
     else:
@@ -250,7 +248,9 @@ def correct_label(body: LabelCorrectionIn, request: Request) -> LabelCorrectionO
         }.items()
         if v is not None
     }
-    result = correct(request.app.state.paths, body.ticket_id, body.stage, correction, _reviewer(), skill=body.skill)
+    result = correct(
+        request.app.state.paths, body.ticket_id, body.stage, correction, _reviewer(request), skill=body.skill
+    )
     return LabelCorrectionOut(ticket_id=result["ticket_id"], stage=result["stage"], run_id=result["run_id"])
 
 

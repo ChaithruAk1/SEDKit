@@ -1,0 +1,22 @@
+# Sign-in defaults (docs/sign-in.md). Every provider is off and nobody is allowed in.
+# Real values go in DATA_DIR\config\auth.yaml, written by `sed auth ...`; the allowlist names real people, so it never
+# lives in the repo.
+mode: auto              # auto: synthetic profiles skip sign-in (developer mode), the real profile requires it
+session_hours: 12       # a sign-in lasts this long, or until `sed serve` stops
+
+providers:
+  microsoft:
+    enabled: false
+    client_id: ""         # the application (client) ID of the app registration
+    tenant_id: ""         # the directory (tenant) ID of the organisation
+    redirect_host: localhost   # the registered redirect is http://localhost/auth/callback (any port)
+  google:
+    enabled: false
+    client_id: ""         # an OAuth client of type "Desktop app"
+  github:
+    enabled: false
+    client_id: ""         # an OAuth app with "Enable Device Flow" ticked
+
+allow:
+  emails: []              # verified addresses that may sign in, with any switched-on provider
+  microsoft_tenants: []   # everyone in these organisations may sign in with Microsoft

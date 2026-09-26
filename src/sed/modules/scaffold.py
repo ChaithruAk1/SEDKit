@@ -288,7 +288,8 @@ def plan(
 
     n = _names(key, title, description, list(depends_on or []), order)
     installed = {m.key for m in modules.installed()}
-    if key in installed or key in modules.CORE_PAGE_KEYS or key in modules.CORE_CLI_NAMES:
+    reserved = modules.CORE_PAGE_KEYS | modules.CORE_CLI_NAMES | modules.CORE_API_KEYS
+    if key in installed or key in reserved:
         raise PreconditionFailed(f"Module key '{key}' is already used")
     unknown = [d for d in n.depends_on if d not in installed]
     if unknown:

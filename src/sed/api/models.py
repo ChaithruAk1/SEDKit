@@ -620,3 +620,63 @@ class ClearDataOut(ApiModel):
     detached: dict[str, int]
     import_batches: int
     rows: int
+
+
+# -- sign-in (sed.auth; routes_auth) ---------------------------------------------------------------------------------
+
+AuthProviderKey = Literal["microsoft", "google", "github"]
+
+
+class AuthProviderOut(ApiModel):
+    key: AuthProviderKey
+    label: str
+    flow: Literal["redirect", "device"]  # redirect: the provider's page and back; device: a code entered at GitHub
+
+
+class AuthUserOut(ApiModel):
+    name: str
+    email: str | None
+    method: Literal["microsoft", "google", "github", "developer_mode"]
+    verified: bool  # False in developer mode: the Windows account name, which nobody proved
+
+
+class AuthSessionOut(ApiModel):
+    mode: Literal["sign_in", "developer"]
+    signed_in: bool
+    user: AuthUserOut | None
+    expires_at: str | None  # ISO-8601 UTC
+    providers: list[AuthProviderOut]
+    setup_needed: list[str]  # why nobody could sign in yet (empty when someone can)
+
+
+class AuthStartIn(ApiModel):
+    provider: AuthProviderKey
+
+
+class AuthStartOut(ApiModel):
+    authorize_url: str
+
+
+class DeviceStartOut(ApiModel):
+    flow_id: str
+    user_code: str
+    verification_uri: str
+    expires_in: int
+    interval: int
+
+
+class DevicePollIn(ApiModel):
+    flow_id: str = Field(min_length=1, max_length=200)
+
+
+class DevicePollOut(ApiModel):
+    status: Literal["signed_in", "refused", "failed", "cancelled", "pending", "expired"]
+    message: str
+
+
+class SignOutIn(ApiModel):
+    """No fields: sign-out ends the session named by the cookie."""
+
+
+class SignOutOut(ApiModel):
+    signed_out: bool

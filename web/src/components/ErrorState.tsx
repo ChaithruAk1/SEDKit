@@ -19,6 +19,8 @@ function describe(error: ApiError | Error): { title: string; hint: string | null
       return { title: 'Not available yet', hint: 'This API route is not implemented in this build.', color: 'gray', kind };
     case 'forbidden':
       return { title: 'Request refused', hint: 'The launch token is missing or stale: reload the page served by `sed serve`.', color: 'red', kind };
+    case 'unauthenticated':
+      return { title: 'Signed out', hint: 'Your sign-in has ended. Sign in again to continue.', color: 'yellow', kind };
     case 'busy': {
       const seconds = 'retryAfter' in error && error.retryAfter ? ` in ${error.retryAfter} s` : '';
       return { title: 'Database busy', hint: `Another job is writing. Retry${seconds}.`, color: 'yellow', kind };

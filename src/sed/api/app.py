@@ -18,10 +18,14 @@ from sed import __version__
 from sed.api import errors
 from sed.api.models import ErrorBody, ErrorEnvelope
 from sed.api.security import SecurityHeadersMiddleware, TokenMiddleware, validate_token
+from sed.auth.middleware import SessionMiddleware, is_public
+from sed.auth.runtime import AuthRuntime
+from sed.auth.settings import load_auth_settings, resolve_mode
 from sed.paths import Paths
 
 ENVELOPE_REF = {"$ref": "#/components/schemas/ErrorEnvelope"}
 ERROR_RESPONSES = {
+    "401": "Not signed in",
     "403": "Missing or invalid X-SED-Token",
     "404": "Not found",
     "409": "Database busy; retry",
@@ -49,11 +53,13 @@ def _openapi(app: FastAPI) -> dict[str, Any]:
         definition = model.model_json_schema(ref_template="#/components/schemas/{model}")
         components.update(definition.pop("$defs", {}))
         components[model.__name__] = definition
-    for path_item in schema.get("paths", {}).values():
+    for path, path_item in schema.get("paths", {}).items():
         for method, operation in path_item.items():
             responses = operation.setdefault("responses", {})
             for code, description in ERROR_RESPONSES.items():
                 if code == "403" and method in {"get", "head", "options"}:
+                    continue
+                if code == "401" and is_public(path):
                     continue
                 responses[code] = {
                     "description": description,
@@ -97,15 +103,25 @@ def create_app(
     web_dist: Path | None = None,
     modules: Iterable[Any] | None = None,
     allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost"),
+    developer_mode: bool = False,
+    auth: AuthRuntime | None = None,
 ) -> FastAPI:
+    """`developer_mode` skips sign-in for this app (`sed serve --developer-mode`); `auth` injects a prepared sign-in
+    runtime (tests), otherwise one is built from auth.yaml and the profile."""
     from sed import modules as registry
-    from sed.api import routes_core, routes_reports, routes_review, routes_sources
+    from sed.api import routes_auth, routes_core, routes_reports, routes_review, routes_sources
 
     validate_token(token)
+    if auth is None:
+        settings = load_auth_settings(paths)
+        auth = AuthRuntime(settings, resolve_mode(settings, paths, developer_mode=developer_mode))
     app = FastAPI(
         title="SED",
         version=__version__,
-        description="Local SED API (127.0.0.1 only). Unsafe methods require the X-SED-Token header.",
+        description=(
+            "Local SED API (127.0.0.1 only). Unsafe methods require the X-SED-Token header; /api requests need a "
+            "signed-in session unless SED runs in developer mode."
+        ),
         openapi_url="/api/openapi.json",
         docs_url=None,
         redoc_url=None,
@@ -113,7 +129,10 @@ def create_app(
     )
     app.state.paths = paths
     app.state.token = token
+    app.state.auth = auth
     errors.install(app)
+    app.include_router(routes_auth.router, prefix="/api")
+    app.include_router(routes_auth.pages)
     app.include_router(routes_core.router, prefix="/api")
     app.include_router(routes_review.router, prefix="/api")
     app.include_router(routes_reports.router, prefix="/api")
@@ -130,7 +149,9 @@ def create_app(
         _mount_web(app, web_dist, token)
 
     app.openapi = lambda: _openapi(app)  # type: ignore[method-assign]
-    # Middleware order, outermost first: security headers (so 400 and 403 carry them too), host check, token.
+    # Middleware order, outermost first: security headers (so 400, 401 and 403 carry them too), host check, token,
+    # then the session (401 for /api without a sign-in; it puts the actor on request.state).
+    app.add_middleware(SessionMiddleware, runtime=auth)
     app.add_middleware(TokenMiddleware, token=token)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(allowed_hosts))
     app.add_middleware(SecurityHeadersMiddleware)

@@ -3,7 +3,7 @@
  * GET /api/nav), the one quiet action (upload an export), the items waiting for review with a search, and the person
  * using SED. Collapsible to icons; on narrow windows it floats over the page.
  */
-import { Popover, Skeleton, Stack, Text, TextInput, Tooltip } from '@mantine/core';
+import { Button, Popover, Skeleton, Stack, Text, TextInput, Tooltip } from '@mantine/core';
 import {
   IconHome,
   IconLayoutSidebarLeftCollapse,
@@ -15,6 +15,8 @@ import { type ReactNode, useMemo, useState } from 'react';
 import { Link, matchPath, useLocation, useNavigate } from 'react-router';
 
 import { useApi, useCachedApi } from '../api/useApi';
+import { formatDateTime } from '../components/format';
+import { PROVIDER_LABEL, useAuth } from '../core/auth/AuthGate';
 import { filterSearch } from '../hooks/useFilters';
 import { NavIcon } from './navIcons';
 import { type NavEntry, useShell } from './ShellContext';
@@ -140,26 +142,53 @@ function ReviewShelf({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/** Who is using SED: the signed-in person (with sign-out), or developer mode and the Windows account it records. */
 function PersonCard() {
   const [name, setName] = usePersonName();
   const { meta } = useShell();
-  const initial = name.trim().charAt(0).toUpperCase() || 'S';
+  const auth = useAuth();
+  const session = auth?.session;
+  const user = session?.signed_in ? session.user : null;
+  const developer = session?.mode === 'developer';
+  const shown = name.trim() || user?.name || 'Add your name';
+  const initial = shown.trim().charAt(0).toUpperCase() || 'S';
+  const second = user ? (user.email ?? user.name) : developer ? 'Developer mode' : meta.data ? `Profile ${meta.data.profile}` : 'Application owner';
   return (
     <Popover position="top-start" withinPortal trapFocus>
       <Popover.Target>
-        <button type="button" className="sed-user" aria-label="Your name and profile">
+        <button type="button" className="sed-user" aria-label="Who is signed in, and your name">
           <span className="sed-avatar">{initial}</span>
           <span className="sed-hide-collapsed sed-user-text">
             <Text size="sm" fw={600} truncate>
-              {name.trim() || 'Add your name'}
+              {shown}
             </Text>
             <Text size="xs" c="dimmed" truncate>
-              {meta.data ? `Profile ${meta.data.profile}` : 'Application owner'}
+              {second}
             </Text>
           </span>
         </button>
       </Popover.Target>
       <Popover.Dropdown>
+        {user ? (
+          <Stack gap={6} className="sed-popover-field">
+            <Text size="sm">
+              Signed in with {PROVIDER_LABEL[user.method] ?? user.method} as {user.email ?? user.name}.
+            </Text>
+            {session?.expires_at ? (
+              <Text size="xs" c="dimmed">
+                The sign-in lasts until {formatDateTime(session.expires_at)}, or until SED is stopped.
+              </Text>
+            ) : null}
+            <Button size="xs" variant="default" onClick={() => void auth?.signOut()}>
+              Sign out
+            </Button>
+          </Stack>
+        ) : developer ? (
+          <Text size="xs" c="dimmed" className="sed-popover-field">
+            Developer mode: nobody is signed in. What you do is recorded under the Windows account{' '}
+            {session?.user?.name ?? 'unknown'}.
+          </Text>
+        ) : null}
         <TextInput
           label="Your first name"
           description="Used for the greeting. Kept in this browser only."

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from sed.api import routes_core, routes_reports, routes_review, routes_sources
+from sed.api import routes_auth, routes_core, routes_reports, routes_review, routes_sources
 
 SECURITY_HEADERS = {
     "x-frame-options": "DENY",
@@ -27,7 +27,13 @@ def core_get_routes() -> list[tuple[str, Any]]:
     """(/api path with required query, response model) for every GET route of the core routers without path
     parameters (routes like /runs/{run_id} are tested with a real run)."""
     out = []
-    routers = [routes_core.router, routes_review.router, routes_reports.router, routes_sources.router]
+    routers = [
+        routes_auth.router,
+        routes_core.router,
+        routes_review.router,
+        routes_reports.router,
+        routes_sources.router,
+    ]
     for route in [r for router in routers for r in router.routes]:
         if "GET" in getattr(route, "methods", set()) and "{" not in route.path:
             out.append((f"/api{route.path}{REQUIRED_QUERY.get(route.path, '')}", route.response_model))

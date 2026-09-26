@@ -15,7 +15,15 @@
       "Bash(uv run sed mappings save-override:*)",
       "PowerShell(uv run sed mappings save-override:*)",
       "Bash(uv run sed config save-override:*)",
-      "PowerShell(uv run sed config save-override:*)"
+      "PowerShell(uv run sed config save-override:*)",
+      "Bash(uv run sed auth mode:*)",
+      "PowerShell(uv run sed auth mode:*)",
+      "Bash(uv run sed auth provider:*)",
+      "PowerShell(uv run sed auth provider:*)",
+      "Bash(uv run sed auth allow:*)",
+      "PowerShell(uv run sed auth allow:*)",
+      "Bash(uv run sed auth disallow:*)",
+      "PowerShell(uv run sed auth disallow:*)"
     ],
     "deny": [
       "WebFetch",

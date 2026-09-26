@@ -933,25 +933,35 @@ def serve(
     port: Annotated[int | None, typer.Option(help="Port on 127.0.0.1 (default: settings api.port)")] = None,
     no_browser: Annotated[bool, typer.Option("--no-browser", help="Do not open the dashboard in a browser")] = False,
     dev: Annotated[bool, typer.Option("--dev", help="Use SED_DEV_TOKEN for the Vite dev proxy")] = False,
+    developer_mode: Annotated[
+        bool,
+        typer.Option(
+            "--developer-mode",
+            help="Skip sign-in for this launch only (offline or testing); every screen says so",
+        ),
+    ] = False,
     profile: ProfileOpt = None,
     data_dir: DataDirOpt = None,
     as_json: JsonOpt = False,
 ) -> None:
-    """Serve the local API and dashboard on 127.0.0.1 (per-launch token for write requests)."""
+    """Serve the local API and dashboard on 127.0.0.1 (sign-in, and a per-launch token for write requests)."""
     from sed.api.serve import run
     from sed.settings import load_settings
 
     paths = _paths(profile, data_dir)
-    run(paths, port=port or load_settings(paths).api.port, open_browser=not no_browser, dev=dev)
+    port = port or load_settings(paths).api.port
+    run(paths, port=port, open_browser=not no_browser, dev=dev, developer_mode=developer_mode)
 
 
 def _mount_core_subapps() -> None:
     from sed import modules
     from sed.ai.cli import ai_app, review_app
+    from sed.auth.cli import auth_app
     from sed.connectors.cli import pull_app, schedule_app, sources_command
     from sed.modules.cli import modules_app
     from sed.reports.cli import report_app
 
+    app.add_typer(auth_app, name="auth")
     app.add_typer(report_app, name="report")
     app.add_typer(modules_app, name="modules")
     app.add_typer(ai_app, name="ai")

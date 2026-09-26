@@ -5,7 +5,8 @@
  * - POST requests carry `X-SED-Token`, read from `<meta name="sed-token">` that `sed serve` fills in per launch.
  *   In `npm run dev` the meta keeps its placeholder and the Vite proxy adds the header instead.
  * - Non-2xx responses are parsed as the ErrorEnvelope `{ok: false, error: {kind, message, details}}` and thrown as
- *   `ApiError`; transport failures become kind `network`.
+ *   `ApiError`; transport failures become kind `network`. A 401 (not signed in, or the sign-in ended) also fires
+ *   `SIGNED_OUT_EVENT`, which brings the sign-in screen back.
  * - In fixtures mode (VITE_SED_FIXTURES=1) calls are answered by the typed synthetic fixtures instead of fetch.
  */
 import type {
@@ -28,8 +29,12 @@ const TOKEN_PLACEHOLDER = ['__SED', 'TOKEN__'].join('_');
 
 export const FIXTURES_MODE = import.meta.env.VITE_SED_FIXTURES === '1';
 
+/** Fired on `window` when the API answers 401: the session ended, so the sign-in screen comes back. */
+export const SIGNED_OUT_EVENT = 'sed:signed-out';
+
 const KIND_BY_STATUS: Record<number, string> = {
   400: 'bad_request',
+  401: 'unauthenticated',
   403: 'forbidden',
   404: 'not_found',
   409: 'busy',
@@ -143,6 +148,7 @@ async function send<T>(method: 'GET' | 'POST', url: string, body: unknown, signa
     }
   }
   if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
     if (isErrorEnvelope(payload)) {
       const { kind, message, details } = payload.error;
       throw new ApiError(response.status, kind, message, details ?? null, retryAfterSeconds(response));

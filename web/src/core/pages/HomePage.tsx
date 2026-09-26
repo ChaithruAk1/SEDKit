@@ -14,6 +14,7 @@ import { SearchEverything } from '../../app/SearchEverything';
 import { Watermark } from '../../app/Watermark';
 import { useShell } from '../../app/ShellContext';
 import { usePersonName } from '../../app/Sidebar';
+import { useAuth } from '../auth/AuthGate';
 import './home.css';
 
 const DISMISS_KEY = 'sed.home.suggestion.dismissed';
@@ -112,6 +113,7 @@ export default function HomePage() {
   const { meta } = useShell();
   const navigate = useNavigate();
   const [name] = usePersonName();
+  const auth = useAuth();
   const queue = useApi('/api/review/queue', { query: { limit: 200 } });
   const [dismissed, setDismissed] = useState(readDismissed);
 
@@ -167,7 +169,9 @@ export default function HomePage() {
     ...moduleKeys.map((key) => MODULE_TILES[key] ?? { art: 'generic', label: meta.data?.modules.find((m) => m.key === key)?.title ?? key, to: `/${key}` }),
     ...CORE_TILES,
   ];
-  const firstName = name.trim();
+  // The name saved in this browser, else the signed-in person's first name.
+  const signedIn = auth?.session.signed_in ? auth.session.user?.name : null;
+  const firstName = name.trim() || (signedIn && !signedIn.includes('@') ? (signedIn.split(' ')[0] ?? '') : '');
   const { homeRef, stageRef, placement } = useMarkPlacement();
 
   return (

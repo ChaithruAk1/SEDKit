@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 from sed import __version__, db
-from sed.api.deps import read_conn, resolve_as_of, write_conn
+from sed.api.deps import read_conn, resolve_as_of, reviewer, write_conn
 from sed.api.findings import published_findings
 from sed.api.models import (
     AliasIn,
@@ -314,10 +314,8 @@ def alias_targets(
 def create_alias(body: AliasIn, request: Request, conn: sqlite3.Connection = Depends(write_conn)) -> AliasOut:
     # Manual alias plus decision log, then re-link existing rows. Writes go through db.write_tx inside
     # assign_alias, so a held write lock surfaces as Busy -> 409 with Retry-After.
-    from sed.bootstrap import reviewer_name
-
     result = assign_alias(
-        request.app.state.paths, body.kind, body.raw_value, body.target, reviewer=reviewer_name(), reresolve=True
+        request.app.state.paths, body.kind, body.raw_value, body.target, reviewer=reviewer(request), reresolve=True
     )
     return AliasOut(
         kind=result["kind"],

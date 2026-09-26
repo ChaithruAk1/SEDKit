@@ -58,8 +58,12 @@ CORE_CLI_NAMES = frozenset(
         "schedule",
         "sources",
         "branding",
+        "auth",
     }
 )
+# First path segment of the core API routes that are open without a sign-in (sed.auth.middleware.PUBLIC_API): a module
+# router mounted at /api/<key> must never land under one of them.
+CORE_API_KEYS = frozenset({"auth", "health", "branding"})
 # Skills that belong to the platform rather than a module (no run handler, no module surface).
 CORE_SKILLS = ("sed-map-export", "sed-review", "sed-eval", "sed-review-module", "sed-build-module")
 CORE_NAV = (
@@ -398,6 +402,8 @@ def validate(mods: tuple[Module, ...] | list[Module] | None = None) -> list[str]
             problems.append(f"module key '{m.key}' must match {MODULE_KEY_RE.pattern}")
         if m.key in CORE_PAGE_KEYS:
             problems.append(f"module key '{m.key}' is reserved by the core page #/{m.key}")
+        if m.key in CORE_API_KEYS:
+            problems.append(f"module key '{m.key}' is reserved by the core API /api/{m.key}")
         claim("module", m.key, m.key)
         problems += [f"{m.key}: missing dependency '{d}'" for d in m.depends_on if d not in keys]
         problems += [f"{m.key}: invalid import reference '{r}'" for r in declared_refs(m) if not IMPORT_REF_RE.match(r)]
@@ -477,6 +483,7 @@ def _extension_problems(m: Module, mods: tuple[Module, ...]) -> list[str]:
 
 __all__ = [
     "BUILTIN",
+    "CORE_API_KEYS",
     "CORE_CLI_NAMES",
     "CORE_NAV",
     "CORE_SKILLS",

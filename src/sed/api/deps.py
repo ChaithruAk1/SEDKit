@@ -20,6 +20,17 @@ def _paths(request: Request):
     return request.app.state.paths
 
 
+def reviewer(request: Request) -> str:
+    """The name a decision made through the API records: the signed-in person's verified address, or in developer
+    mode the Windows account name (as before sign-in existed)."""
+    actor = getattr(request.state, "actor", None)
+    if actor is not None:
+        return actor.reviewer
+    from sed.bootstrap import reviewer_name
+
+    return reviewer_name()
+
+
 def read_conn(request: Request) -> Iterator[sqlite3.Connection]:
     """Read-only connection for one request (query_only; never holds a long-lived reader)."""
     paths = _paths(request)

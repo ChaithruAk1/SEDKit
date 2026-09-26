@@ -15,14 +15,14 @@ exports (ServiceNow, Jira, Confluence, Excel) -> DATA_DIR/inbox -> sed import
                                               |
    report snapshots (frozen facts + tables + provenance) -> XLSX / Markdown / PPTX (template maps) -> DATA_DIR/out
                                               |
-   FastAPI on 127.0.0.1 (host allowlist, per-launch token) -> React dashboard (web/, served from web/dist)
+   FastAPI on 127.0.0.1 (host allowlist, sign-in, per-launch token) -> React dashboard (web/, served from web/dist)
 ```
 
 ## Core and modules
 
 - **Core** (`src/sed/`): paths, layered settings, database and migrations, PII, CLI plumbing, ingest engine
-  (`ingest/`), report engines (`reports/`), AI run lifecycle (`ai/`), API host (`api/`) and the module registry
-  (`modules/`). The core never imports module code directly (`tests/platform/test_core_boundaries.py`).
+  (`ingest/`), report engines (`reports/`), AI run lifecycle (`ai/`), API host (`api/`), dashboard sign-in (`auth/`,
+  `docs/sign-in.md`) and the module registry (`modules/`). The core never imports module code directly (`tests/platform/test_core_boundaries.py`).
 - **Modules** (`src/sed/modules/<key>/`): a manifest (`MODULE`) declares CLI mounts, API routers, dashboard pages,
   reports, AI skills, ingest targets and hooks, synthetic data, metric definitions, doctor checks, config and tables
   as lazy import references. Ops is module #1. How to add one: `docs/modules.md`.
@@ -49,4 +49,5 @@ exports (ServiceNow, Jira, Confluence, Excel) -> DATA_DIR/inbox -> sed import
 | Reports and decks | `src/sed/reports/`, `src/sed/modules/ops/reports/`, `config/ops/reports/`, `templates/pptx/` |
 | AI runs and review | `src/sed/ai/`, `src/sed/modules/ops/ai/`, `.claude/skills/sed-triage-batch/`, `.claude/workflows/sed-analyze.js` |
 | API and dashboard | `src/sed/api/`, `src/sed/modules/ops/api.py`, `web/` |
+| Sign-in | `src/sed/auth/`, `src/sed/api/routes_auth.py`, `config/auth.yaml`, `web/src/core/auth/`, `docs/sign-in.md` |
 | Tests | `tests/platform/` (core contracts), `tests/modules/<key>/`, `tests/fixtures/ops_profile.py` |

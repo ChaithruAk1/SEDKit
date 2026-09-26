@@ -1,13 +1,15 @@
 /**
- * The top row of the main column: the page tabs on the left, and on the right Home, the data status dot, the light/dark
- * switch and Help. On narrow windows a menu button opens the sidebar.
+ * The top row of the main column: the page tabs on the left, and on the right the developer-mode label (when nobody
+ * signs in), Home, the data status dot, the light/dark switch and Help. On narrow windows a menu button opens the
+ * sidebar.
  */
-import { Anchor, Popover, Stack, Text, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
+import { Anchor, Badge, Popover, Stack, Text, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { IconArrowLeft, IconHelp, IconHome, IconMenu2, IconMoon, IconPlus, IconSun, IconX } from '@tabler/icons-react';
 import { Link, matchPath, useLocation, useNavigate } from 'react-router';
 
 import { FIXTURES_MODE } from '../api/client';
 import { formatDate } from '../components/format';
+import { useAuth } from '../core/auth/AuthGate';
 import { NavIcon } from './navIcons';
 import { useShell } from './ShellContext';
 import { TAB_LIMIT, useTabs } from './tabs';
@@ -34,6 +36,21 @@ function StatusDot() {
   return (
     <Tooltip label={label} withinPortal>
       <span className="sed-dot" data-state={state} role="status" aria-label={label} />
+    </Tooltip>
+  );
+}
+
+/** Developer mode is never quiet: on every screen, a label says nobody signed in and whose name actions go under. */
+function DeveloperMode() {
+  const auth = useAuth();
+  if (auth?.session.mode !== 'developer') return null;
+  const who = auth.session.user?.name ?? 'unknown';
+  const label = `Nobody is signed in. What you do is recorded under the Windows account ${who}.`;
+  return (
+    <Tooltip label={label} withinPortal>
+      <Badge color="yellow" variant="light" tt="none" role="status" aria-label={`Developer mode. ${label}`}>
+        Developer mode
+      </Badge>
     </Tooltip>
   );
 }
@@ -135,6 +152,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         </Tooltip>
       </div>
       <div className="sed-tools">
+        <DeveloperMode />
         <Tooltip label="Home" withinPortal>
           <button type="button" className="sed-icon-box" onClick={() => navigate('/')} aria-label="Home">
             <IconHome size={16} />

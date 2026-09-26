@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from sed import __version__, claude_setup, db
@@ -13,7 +12,10 @@ from sed.settings import PII_MODES, load_agent_config, load_settings
 
 
 def reviewer_name() -> str:
-    return os.environ.get("USERNAME") or os.environ.get("USER") or "unknown"
+    """Who a command-line decision is recorded under: `windows:<account>`, never proven (docs/sign-in.md)."""
+    from sed.auth.actor import command_line_actor
+
+    return command_line_actor().id
 
 
 def init_profile(

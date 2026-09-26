@@ -214,7 +214,25 @@ def test_cli_serve_passes_the_options_through(profile, monkeypatch):
     monkeypatch.setattr(serve, "run", lambda paths, **kwargs: calls.append((paths.profile, kwargs)))
     result = CliRunner().invoke(app, ["serve", "--profile", "synthetic", "--no-browser", "--port", "8123", "--dev"])
     assert result.exit_code == 0, result.output
-    assert calls == [("synthetic", {"port": 8123, "open_browser": False, "dev": True})]
+    result = CliRunner().invoke(app, ["serve", "--profile", "real", "--port", "8124", "--developer-mode"])
+    assert result.exit_code == 0, result.output
+    assert calls == [
+        ("synthetic", {"port": 8123, "open_browser": False, "dev": True, "developer_mode": False}),
+        ("real", {"port": 8124, "open_browser": True, "dev": False, "developer_mode": True}),
+    ]
+
+
+def test_the_start_up_line_says_how_sign_in_works(profile, data_root, monkeypatch):
+    from sed.api.app import create_app
+    from sed.paths import get_paths
+
+    monkeypatch.setenv("USERNAME", "synthetic-user")
+    developer = create_app(profile, token="t")
+    assert serve.sign_in_line(developer) == (
+        "Developer mode: nobody signs in; actions are recorded under the Windows account 'synthetic-user'."
+    )
+    real = create_app(get_paths("real"), token="t")
+    assert serve.sign_in_line(real).startswith("Sign-in required, but nobody can sign in yet: no sign-in provider")
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Ctrl+Break is a Windows console event")

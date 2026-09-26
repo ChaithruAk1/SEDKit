@@ -19,7 +19,7 @@ is a lazy import reference (`"package.module:attr"`), so the core imports module
 | Surface | Declaration | Where it appears |
 |---|---|---|
 | CLI | `CliMount(name, app)` | `sed <name> ...` (keep names short; core names are reserved) |
-| API | `ApiMount(router)` | `/api/<key>/...` with the core's host check, token and error envelope |
+| API | `ApiMount(router)` | `/api/<key>/...` with the core's host check, sign-in, token and error envelope (keys `auth`, `health` and `branding` are reserved) |
 | Dashboard | `NavItem(id="<key>.<page>", path="/<key>/...")` + `web/src/modules/<key>/index.ts` | `#/<key>/...`, nav from `GET /api/nav` |
 | Reports | `ReportDef(key, title, spec, builder, period_kinds, ...)` | `sed report build <key>`; spec in `config/<key>/reports/`; AI sections under `sections:` (drafted by `sed-draft-report`, shown on `narrative` slides) |
 | AI skills | `SkillDef(name="sed-<...>", handler)` + `.claude/skills/<name>/` | `sed ai start-run <name>` |

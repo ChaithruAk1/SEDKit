@@ -18,6 +18,7 @@ log = logging.getLogger("sed.api")
 RETRY_AFTER = {"Retry-After": "2"}
 ERROR_STATUSES = {
     400: "bad_request",
+    401: "unauthenticated",
     403: "forbidden",
     404: "not_found",
     405: "method_not_allowed",

@@ -32,6 +32,7 @@ def test_every_core_get_returns_its_model(ops_profile, core_gets):
     client = api_client(ops_profile.paths, send_token=False)
     paths_seen = {path.split("?")[0] for path, _ in core_gets}
     assert paths_seen == {
+        "/api/auth/session",
         "/api/health",
         "/api/meta",
         "/api/nav",

@@ -8,6 +8,11 @@
   - Each enabled module's router is mounted at `/api/<key>/...`.
 - **Security:** mandatory for every route, including module routers.
   - The host allowlist is 127.0.0.1 and localhost; any other host gets 400. No CORS.
+  - Sign-in (`sed.auth`, `routes_auth.py`, `docs/sign-in.md`): every request needs the session cookie unless SED runs
+    in developer mode, otherwise 401 `unauthenticated` (deny by default). Open: the dashboard shell (`/`, `/assets/*`,
+    top-level files), `/auth/callback`, `/auth/finish`, `/api/health`, `/api/branding*`, `/api/auth/*`.
+    Routes read who is asking from `request.state.actor`; record decisions with `deps.reviewer(request)`, never the
+    Windows user name.
   - Every non-GET/HEAD/OPTIONS request under `/api` needs the `X-SED-Token` header (the per-launch token), otherwise 403.
   - The token is never logged, and never put in a URL or response body.
   - Anti-framing and no-sniff headers go on every response. `index.html` is served `no-store`.

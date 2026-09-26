@@ -55,6 +55,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/device/poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Device Poll */
+        post: operations["core_device_poll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/device/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Device Start */
+        post: operations["core_device_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auth Session */
+        get: operations["core_auth_session"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign Out */
+        post: operations["core_sign_out"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Auth Start */
+        post: operations["core_auth_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/branding": {
         parameters: {
             query?: never;
@@ -1061,6 +1146,65 @@ export interface components {
             /** Ticket Id */
             ticket_id: string;
         };
+        /** AuthProviderOut */
+        AuthProviderOut: {
+            /**
+             * Flow
+             * @enum {string}
+             */
+            flow: "redirect" | "device";
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "microsoft" | "google" | "github";
+            /** Label */
+            label: string;
+        };
+        /** AuthSessionOut */
+        AuthSessionOut: {
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "sign_in" | "developer";
+            /** Providers */
+            providers: components["schemas"]["AuthProviderOut"][];
+            /** Setup Needed */
+            setup_needed: string[];
+            /** Signed In */
+            signed_in: boolean;
+            user: components["schemas"]["AuthUserOut"] | null;
+        };
+        /** AuthStartIn */
+        AuthStartIn: {
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "microsoft" | "google" | "github";
+        };
+        /** AuthStartOut */
+        AuthStartOut: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
+        /** AuthUserOut */
+        AuthUserOut: {
+            /** Email */
+            email: string | null;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "microsoft" | "google" | "github" | "developer_mode";
+            /** Name */
+            name: string;
+            /** Verified */
+            verified: boolean;
+        };
         /** BacklogGroupRow */
         BacklogGroupRow: {
             /** D0 7 */
@@ -1448,6 +1592,34 @@ export interface components {
             scope_points: number;
             /** Week Ending */
             week_ending: string;
+        };
+        /** DevicePollIn */
+        DevicePollIn: {
+            /** Flow Id */
+            flow_id: string;
+        };
+        /** DevicePollOut */
+        DevicePollOut: {
+            /** Message */
+            message: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "signed_in" | "refused" | "failed" | "cancelled" | "pending" | "expired";
+        };
+        /** DeviceStartOut */
+        DeviceStartOut: {
+            /** Expires In */
+            expires_in: number;
+            /** Flow Id */
+            flow_id: string;
+            /** Interval */
+            interval: number;
+            /** User Code */
+            user_code: string;
+            /** Verification Uri */
+            verification_uri: string;
         };
         /** DocRow */
         DocRow: {
@@ -2996,6 +3168,16 @@ export interface components {
             /** Transport */
             transport: string;
         };
+        /**
+         * SignOutIn
+         * @description No fields: sign-out ends the session named by the cookie.
+         */
+        SignOutIn: Record<string, never>;
+        /** SignOutOut */
+        SignOutOut: {
+            /** Signed Out */
+            signed_out: boolean;
+        };
         /** SlaOut */
         SlaOut: {
             /** By Priority */
@@ -3351,6 +3533,15 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewRatesOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -3420,6 +3611,15 @@ export interface operations {
                     "application/json": components["schemas"]["AliasTargetsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -3487,6 +3687,392 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AliasOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_device_poll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DevicePollIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevicePollOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_device_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthStartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceStartOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_auth_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionOut"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_sign_out: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignOutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignOutOut"];
+                };
+            };
+            /** @description Missing or invalid X-SED-Token */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_auth_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthStartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStartOut"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -3632,6 +4218,15 @@ export interface operations {
                     "application/json": components["schemas"]["ClearDataOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Missing or invalid X-SED-Token */
             403: {
                 headers: {
@@ -3704,6 +4299,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataSourcesOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -3783,6 +4387,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryPortfolioOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -3866,6 +4479,15 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveryProjectOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -3932,6 +4554,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnmappedList"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -4007,6 +4638,15 @@ export interface operations {
                     "application/json": components["schemas"]["FindingsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -4074,6 +4714,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FindingReviewOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -4154,6 +4803,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FindingReviewOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -4297,6 +4955,15 @@ export interface operations {
                     "application/json": components["schemas"]["ImportsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -4369,6 +5036,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -4447,6 +5123,15 @@ export interface operations {
                     "application/json": components["schemas"]["JobOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -4514,6 +5199,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LabelCorrectionOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -4593,6 +5287,15 @@ export interface operations {
                     "application/json": components["schemas"]["LayoutsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -4660,6 +5363,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LayoutOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -4740,6 +5452,15 @@ export interface operations {
                     "application/json": components["schemas"]["LayoutOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Missing or invalid X-SED-Token */
             403: {
                 headers: {
@@ -4818,6 +5539,15 @@ export interface operations {
                     "application/json": components["schemas"]["LayoutDeletedOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Missing or invalid X-SED-Token */
             403: {
                 headers: {
@@ -4892,6 +5622,15 @@ export interface operations {
                     "application/json": components["schemas"]["MetaOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -4957,6 +5696,15 @@ export interface operations {
                     "application/json": components["schemas"]["ModulesOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -5020,6 +5768,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NavOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -5099,6 +5856,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppsOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -5182,6 +5948,15 @@ export interface operations {
                     "application/json": components["schemas"]["App360Out"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -5262,6 +6037,15 @@ export interface operations {
                     "application/json": components["schemas"]["AttentionOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -5340,6 +6124,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RenewalsOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -5423,6 +6216,15 @@ export interface operations {
                     "application/json": components["schemas"]["CostsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -5486,6 +6288,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OpsFiltersOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -5567,6 +6378,15 @@ export interface operations {
                     "application/json": components["schemas"]["LicensesOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -5644,6 +6464,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OpsOverview"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -5737,6 +6566,15 @@ export interface operations {
                     "application/json": components["schemas"]["TicketPage"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -5814,6 +6652,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BacklogOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -5897,6 +6744,15 @@ export interface operations {
                     "application/json": components["schemas"]["MttrOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -5976,6 +6832,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SlaOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -6060,6 +6925,15 @@ export interface operations {
                     "application/json": components["schemas"]["VolumesOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -6128,6 +7002,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TicketDetail"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -6210,6 +7093,15 @@ export interface operations {
                     "application/json": components["schemas"]["VendorTrendsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -6275,6 +7167,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportsOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -6344,6 +7245,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -6424,6 +7334,15 @@ export interface operations {
                     "application/json": components["schemas"]["ReadinessOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -6491,6 +7410,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewQueueOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -6562,6 +7490,15 @@ export interface operations {
                     "application/json": components["schemas"]["RunsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -6627,6 +7564,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunDetailOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -6698,6 +7644,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunReviewOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -6778,6 +7733,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VerdictsOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */
@@ -6873,6 +7837,15 @@ export interface operations {
                     "application/json": components["schemas"]["SapChangesOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -6961,6 +7934,15 @@ export interface operations {
                     "application/json": components["schemas"]["SapIdocsOut"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -7045,6 +8027,15 @@ export interface operations {
                     "application/json": components["schemas"]["SapL3Out"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -7124,6 +8115,15 @@ export interface operations {
                     "application/json": components["schemas"]["SapOverview"];
                 };
             };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -7187,6 +8187,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SourcesOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Not found */
@@ -7258,6 +8267,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
             /** @description Missing or invalid X-SED-Token */

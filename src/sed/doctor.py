@@ -118,6 +118,7 @@ def run_checks(paths: Paths, *, skip: set[str] | None = None) -> list[Check]:
     add(_check("skill_names_no_personal_clash", not clashes, ", ".join(clashes) or "no clashes with ~/.claude/skills"))
     _module_checks(paths, root, add)
     _connector_checks(paths, add)
+    _sign_in_checks(paths, add)
 
     if paths.data_class == "real":
         add(
@@ -129,6 +130,29 @@ def run_checks(paths: Paths, *, skip: set[str] | None = None) -> list[Check]:
             )
         )
     return checks
+
+
+def _sign_in_checks(paths: Paths, add) -> None:
+    """auth.yaml is valid, and when the dashboard requires sign-in, someone can actually sign in (docs/sign-in.md)."""
+    from sed.auth.settings import load_auth_settings, resolve_mode
+
+    try:
+        settings = load_auth_settings(paths)
+        mode = resolve_mode(settings, paths)
+    except SedError as exc:
+        add(Check("sign_in_settings_valid", "fail", f"{exc.message}: {exc.details}" if exc.details else exc.message))
+        return
+    add(Check("sign_in_settings_valid", "ok", f"auth.yaml valid ({mode.replace('_', '-')})"))
+    if mode == "developer":
+        add(Check("sign_in_ready", "ok", "developer mode (synthetic profile): the dashboard asks nobody to sign in"))
+        return
+    problems = settings.problems()
+    detail = (
+        "; ".join(problems) + " (sed auth provider/allow; docs/sign-in.md)"
+        if problems
+        else ", ".join(settings.enabled())
+    )
+    add(_check("sign_in_ready", not problems, detail, severity="fail" if paths.data_class == "real" else "warn"))
 
 
 def _database_checks(paths: Paths, add) -> dict[str, str]:

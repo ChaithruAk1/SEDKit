@@ -85,6 +85,7 @@
   --sed-tab-min-w: 96px;
   --sed-strip-h: 22px;
   --sed-home-w: 980px;
+  --sed-signin-w: 420px;
 
   /* Motion: two durations, one easing, and the one glow of a selected thing (three breaths, then still). */
   --sed-d1: 120ms;

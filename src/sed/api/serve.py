@@ -5,6 +5,8 @@
   The token is injected into the served index.html and is never printed, logged or put in a URL.
 * `DATA_DIR\\serve.lock` holds the server pid while it runs (so `sed db restore` refuses) and is removed on exit.
 * Serves `web/dist` when it has an index.html; otherwise API only, with a warning.
+* Sign-in (docs/sign-in.md): the real profile requires it; `--developer-mode` skips it for this launch only, and the
+  dashboard then says so on every screen.
 """
 
 from __future__ import annotations
@@ -179,7 +181,24 @@ def shutdown() -> None:
             server.should_exit = True
 
 
-def run(paths: Paths, *, port: int = 8000, open_browser: bool = True, dev: bool = False) -> None:
+def sign_in_line(app: Any) -> str:
+    """How this launch handles sign-in, for the start-up message."""
+    runtime = app.state.auth
+    if runtime.mode == "developer":
+        who = runtime.actor_for(None)
+        return (
+            "Developer mode: nobody signs in; actions are recorded under the Windows account "
+            f"'{who.name if who else 'unknown'}'."
+        )
+    problems = runtime.settings.problems()
+    if problems:
+        return f"Sign-in required, but nobody can sign in yet: {'; '.join(problems)} (see docs/sign-in.md)."
+    return "Sign-in required: " + ", ".join(label for _, label, _ in runtime.providers()) + "."
+
+
+def run(
+    paths: Paths, *, port: int = 8000, open_browser: bool = True, dev: bool = False, developer_mode: bool = False
+) -> None:
     import uvicorn
 
     from sed.api.app import create_app
@@ -188,7 +207,7 @@ def run(paths: Paths, *, port: int = 8000, open_browser: bool = True, dev: bool 
         raise PreconditionFailed(f"No database for profile '{paths.profile}'; run `sed init` first.")
     token = launch_token(dev)
     web_dist = default_web_dist()
-    app = create_app(paths, token=token, web_dist=web_dist)
+    app = create_app(paths, token=token, web_dist=web_dist, developer_mode=developer_mode)
     sock = bind_socket(port)
     try:
         actual_port = sock.getsockname()[1]
@@ -208,6 +227,7 @@ def run(paths: Paths, *, port: int = 8000, open_browser: bool = True, dev: bool 
             server = uvicorn.Server(config)
             data_class = paths.data_class.upper()
             _say(f"SED ({data_class}) profile '{paths.profile}' serving on {url}{' [dev token]' if dev else ''}")
+            _say(sign_in_line(app))
             if web_dist is None:
                 _say(
                     "warning: web/dist not found; serving the API only "

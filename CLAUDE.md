@@ -67,6 +67,8 @@ such a build, work in the main checkout as usual. Never put high-entropy literal
     `write_tx` = BEGIN IMMEDIATE, migrations, backups), `schema/NNN_*.sql`, `doctor.py`, `bootstrap.py`.
   - Engines: `ingest/` (with `upload.py` for dashboard uploads), `reports/`, `ai/`, `api/`, `connectors/` (read-only
     pulls) and `sources.py` (every source by API or by file; `docs/sources.md`).
+  - Sign-in: `auth/` (Microsoft, Google, GitHub; allowlist and developer mode; `docs/sign-in.md`). Settings in
+    `config/auth.yaml` overlaid by `DATA_DIR\config\auth.yaml`, written by `sed auth ...` (asks permission).
   - Registry: `modules/`.
   - Ops module: `modules/ops/`; legacy ops code in `metrics.py`, `analytics.py`, `synth/`, `ingest/targets.py`.
   - SAP module: `modules/sap/` (SAP scope over ops tickets; see its `CLAUDE.md`).

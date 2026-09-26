@@ -1,0 +1,50 @@
+/* THE SIGN-IN SCREEN. Objects that exist on this screen alone (the brand line, the title, the GitHub code), dressed
+   through tokens only; the panel, buttons, alerts and fields keep their shared dress. */
+.sed-signin {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sed-s5) var(--sed-s4);
+  background: var(--sed-canvas);
+}
+.sed-signin-panel {
+  width: 100%;
+  max-width: var(--sed-signin-w);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sed-s4);
+  padding: var(--sed-s6);
+  background: var(--sed-panel);
+  border: var(--sed-hairline) solid var(--sed-line);
+  border-radius: var(--sed-r1);
+  box-shadow: var(--sed-shadow-deep);
+}
+.sed-signin-brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sed-s3);
+}
+.sed-signin-word {
+  color: var(--sed-accent);
+  font-size: var(--sed-fs-heading);
+  font-weight: var(--sed-weight-title);
+  letter-spacing: var(--sed-logo-tracking);
+}
+.sed-signin-title {
+  margin: 0;
+  font-size: var(--sed-fs-heading);
+  font-weight: var(--sed-weight-title);
+  color: var(--sed-tx);
+}
+.sed-signin-code {
+  font-family: var(--sed-font-mono);
+  font-size: var(--sed-fs-heading);
+  font-weight: var(--sed-weight-strong);
+  letter-spacing: var(--sed-logo-tracking);
+  padding: var(--sed-chip-pad);
+}
+.sed-signin-note {
+  border-top: var(--sed-hairline) solid var(--sed-line-faint);
+  padding-top: var(--sed-s3);
+}
