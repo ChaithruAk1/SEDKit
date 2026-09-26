@@ -11,8 +11,9 @@ is disk encryption (BitLocker), not a sign-in screen.
 
 - **The real profile asks for a sign-in; synthetic profiles do not.** A synthetic profile runs in *developer mode*:
   nobody signs in, and every screen says so.
-- **Microsoft, Google or GitHub.** You choose on the sign-in screen. Your password goes only to that provider's own
-  page; SED never sees it and has no password field anywhere.
+- **Company SSO (Microsoft), Google or GitHub.** You choose on the sign-in screen; "Sign in with company SSO" is your
+  company account, the one you use for Outlook and Teams. Your password goes only to that provider's own page; SED
+  never sees it and has no password field anywhere. A button appears only once its provider is set up (below).
 - **Only listed people get in.** Signing in with *a* Google or GitHub account proves who you are; the list in SED's
   settings decides whether you may use it. The list holds e-mail addresses, or a whole Microsoft organisation.
 - **One person at a time.** A new sign-in ends any other. A sign-in lasts 12 hours, or until SED is stopped.
@@ -52,7 +53,7 @@ then restart `sed serve`.
 
 GitHub signs in with a short code: SED shows it, you enter it on GitHub's page, and SED continues on its own.
 
-### Microsoft (ask your IT department)
+### Microsoft: company SSO (ask your IT department)
 
 Send them this:
 

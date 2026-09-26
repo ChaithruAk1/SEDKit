@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit */
+        get: operations["core_audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/device/poll": {
         parameters: {
             query?: never;
@@ -1145,6 +1162,102 @@ export interface components {
             state: string | null;
             /** Ticket Id */
             ticket_id: string;
+        };
+        /** AuditActionOut */
+        AuditActionOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /** AuditEntryOut */
+        AuditEntryOut: {
+            /** Action */
+            action: string;
+            /** Action Label */
+            action_label: string;
+            /** Actor */
+            actor: string;
+            /** Actor Name */
+            actor_name: string;
+            /** At */
+            at: string;
+            /** Changes */
+            changes: {
+                [key: string]: unknown;
+            }[] | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "dashboard" | "command_line";
+            /** Correlation Id */
+            correlation_id: string | null;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /** Entry Hash */
+            entry_hash: string;
+            /** Method */
+            method: string;
+            /** Open */
+            open: boolean;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "started" | "done" | "failed" | "refused";
+            /** Prev Hash */
+            prev_hash: string;
+            /** Seq */
+            seq: number;
+            /** Summary */
+            summary: string;
+            /** Target Id */
+            target_id: string | null;
+            /** Target Type */
+            target_type: string | null;
+            /** Verified */
+            verified: boolean;
+        };
+        /** AuditIntegrityOut */
+        AuditIntegrityOut: {
+            /** Entries */
+            entries: number;
+            /** First At */
+            first_at: string | null;
+            /** First Break */
+            first_break: number | null;
+            /** Intact */
+            intact: boolean;
+            /** Last At */
+            last_at: string | null;
+        };
+        /** AuditPageOut */
+        AuditPageOut: {
+            /** Actions */
+            actions: components["schemas"]["AuditActionOut"][];
+            integrity: components["schemas"]["AuditIntegrityOut"];
+            /** Items */
+            items: components["schemas"]["AuditEntryOut"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** People */
+            people: components["schemas"]["AuditPersonOut"][];
+            /** Total */
+            total: number;
+        };
+        /** AuditPersonOut */
+        AuditPersonOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Verified */
+            verified: boolean;
         };
         /** AuthProviderOut */
         AuthProviderOut: {
@@ -3700,6 +3813,96 @@ export interface operations {
             };
             /** @description Missing or invalid X-SED-Token */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Database busy; retry */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not implemented yet */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    core_audit: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                /** @description One person: an address or windows:<account> */
+                person?: string | null;
+                /** @description An action key, e.g. download */
+                action?: string | null;
+                outcome?: ("started" | "done" | "failed" | "refused") | null;
+                /** @description First day, YYYY-MM-DD (reporting time zone) */
+                since?: string | null;
+                /** @description Last day, YYYY-MM-DD (reporting time zone) */
+                until?: string | null;
+                /** @description Words in what happened, who or the target */
+                q?: string | null;
+                /** @description All entries of one action */
+                correlation?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPageOut"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -27,6 +27,14 @@ already record who decided inside SED. Commands that only print a few sample row
 Entries hold names, counts, filters and fingerprints, never ticket text, and never the text of an error (which can
 quote a file's rows or a folder path): a failure is recorded in fixed words, such as "the input was refused".
 
+## Reading it
+
+Click **Audit** in the sidebar. The page lists every entry, newest first, with a note at the top saying whether the
+trail is intact. Filter by person, action, outcome, days or words; open an entry for its details and, for a change,
+each value before and after, or to see how an action started and ended. **Download as a workbook** saves what the
+filters show, with each entry's fingerprints (a copy kept elsewhere can later show whether the trail was rewritten).
+The download is itself recorded; reading the page is not.
+
 ## What each entry says
 
 - **When** (UTC) and **who**: the signed-in address, or `windows:<name>` when nobody proved who it was (developer
@@ -53,6 +61,10 @@ quote a file's rows or a folder path): a failure is recorded in fixed words, suc
 
 ## For developers
 
+- **Page.** `GET /api/audit` (filters `person`, `action`, `outcome`, `since`, `until`, `q`, `correlation`; paged, newest
+  first, with the people, the actions and the chain check) and `GET /api/audit-export.xlsx` (the same filters, recorded
+  as a download) in `sed/api/routes_audit.py`, reading through `sed.audit.query`; the page is
+  `web/src/core/pages/AuditPage.tsx`.
 - **Code.** `sed.audit.store` (the append-only SQLite store, the hash chain, `verify`), `sed.audit.record` (`record`,
   `start` and `Attempt`, `AuditUnavailable`, the sign-in recorder and the dashboard-session note) and
   `sed.audit.actions` (each action's wording, shared by the dashboard and the command line). `sed audit verify`.

@@ -23,6 +23,11 @@ const ICONS: Record<string, typeof IconBrandGoogle> = {
   github: IconBrandGithub,
 };
 
+/** The company sign-in is what people call SSO, so its button says so. */
+const BUTTON_TEXT: Record<string, string> = {
+  microsoft: 'Sign in with company SSO (Microsoft)',
+};
+
 /** Waits for the GitHub code to be entered, asking SED at the pace GitHub allows. */
 function DevicePanel({ device, onStop }: { device: Device; onStop: (message: string | null) => void }) {
   useEffect(() => {
@@ -159,7 +164,7 @@ export function SignInPage({ session }: { session: AuthSession }) {
                   disabled={pending !== null && pending !== provider.key}
                   onClick={() => void start(provider)}
                 >
-                  Sign in with {provider.label}
+                  {BUTTON_TEXT[provider.key] ?? `Sign in with ${provider.label}`}
                 </Button>
               );
             })}

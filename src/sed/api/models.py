@@ -680,3 +680,57 @@ class SignOutIn(ApiModel):
 
 class SignOutOut(ApiModel):
     signed_out: bool
+
+
+# -- audit trail (sed.audit; routes_audit) ---------------------------------------------------------------------------
+
+
+class AuditEntryOut(ApiModel):
+    seq: int  # the entry's number in the chain
+    at: str  # ISO-8601 UTC
+    actor: str  # the verified address, windows:<account>, or unknown
+    actor_name: str
+    method: str  # microsoft | google | github | developer_mode | windows
+    verified: bool  # proven by an identity provider
+    channel: Literal["dashboard", "command_line"]
+    action: str
+    action_label: str
+    outcome: Literal["started", "done", "failed", "refused"]
+    target_type: str | None
+    target_id: str | None
+    summary: str
+    detail: dict[str, Any]
+    changes: list[dict[str, Any]] | None  # each changed field with its value before and after
+    correlation_id: str | None  # ties an action's start to how it ended
+    open: bool  # a start whose outcome was never recorded
+    prev_hash: str
+    entry_hash: str
+
+
+class AuditPersonOut(ApiModel):
+    id: str
+    name: str
+    verified: bool
+
+
+class AuditActionOut(ApiModel):
+    key: str
+    label: str
+
+
+class AuditIntegrityOut(ApiModel):
+    entries: int
+    intact: bool
+    first_break: int | None  # the first entry that is missing or does not fit
+    first_at: str | None
+    last_at: str | None
+
+
+class AuditPageOut(ApiModel):
+    items: list[AuditEntryOut]
+    total: int
+    page: int
+    page_size: int
+    people: list[AuditPersonOut]
+    actions: list[AuditActionOut]
+    integrity: AuditIntegrityOut

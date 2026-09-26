@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from sed.api import routes_auth, routes_core, routes_reports, routes_review, routes_sources
+from sed.api import routes_audit, routes_auth, routes_core, routes_reports, routes_review, routes_sources
 
 SECURITY_HEADERS = {
     "x-frame-options": "DENY",
@@ -28,6 +28,7 @@ def core_get_routes() -> list[tuple[str, Any]]:
     parameters (routes like /runs/{run_id} are tested with a real run)."""
     out = []
     routers = [
+        routes_audit.router,
         routes_auth.router,
         routes_core.router,
         routes_review.router,

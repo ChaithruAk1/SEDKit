@@ -24,7 +24,7 @@ import { type NavEntry, useShell } from './ShellContext';
 const LOGO_URL = '/api/branding/logo';
 const NAME_KEY = 'sed.person.name';
 const SHELF_SIZE = 6;
-const CORE_TOP = ['/review', '/reports', '/data', '/runs'];
+const CORE_TOP = ['/review', '/reports', '/data', '/runs', '/audit'];
 
 function readName(): string {
   try {

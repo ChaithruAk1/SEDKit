@@ -119,6 +119,7 @@ One deviation from §4: **GitHub uses its device code sign-in**, not the browser
 flow needs the client secret on every token exchange and §4 promises no stored secret. Microsoft and Google use the
 redirect with PKCE as planned.
 
-Phase 1 (identity) is built: `docs/sign-in.md`. Phase 2 (the log) is built: `docs/audit.md`. The log is its own file
+Phase 1 (identity) is built: `docs/sign-in.md`. Phase 2 (the log) and Phase 3 (the Audit page) are built:
+`docs/audit.md`. The log is its own file
 under `DATA_DIR` (`audit\audit.db`), not in `sed.db`, because `sed db restore` replaces `sed.db` wholesale and GET
 routes must never write it; `sed data move` copies it with SQLite's backup so its newest entries travel too.

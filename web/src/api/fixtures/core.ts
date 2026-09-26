@@ -85,6 +85,7 @@ export function nav(): Schema<'NavOut'> {
       { id: 'core.runs', module: 'core', label: 'AI runs', path: '/runs', order: 810, icon: 'robot' },
       { id: 'core.reports', module: 'core', label: 'Reports', path: '/reports', order: 820, icon: 'file-text' },
       { id: 'core.data', module: 'core', label: 'Data', path: '/data', order: 900, icon: 'database' },
+      { id: 'core.audit', module: 'core', label: 'Audit', path: '/audit', order: 910, icon: 'shield-check' },
     ],
   };
 }

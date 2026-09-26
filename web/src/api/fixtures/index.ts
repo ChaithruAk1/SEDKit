@@ -6,6 +6,7 @@
  */
 import { ApiError, isAbortError } from '../client';
 import type { GetPath, GetPathParams, GetQuery, GetResponse, PostBody, PostPath, PostPathParams, PostResponse } from '../types';
+import * as audit from './audit';
 import * as auth from './auth';
 import * as core from './core';
 import * as delivery from './delivery';
@@ -26,6 +27,7 @@ type PostHandlers = {
 const GET_HANDLERS: GetHandlers = {
   '/api/health': () => ({ ok: true, version: '0.2.0' }),
   '/api/auth/session': () => auth.session(),
+  '/api/audit': (_, query) => audit.auditPage(query),
   '/api/branding': () => ({ title: null, logo: false, watermark: false, watermark_dark: false }),
   '/api/meta': () => core.meta(),
   '/api/nav': () => core.nav(),

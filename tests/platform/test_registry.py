@@ -30,7 +30,7 @@ def test_builtin_modules_are_enabled_by_default_and_nav_is_namespaced():
             assert item.path.strip("/").split("/")[0] in modules.CORE_PAGE_KEYS
         else:
             assert item.path == f"/{key}" or item.path.startswith(f"/{key}/")
-    assert sorted(modules.CORE_PAGE_KEYS) == ["data", "reports", "review", "runs"]
+    assert sorted(modules.CORE_PAGE_KEYS) == ["audit", "data", "reports", "review", "runs"]
     assert [item.id for _, item in modules.nav()][:1] == ["ops.overview"]
 
 

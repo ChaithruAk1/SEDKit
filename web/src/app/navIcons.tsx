@@ -12,6 +12,7 @@ import {
   IconListCheck,
   IconPoint,
   IconRobot,
+  IconShieldCheck,
   IconTicket,
   type Icon,
 } from '@tabler/icons-react';
@@ -31,6 +32,7 @@ const ICONS: Record<string, Icon> = {
   'git-pull-request': IconGitPullRequest,
   'list-check': IconListCheck,
   robot: IconRobot,
+  'shield-check': IconShieldCheck,
 };
 
 export function NavIcon({ name, size = 18 }: { name: string | null | undefined; size?: number }) {

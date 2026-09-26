@@ -32,6 +32,8 @@ def test_every_core_get_returns_its_model(ops_profile, core_gets):
     client = api_client(ops_profile.paths, send_token=False)
     paths_seen = {path.split("?")[0] for path, _ in core_gets}
     assert paths_seen == {
+        "/api/audit",
+        "/api/audit-export.xlsx",
         "/api/auth/session",
         "/api/health",
         "/api/meta",
@@ -54,6 +56,9 @@ def test_every_core_get_returns_its_model(ops_profile, core_gets):
     for path, model in core_gets:
         response = client.get(path)
         assert response.status_code == 200, (path, response.text[:500])
+        if model is None:  # a download, not a JSON answer
+            assert response.headers["content-type"].startswith("application/vnd.openxmlformats"), path
+            continue
         model.model_validate(response.json())
 
 
@@ -117,7 +122,7 @@ def test_nav_and_modules_follow_the_served_modules(ops_profile):
         {"id": i.id, "module": key, "label": i.label, "path": i.path, "order": i.order, "icon": i.icon}
         for key, i in modules.nav(paths)
     ]
-    assert nav == expected and nav[-1]["id"] == "core.data"
+    assert nav == expected and nav[-1]["id"] == "core.audit"
 
     listed = api_client(paths).get("/api/modules").json()["modules"]
     ops = next(m for m in listed if m["key"] == "ops")
@@ -142,6 +147,7 @@ def test_nav_and_modules_follow_the_served_modules(ops_profile):
         "core.runs",
         "core.reports",
         "core.data",
+        "core.audit",
     ]
     assert not any(m["enabled"] for m in only_core.get("/api/modules").json()["modules"])
     assert only_core.get("/api/meta").json()["definitions"] == {}

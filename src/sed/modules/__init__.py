@@ -72,6 +72,7 @@ CORE_NAV = (
     NavItem("core.runs", "AI runs", "/runs", 810, "robot"),
     NavItem("core.reports", "Reports", "/reports", 820, "file-text"),
     NavItem("core.data", "Data", "/data", 900, "database"),
+    NavItem("core.audit", "Audit", "/audit", 910, "shield-check"),
 )
 # First path segment of every core page: module keys must not take them (pages are #/<key>/...).
 CORE_PAGE_KEYS = frozenset(item.path.strip("/").split("/")[0] for item in CORE_NAV)

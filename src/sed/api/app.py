@@ -109,7 +109,7 @@ def create_app(
     """`developer_mode` skips sign-in for this app (`sed serve --developer-mode`); `auth` injects a prepared sign-in
     runtime (tests), otherwise one is built from auth.yaml and the profile."""
     from sed import modules as registry
-    from sed.api import routes_auth, routes_core, routes_reports, routes_review, routes_sources
+    from sed.api import routes_audit, routes_auth, routes_core, routes_reports, routes_review, routes_sources
 
     validate_token(token)
     if auth is None:
@@ -137,6 +137,7 @@ def create_app(
     app.include_router(routes_auth.router, prefix="/api")
     app.include_router(routes_auth.pages)
     app.include_router(routes_core.router, prefix="/api")
+    app.include_router(routes_audit.router, prefix="/api")
     app.include_router(routes_review.router, prefix="/api")
     app.include_router(routes_reports.router, prefix="/api")
     app.include_router(routes_sources.router, prefix="/api")
